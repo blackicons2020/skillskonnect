@@ -844,35 +844,22 @@ app.post('/api/contact', (req: Request, res: Response) => {
     res.json({ message: 'Message received' });
 });
 
+// ... (The previous code block ends with the continuation of the messages route)
+            chatId: r.chat_id,
+            // ... other message properties
+        }));
+        res.json(messages);
+    } catch (error) { handleError(res, error); }
+});
+
 // ============================================================================
 // EXPORT (CRITICAL FOR VERCEL SERVERLESS)
 // ============================================================================
-// This is the essential line that exposes the Express 'app' instance
-// to the Vercel Node runtime environment for handling API requests.
+// This is the only necessary instruction for the serverless function.
 module.exports = app; 
 
 // ============================================================================
-// STATIC FILE SERVING / SPA ROUTING (Production only)
+// REDUNDANT LOGIC REMOVED 
+// (The static file serving, SPA fallback, and the final 404 are now 
+// handled by vercel.json for cleaner serverless execution.)
 // ============================================================================
-
-// Serve static files in production (required to load your frontend assets)
-// The check `if (process.env.NODE_ENV === 'production')` ensures this is only used
-// on Vercel, not in a local dev environment if you ever choose to run it locally.
-if (process.env.NODE_ENV === 'production') {
-  // Serves assets from the frontend build folder (e.g., /dist)
-  app.use(express.static(path.join(__dirname_local, '../dist')));
-
-  // SPA Fallback: Handles all non-API and non-static file requests by serving index.html
-  // This ensures routing like /dashboard or /about works for your frontend.
-  app.get('*', (req, res) => {
-    res.sendFile(path.join(__dirname_local, '../dist/index.html'));
-  });
-}
-
-// Global 404 Handler (Runs if no route/static file matched)
-app.use((req, res, next) => {
-    res.status(404).json({ message: `Not Found - ${req.originalUrl}` });
-});
-
-// NOTE: The entire app.listen() block has been removed as it is incompatible 
-// with Vercel's serverless function environment.
