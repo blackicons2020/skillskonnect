@@ -1,0 +1,31 @@
+{
+  "version": 2,
+  "builds": [
+    {
+      "src": "api/index.ts",
+      "use": "@vercel/node"
+    },
+    {
+      "src": "package.json",
+      "use": "@vercel/static-build",
+      "config": {
+        "installCommand": "npm install",
+        "buildCommand": "npm run build"
+      }
+    }
+  ],
+  "rewrites": [
+    {
+      "source": "/api/(.*)",
+      "destination": "/api/index" 
+      // Changed from "api/index.ts" to "/api/index" (or simply "/api") 
+      // Vercel maps this to the generated serverless function.
+    },
+    {
+      "source": "/(.*)",
+      "destination": "/index.html"
+      // This routes all other requests to the frontend SPA entry point.
+    }
+  ],
+  "outputDirectory": "dist"
+}
