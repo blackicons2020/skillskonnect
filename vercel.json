@@ -14,17 +14,14 @@
       }
     }
   ],
-  "rewrites": [
+  "routes": [
     {
-      "source": "/api/(.*)",
-      "destination": "/api/index" 
-      // Changed from "api/index.ts" to "/api/index" (or simply "/api") 
-      // Vercel maps this to the generated serverless function.
+      "src": "/api/(.*)",
+      "dest": "api/index.ts"
     },
     {
-      "source": "/(.*)",
-      "destination": "/index.html"
-      // This routes all other requests to the frontend SPA entry point.
+      "src": "/(.*)",
+      "dest": "/index.html"
     }
   ],
   "outputDirectory": "dist"
