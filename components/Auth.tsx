@@ -359,29 +359,6 @@ export const Auth: React.FC<AuthProps> = ({ initialTab, onNavigate, onLoginAttem
                         )}
                     </div>
                 </div>
-
-                {/* DEMO CREDENTIALS HELPER */}
-                <div className="max-w-md w-full mt-8 p-4 bg-yellow-50 border border-yellow-200 rounded-lg text-xs text-yellow-800">
-                    <p className="font-bold mb-2 text-sm">Demo Admin Logins (Password: 'password')</p>
-                    <div className="grid grid-cols-2 gap-2">
-                        <div>
-                            <span className="font-semibold block">Super Admin:</span>
-                            <span className="select-all">super@cleanconnect.ng</span>
-                        </div>
-                        <div>
-                            <span className="font-semibold block">Payment Admin:</span>
-                            <span className="select-all">payment@cleanconnect.ng</span>
-                        </div>
-                        <div>
-                            <span className="font-semibold block">Verification Admin:</span>
-                            <span className="select-all">verification@cleanconnect.ng</span>
-                        </div>
-                        <div>
-                            <span className="font-semibold block">Support Admin:</span>
-                            <span className="select-all">support@cleanconnect.ng</span>
-                        </div>
-                    </div>
-                </div>
             </div>
             
             {socialProvider && (
