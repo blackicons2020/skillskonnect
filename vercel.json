@@ -2,27 +2,8 @@
   "version": 2,
   "builds": [
     {
-      "src": "index.ts",
-      "use": "@vercel/node",
-      "config": {
-        "includeFiles": ["**/*.ts", "**/*.js"]
-      }
+      "src": "api/index.ts",
+      "use": "@vercel/node"
     }
-  ],
-  "routes": [
-    {
-      "src": "/api/(.*)",
-      "dest": "/index.ts"
-    },
-    {
-      "src": "/(.*)",
-      "dest": "/index.ts"
-    }
-  ],
-  "env": {
-    "DATABASE_URL": "postgresql://cleanconnect_db_cj0i_user:foozWKlUIQfIIz5dhAK6hXCG2c9KPESO@dpg-d4fc7m6uk2gs73f8k1dg-a.oregon-postgres.render.com/cleanconnect_db_cj0i?sslmode=require",
-    "JWT_SECRET": "dev_secret_key_123",
-    "API_KEY": "",
-    "NODE_ENV": "production"
-  }
+  ]
 }
