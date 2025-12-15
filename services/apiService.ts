@@ -5,7 +5,6 @@ import { User, Cleaner, Booking, AdminRole, Chat, Message, SupportTicket, Review
 // CONFIGURATION
 // ==========================================
 // Safely determine API URL. 
-// We use a helper function to avoid crashing if `import.meta.env` is undefined in certain runtime environments.
 const getApiUrl = () => {
     try {
         const env = (import.meta as any).env;
@@ -23,158 +22,6 @@ const getApiUrl = () => {
 };
 
 const API_URL = getApiUrl();
-
-// ==========================================
-// MOCK DATA STORAGE & PERSISTENCE
-// ==========================================
-const STORAGE_PREFIX = 'cleanconnect_mock_';
-const STORAGE_TIMEOUT_MS = 20 * 60 * 1000; // 20 minutes
-
-// Helper to manage expiration
-const checkStorageExpiration = () => {
-    const timestamp = localStorage.getItem(`${STORAGE_PREFIX}timestamp`);
-    if (!timestamp || (Date.now() - Number(timestamp) > STORAGE_TIMEOUT_MS)) {
-        console.log("Mock data expired or not found. Resetting...");
-        localStorage.clear(); // Clear all
-        localStorage.setItem(`${STORAGE_PREFIX}timestamp`, Date.now().toString());
-        initializeMockData();
-    }
-};
-
-const getStoredData = <T>(key: string, defaultData: T): T => {
-    try {
-        const stored = localStorage.getItem(`${STORAGE_PREFIX}${key}`);
-        return stored ? JSON.parse(stored) : defaultData;
-    } catch {
-        return defaultData;
-    }
-};
-
-const setStoredData = (key: string, data: any) => {
-    localStorage.setItem(`${STORAGE_PREFIX}${key}`, JSON.stringify(data));
-};
-
-// Initial Mock Data
-const INITIAL_CLEANERS: Cleaner[] = [
-    {
-        id: 'cleaner_1',
-        name: 'Sarah Jenkins',
-        photoUrl: 'https://images.unsplash.com/photo-1573496359142-b8d87734a5a2?q=80&w=200&auto=format&fit=crop',
-        rating: 4.8,
-        reviews: 124,
-        serviceTypes: ['Residential/Domestic Cleaning', 'Deep Cleaning'],
-        state: 'Lagos',
-        city: 'Ikeja',
-        experience: 5,
-        bio: 'Professional cleaner with 5 years of experience in residential cleaning. I pay attention to details and use eco-friendly products.',
-        isVerified: true,
-        chargeHourly: 3500,
-        subscriptionTier: 'Pro',
-        cleanerType: 'Individual',
-        reviewsData: [
-            { reviewerName: 'John Doe', rating: 5, comment: 'Excellent service!', timeliness: 5, thoroughness: 5, conduct: 5 },
-            { reviewerName: 'Jane Smith', rating: 4.6, comment: 'Very good.', timeliness: 4, thoroughness: 5, conduct: 5 }
-        ]
-    },
-    {
-        id: 'cleaner_2',
-        name: 'Blue Wave Cleaning Services',
-        photoUrl: 'https://images.unsplash.com/photo-1581578731117-104f2a41272c?q=80&w=200&auto=format&fit=crop',
-        rating: 4.5,
-        reviews: 45,
-        serviceTypes: ['Commercial/Office Cleaning', 'Post-Construction'],
-        state: 'Abuja',
-        city: 'Garki',
-        experience: 8,
-        bio: 'Top-rated cleaning company serving businesses in Abuja. We specialize in office and post-construction cleaning.',
-        isVerified: true,
-        chargePerContract: 150000,
-        chargePerContractNegotiable: true,
-        subscriptionTier: 'Premium',
-        cleanerType: 'Company',
-        reviewsData: []
-    },
-    {
-        id: 'cleaner_3',
-        name: 'Emmanuel Okonkwo',
-        photoUrl: 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?q=80&w=200&auto=format&fit=crop',
-        rating: 4.2,
-        reviews: 28,
-        serviceTypes: ['Carpet and Upholstery Cleaning', 'Laundry & ironing'],
-        state: 'Lagos',
-        city: 'Lekki',
-        experience: 3,
-        bio: 'Expert in carpet cleaning and laundry services. Prompt and reliable.',
-        isVerified: false,
-        chargeDaily: 12000,
-        subscriptionTier: 'Standard',
-        cleanerType: 'Individual',
-        reviewsData: []
-    }
-];
-
-const INITIAL_USERS: User[] = [
-    {
-        id: 'user_123',
-        fullName: 'Test Client',
-        email: 'client@test.com',
-        phoneNumber: '08012345678',
-        role: 'client',
-        gender: 'Male',
-        state: 'Lagos',
-        city: 'Ikeja',
-        address: '123 Test Street',
-        isAdmin: false,
-        subscriptionTier: 'Free'
-    },
-    {
-        id: 'admin_super',
-        fullName: 'Super Admin',
-        email: 'super@cleanconnect.ng',
-        phoneNumber: '0000000000',
-        role: 'client', // Admins are technically clients with admin flags in this simple model
-        isAdmin: true,
-        adminRole: 'Super',
-        address: 'Admin HQ',
-        city: 'Abuja',
-        state: 'FCT',
-        gender: 'Female'
-    },
-    // Add cleaner users so they exist in the users table for Admin view
-    ...INITIAL_CLEANERS.map(c => ({
-        ...c,
-        fullName: c.name,
-        profilePhoto: c.photoUrl, // Map cleaner photo to user profile photo
-        role: 'cleaner' as const,
-        email: `cleaner_${c.id}@test.com`,
-        phoneNumber: '0800000000',
-        address: 'Cleaner Address',
-        gender: 'Female' as const,
-        isAdmin: false,
-        reviewsData: c.reviewsData || []
-    }))
-];
-
-const MOCK_USER: User = INITIAL_USERS[0];
-
-const initializeMockData = () => {
-    if (!localStorage.getItem(`${STORAGE_PREFIX}users`)) {
-        setStoredData('users', INITIAL_USERS);
-    }
-    if (!localStorage.getItem(`${STORAGE_PREFIX}bookings`)) {
-        setStoredData('bookings', []);
-    }
-};
-
-// Run expiration check on load
-checkStorageExpiration();
-
-// Data Accessors
-const getUsers = (): User[] => getStoredData('users', INITIAL_USERS);
-const getBookings = (): Booking[] => getStoredData('bookings', []);
-const saveUsers = (users: User[]) => setStoredData('users', users);
-const saveBookings = (bookings: Booking[]) => setStoredData('bookings', bookings);
-
 
 // ==========================================
 // API HELPERS
@@ -235,57 +82,18 @@ const fileToBase64 = async (file: File): Promise<string> => {
 
 export const apiService = {
     login: async (email: string, password?: string): Promise<{ token: string; user: User }> => {
-        try {
-            const response = await fetch(`${API_URL}/auth/login`, {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ email, password }),
-            });
-            return handleResponse(response);
-        } catch (error) {
-            // For production, we want real errors. Only mock specific admin emails for demo access if DB is not set up
-            if (email === 'payment@cleanconnect.ng' || email === 'verification@cleanconnect.ng' || email === 'support@cleanconnect.ng' || email === 'super@cleanconnect.ng') {
-               console.warn("Using persistent mock fallback for ADMIN demo access.");
-               const users = getUsers();
-                // Specific Admin Checks
-                if (email === 'payment@cleanconnect.ng') return { token: 'mock-token-payment', user: { ...INITIAL_USERS[1], id: 'admin_pay', fullName: 'Payment Admin', adminRole: 'Payment', email } };
-                if (email === 'verification@cleanconnect.ng') return { token: 'mock-token-verif', user: { ...INITIAL_USERS[1], id: 'admin_verif', fullName: 'Verification Admin', adminRole: 'Verification', email } };
-                if (email === 'support@cleanconnect.ng') return { token: 'mock-token-support', user: { ...INITIAL_USERS[1], id: 'admin_sup', fullName: 'Support Admin', adminRole: 'Support', email } };
-                if (email === 'super@cleanconnect.ng') return { token: 'mock-token-super', user: { ...INITIAL_USERS[1], id: 'admin_super', fullName: 'Super Admin', adminRole: 'Super', email } };
-            }
-            throw error; // Rethrow real backend errors for normal users
-        }
+        const response = await fetch(`${API_URL}/auth/login`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ email, password }),
+        });
+        return handleResponse(response);
     },
 
     socialLogin: async (provider: 'google' | 'apple', email?: string, name?: string): Promise<{ token: string; user: User }> => {
-        // Mock successful social login for demo purposes as backend OAuth is complex to set up without keys
-        const emailToUse = email || `user@${provider}.com`;
-        const users = getUsers();
-        let user = users.find(u => u.email === emailToUse);
-
-        if (!user) {
-             user = {
-                id: `social_${provider}_${Date.now()}`,
-                fullName: name || `${provider === 'google' ? 'Google' : 'Apple'} User`,
-                email: emailToUse,
-                phoneNumber: '0000000000',
-                role: 'client',
-                gender: 'Other',
-                state: 'Lagos',
-                city: 'Ikeja',
-                address: 'Social Login Address',
-                subscriptionTier: 'Free',
-                isAdmin: false,
-                profilePhoto: emailToUse?.includes('jane') ? 'https://avatar.iran.liara.run/public/girl' : undefined
-            };
-            users.push(user);
-            saveUsers(users);
-        }
-        
-        return {
-            token: `mock-token-${provider}`,
-            user: hydrateUserWithBookings(user)
-        };
+        // Since mock data is removed, and real backend OAuth isn't implemented in the provided backend code,
+        // we throw an error here to indicate this feature requires backend integration.
+        throw new Error("Social login requires backend configuration.");
     },
 
     logout: async () => {
@@ -316,17 +124,11 @@ export const apiService = {
     },
 
     getAllCleaners: async (): Promise<Cleaner[]> => {
-        try {
-            const response = await fetch(`${API_URL}/cleaners`, {
-                method: 'GET',
-                headers: { 'Content-Type': 'application/json' },
-            });
-            return handleResponse(response);
-        } catch (error) {
-            console.warn("Backend failed to fetch cleaners. Returning static list for demo purposes.");
-            // Allow fallback for read-only data to prevent empty landing page if backend is sleeping
-            return INITIAL_CLEANERS;
-        }
+        const response = await fetch(`${API_URL}/cleaners`, {
+            method: 'GET',
+            headers: { 'Content-Type': 'application/json' },
+        });
+        return handleResponse(response);
     },
 
     getCleanerById: async (id: string) => {
@@ -560,14 +362,4 @@ export const apiService = {
         });
         return handleResponse(response);
     }
-};
-
-// ==========================================
-// HELPERS FOR MOCK PERSISTENCE
-// ==========================================
-
-const hydrateUserWithBookings = (user: User): User => {
-    const bookings = getBookings();
-    const userBookings = bookings.filter(b => b.clientId === user.id || b.cleanerId === user.id);
-    return { ...user, bookingHistory: userBookings };
 };
