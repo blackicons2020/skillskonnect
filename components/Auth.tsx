@@ -27,80 +27,84 @@ interface LoginTabProps {
 const LoginTab: React.FC<LoginTabProps> = ({ email, setEmail, password, setPassword, handleLogin, onSocialClick, onForgotPasswordClick }) => {
     const [showPassword, setShowPassword] = useState(false);
     return (
-    <div>
-        <form onSubmit={(e) => { e.preventDefault(); handleLogin(); }}>
-            <div className="space-y-4">
-                <div>
-                    <label htmlFor="email" className="block text-sm font-medium text-gray-700">Email address</label>
-                    <input 
-                        type="email" 
-                        id="email" 
-                        autoComplete="email" 
-                        required 
-                        className="mt-1 block w-full px-3 py-2 border border-gray-600 rounded-md shadow-sm placeholder-gray-400 focus:outline-none focus:ring-primary focus:border-primary sm:text-sm bg-dark text-light" 
-                        placeholder="you@example.com"
-                        value={email}
-                        onChange={(e) => setEmail(e.target.value)}
-                    />
-                </div>
-                <div>
-                    <label htmlFor="password"className="block text-sm font-medium text-gray-700">Password</label>
-                    <div className="relative mt-1">
+        <div>
+            <form onSubmit={(e) => { e.preventDefault(); handleLogin(); }}>
+                <div className="space-y-4">
+                    <div>
+                        <label htmlFor="email" className="block text-sm font-medium text-gray-700">Email address</label>
                         <input 
-                            type={showPassword ? 'text' : 'password'}
-                            id="password" 
-                            autoComplete="current-password" 
-                            required
-                            minLength={8}
-                            title="Password must be at least 8 characters long."
-                            className="block w-full px-3 py-2 border border-gray-600 rounded-md shadow-sm placeholder-gray-400 focus:outline-none focus:ring-primary focus:border-primary sm:text-sm bg-dark text-light" 
-                            placeholder="••••••••"
-                            value={password}
-                            onChange={(e) => setPassword(e.target.value)}
+                            type="email" 
+                            id="email" 
+                            autoComplete="email" 
+                            required 
+                            className="mt-1 block w-full px-3 py-2 border border-gray-600 rounded-md shadow-sm placeholder-gray-400 focus:outline-none focus:ring-primary focus:border-primary sm:text-sm bg-dark text-light" 
+                            placeholder="you@example.com"
+                            value={email}
+                            onChange={(e) => setEmail(e.target.value)}
                         />
-                        <div className="absolute inset-y-0 right-0 pr-3 flex items-center">
-                             <button
-                                type="button"
-                                onClick={() => setShowPassword(!showPassword)}
-                                className="text-gray-400 hover:text-gray-200 focus:outline-none"
-                                aria-label={showPassword ? "Hide password" : "Show password"}
-                            >
-                                {showPassword ? <EyeSlashIcon className="h-5 w-5" /> : <EyeIcon className="h-5 w-5" />}
-                            </button>
+                    </div>
+                    <div>
+                        <label htmlFor="password" className="block text-sm font-medium text-gray-700">Password</label>
+                        <div className="relative mt-1">
+                            <input 
+                                type={showPassword ? 'text' : 'password'}
+                                id="password" 
+                                autoComplete="current-password" 
+                                required
+                                minLength={8}
+                                title="Password must be at least 8 characters long."
+                                className="block w-full px-3 py-2 border border-gray-600 rounded-md shadow-sm placeholder-gray-400 focus:outline-none focus:ring-primary focus:border-primary sm:text-sm bg-dark text-light" 
+                                placeholder="••••••••"
+                                value={password}
+                                onChange={(e) => setPassword(e.target.value)}
+                            />
+                            <div className="absolute inset-y-0 right-0 pr-3 flex items-center">
+                                <button
+                                    type="button"
+                                    onClick={() => setShowPassword(!showPassword)}
+                                    className="text-gray-400 hover:text-gray-200 focus:outline-none"
+                                    aria-label={showPassword ? "Hide password" : "Show password"}
+                                >
+                                    {showPassword ? <EyeSlashIcon className="h-5 w-5" /> : <EyeIcon className="h-5 w-5" />}
+                                </button>
+                            </div>
                         </div>
                     </div>
-                </div>
-                <div className="flex items-center justify-between">
-                    <div className="flex items-center">
-                        <input id="remember-me" name="remember-me" type="checkbox" className="h-4 w-4 text-primary focus:ring-secondary border-gray-300 rounded" />
-                        <label htmlFor="remember-me" className="ml-2 block text-sm text-gray-900">Remember me</label>
+                    <div className="flex items-center justify-between">
+                        <div className="flex items-center">
+                            <input id="remember-me" name="remember-me" type="checkbox" className="h-4 w-4 text-primary focus:ring-secondary border-gray-300 rounded" />
+                            <label htmlFor="remember-me" className="ml-2 block text-sm text-gray-900">Remember me</label>
+                        </div>
+                        <div className="text-sm">
+                            <button type="button" onClick={onForgotPasswordClick} className="font-medium text-primary hover:text-secondary">Forgot your password?</button>
+                        </div>
                     </div>
-                    <div className="text-sm">
-                        <button type="button" onClick={onForgotPasswordClick} className="font-medium text-primary hover:text-secondary">Forgot your password?</button>
+                    <div>
+                        <button type="submit" className="w-full flex justify-center py-2 px-4 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-primary hover:bg-secondary focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary">
+                            Sign in
+                        </button>
                     </div>
                 </div>
-                <div>
-                    <button type="submit" className="w-full flex justify-center py-2 px-4 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-primary hover:bg-secondary focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary">
-                        Sign in
+            </form>
+            <div className="mt-6">
+                <div className="relative">
+                    <div className="absolute inset-0 flex items-center">
+                        <div className="w-full border-t border-gray-300"></div>
+                    </div>
+                    <div className="relative flex justify-center text-sm">
+                        <span className="px-2 bg-white text-gray-500">Or continue with</span>
+                    </div>
+                </div>
+                <div className="mt-6 grid grid-cols-2 gap-3">
+                    <button disabled className="w-full inline-flex justify-center py-2 px-4 border border-gray-300 rounded-md shadow-sm bg-white text-sm font-medium text-gray-400 cursor-not-allowed">
+                        <span className="sr-only">Sign in with Google</span><GoogleIcon />
+                    </button>
+                    <button disabled className="w-full inline-flex justify-center py-2 px-4 border border-gray-300 rounded-md shadow-sm bg-white text-sm font-medium text-gray-400 cursor-not-allowed">
+                        <span className="sr-only">Sign in with Apple</span><AppleIcon />
                     </button>
                 </div>
             </div>
-        </form>
-         <div className="mt-6">
-            <div className="relative">
-                <div className="absolute inset-0 flex items-center">
-                    <div className="w-full border-t border-gray-300"></div>
-                </div>
-                <div className="relative flex justify-center text-sm">
-                    <span className="px-2 bg-white text-gray-500">Or continue with</span>
-                </div>
-            </div>
-            <div className="mt-6 grid grid-cols-2 gap-3">
-                <button onClick={() => onSocialClick('google')} className="w-full inline-flex justify-center py-2 px-4 border border-gray-300 rounded-md shadow-sm bg-white text-sm font-medium text-gray-500 hover:bg-gray-50 hover:text-gray-800 transition-colors"><span className="sr-only">Sign in with Google</span><GoogleIcon /></button>
-                <button onClick={() => onSocialClick('apple')} className="w-full inline-flex justify-center py-2 px-4 border border-gray-300 rounded-md shadow-sm bg-white text-sm font-medium text-gray-500 hover:bg-gray-50 hover:text-gray-800 transition-colors"><span className="sr-only">Sign in with Apple</span><AppleIcon /></button>
-            </div>
         </div>
-    </div>
     );
 };
 interface SignupTabProps {
@@ -191,7 +195,7 @@ const SignupTab: React.FC<SignupTabProps> = ({ onInitialSignup, onSocialClick })
                     </div>
                 </div>
             </form>
-             <div className="mt-6">
+            <div className="mt-6">
                 <div className="relative">
                     <div className="absolute inset-0 flex items-center">
                         <div className="w-full border-t border-gray-300"></div>
@@ -201,8 +205,12 @@ const SignupTab: React.FC<SignupTabProps> = ({ onInitialSignup, onSocialClick })
                     </div>
                 </div>
                 <div className="mt-6 grid grid-cols-2 gap-3">
-                    <button onClick={() => onSocialClick('google')} className="w-full inline-flex justify-center py-2 px-4 border border-gray-300 rounded-md shadow-sm bg-white text-sm font-medium text-gray-500 hover:bg-gray-50 hover:text-gray-800 transition-colors"><span className="sr-only">Sign up with Google</span><GoogleIcon /></button>
-                    <button onClick={() => onSocialClick('apple')} className="w-full inline-flex justify-center py-2 px-4 border border-gray-300 rounded-md shadow-sm bg-white text-sm font-medium text-gray-500 hover:bg-gray-50 hover:text-gray-800 transition-colors"><span className="sr-only">Sign up with Apple</span><AppleIcon /></button>
+                    <button disabled className="w-full inline-flex justify-center py-2 px-4 border border-gray-300 rounded-md shadow-sm bg-white text-sm font-medium text-gray-400 cursor-not-allowed">
+                        <span className="sr-only">Sign up with Google</span><GoogleIcon />
+                    </button>
+                    <button disabled className="w-full inline-flex justify-center py-2 px-4 border border-gray-300 rounded-md shadow-sm bg-white text-sm font-medium text-gray-400 cursor-not-allowed">
+                        <span className="sr-only">Sign up with Apple</span><AppleIcon />
+                    </button>
                 </div>
             </div>
         </div>
@@ -275,9 +283,6 @@ export const Auth: React.FC<AuthProps> = ({ initialTab, onNavigate, onLoginAttem
     const [loginView, setLoginView] = useState<'form' | 'forgotPassword'>('form');
     const [email, setEmail] = useState('');
     const [password, setPassword] = useState('');
-    
-    // State for Social Account Selection Modal
-    const [socialProvider, setSocialProvider] = useState<'google' | 'apple' | null>(null);
 
     useEffect(() => {
         setActiveTab(initialTab);
@@ -293,20 +298,12 @@ export const Auth: React.FC<AuthProps> = ({ initialTab, onNavigate, onLoginAttem
     }, [authMessage, onAuthMessageDismiss]);
 
     const handleLogin = () => {
-        // Fix: Trim email and password to prevent accidental whitespace issues when copying details
         onLoginAttempt(email.trim(), password.trim());
     };
 
     const handleTabChange = (tab: 'login' | 'signup') => {
         setActiveTab(tab);
         setLoginView('form');
-    };
-
-    const handleSocialSelect = (selectedEmail: string, selectedName: string) => {
-        if (socialProvider) {
-            onSocialAuth(socialProvider, selectedEmail, selectedName, activeTab);
-            setSocialProvider(null);
-        }
     };
 
     return (
@@ -348,11 +345,11 @@ export const Auth: React.FC<AuthProps> = ({ initialTab, onNavigate, onLoginAttem
                                     password={password}
                                     setPassword={setPassword}
                                     handleLogin={handleLogin}
-                                    onSocialClick={setSocialProvider}
+                                    onSocialClick={() => {}} // No-op
                                     onForgotPasswordClick={() => setLoginView('forgotPassword')}
                                 />
                             ) : (
-                                <SignupTab onInitialSignup={onInitialSignup} onSocialClick={setSocialProvider} />
+                                <SignupTab onInitialSignup={onInitialSignup} onSocialClick={() => {}} />
                             )
                         ) : (
                             <ForgotPasswordTab onBack={() => setLoginView('form')} />
@@ -360,14 +357,6 @@ export const Auth: React.FC<AuthProps> = ({ initialTab, onNavigate, onLoginAttem
                     </div>
                 </div>
             </div>
-            
-            {socialProvider && (
-                <SocialAccountSelectorModal 
-                    provider={socialProvider} 
-                    onClose={() => setSocialProvider(null)}
-                    onSelect={handleSocialSelect}
-                />
-            )}
         </>
     );
 };
