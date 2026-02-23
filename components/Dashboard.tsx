@@ -1,6 +1,6 @@
 
 import React, { useState, useEffect, useRef } from 'react';
-import { User, View, Receipt } from 'types';
+import { User, View, Receipt, VerificationDocuments, Job } from 'types';
 import { PencilIcon, StarIcon, BriefcaseIcon, ChatBubbleLeftRightIcon, LifebuoyIcon } from './icons';
 import { CLEANING_SERVICES } from '../constants/services';
 import { CLIENT_LIMITS } from '../constants/subscriptions';
@@ -8,13 +8,16 @@ import { ChatInterface } from './ChatInterface';
 import { apiService } from '../services/apiService'; 
 import { SupportTicketSection } from './SupportTicketSection';
 import { NIGERIA_LOCATIONS } from '../constants/locations';
+import ProfileCompletionForm from './ProfileCompletionForm';
+import VerificationSection from './VerificationSection';
 
 interface DashboardProps {
     user: User;
     onUpdateUser: (user: User) => void;
     onNavigate: (view: View) => void;
     onUploadSubscriptionReceipt: (receipt: Receipt) => void;
-    initialTab?: 'profile' | 'jobs' | 'reviews' | 'messages' | 'support';
+    initialTab?: 'profile' | 'jobs' | 'reviews' | 'messages' | 'support' | 'verification' | 'listings';
+    allJobs?: Job[];
 }
 
 const ProfileField: React.FC<{ label: string; value?: string | number | null | string[]; isEditing?: boolean; children?: React.ReactNode }> = ({ label, value, isEditing, children }) => (
@@ -37,8 +40,26 @@ const ProfileField: React.FC<{ label: string; value?: string | number | null | s
 );
 
 
-export const Dashboard: React.FC<DashboardProps> = ({ user, onUpdateUser, onNavigate, onUploadSubscriptionReceipt, initialTab }) => {
-    const [activeTab, setActiveTab] = useState<'profile' | 'jobs' | 'reviews' | 'messages' | 'support'>(initialTab || 'profile');
+export const Dashboard: React.FC<DashboardProps> = ({ user, onUpdateUser, onNavigate, onUploadSubscriptionReceipt, initialTab, allJobs = [] }) => {
+    // Check if profile is incomplete
+    const isProfileIncomplete = !user.userType || !user.phoneNumber || !user.country;
+    
+    // Default to 'jobs' (My Jobs & Payments) if profile is complete, otherwise 'profile'
+    const [activeTab, setActiveTab] = useState<'profile' | 'jobs' | 'reviews' | 'messages' | 'support' | 'verification' | 'listings'>(
+        initialTab || (isProfileIncomplete ? 'profile' : 'jobs')
+    );
+    const [showProfileCompletion, setShowProfileCompletion] = useState(false);
+    
+    // Handler for profile updates
+    const handleProfileUpdate = async (updates: Partial<User>) => {
+        await onUpdateUser({ ...user, ...updates });
+        setShowProfileCompletion(false);
+    };
+    
+    // Handler for verification document upload
+    const handleVerificationUpload = async (documents: VerificationDocuments) => {
+        await onUpdateUser({ ...user, verificationDocuments: documents });
+    };
     const [isEditing, setIsEditing] = useState(false);
     const [formData, setFormData] = useState<any>(user);
     const [profilePhotoPreview, setProfilePhotoPreview] = useState<string | null>(null);
@@ -115,6 +136,95 @@ export const Dashboard: React.FC<DashboardProps> = ({ user, onUpdateUser, onNavi
     };
     
     const handleSave = () => {
+        // Comprehensive validation for all required fields
+        if (!formData.fullName || formData.fullName.trim().length < 3) {
+            alert('Please enter your full name (at least 3 characters).');
+            return;
+        }
+
+        // Validate phone number (Nigerian format: 11 digits starting with 0)
+        const phoneRegex = /^0\d{10}$/;
+        if (formData.phoneNumber && !phoneRegex.test(formData.phoneNumber)) {
+            alert('Please enter a valid Nigerian phone number (11 digits starting with 0, e.g., 08012345678).');
+            return;
+        }
+
+        if (!formData.state || formData.state.trim() === '') {
+            alert('Please select your state.');
+            return;
+        }
+
+        if (!formData.city || formData.city.trim() === '') {
+            alert('Please select your city/town.');
+            return;
+        }
+
+        if (formData.city === 'Other' && (!formData.otherCity || formData.otherCity.trim() === '')) {
+            alert('Please specify your city/town name.');
+            return;
+        }
+
+        if (!formData.address || formData.address.trim().length < 10) {
+            alert('Please enter your complete address (at least 10 characters).');
+            return;
+        }
+
+        // Validate required fields for workers
+        if (user.role === 'cleaner') {
+            if (!formData.experience || Number(formData.experience) < 1) {
+                alert('Please enter your years of experience (at least 1 year).');
+                return;
+            }
+            if (Number(formData.experience) > 50) {
+                alert('Please enter a realistic number of years of experience (maximum 50 years).');
+                return;
+            }
+            if (!formData.services || formData.services.length === 0) {
+                alert('Please select at least one service/skill.');
+                return;
+            }
+            if (!formData.bio || formData.bio.trim().length < 20) {
+                alert('Please write a brief bio about yourself (at least 20 characters).');
+                return;
+            }
+
+            // Validate bank details if provided
+            if (formData.bankName || formData.accountNumber) {
+                if (!formData.bankName || formData.bankName.trim() === '') {
+                    alert('Please enter your bank name.');
+                    return;
+                }
+                // Nigerian bank account numbers are exactly 10 digits
+                const accountRegex = /^\d{10}$/;
+                if (!formData.accountNumber || !accountRegex.test(formData.accountNumber)) {
+                    alert('Please enter a valid Nigerian bank account number (exactly 10 digits).');
+                    return;
+                }
+            }
+
+            // Validate pricing - at least one must be provided
+            const hasHourly = formData.chargeHourly && Number(formData.chargeHourly) > 0;
+            const hasDaily = formData.chargeDaily && Number(formData.chargeDaily) > 0;
+            const hasContract = (formData.chargePerContract && Number(formData.chargePerContract) > 0) || formData.chargePerContractNegotiable;
+            
+            if (!hasHourly && !hasDaily && !hasContract) {
+                alert('Please provide at least one pricing option (hourly, daily, or per contract).');
+                return;
+            }
+        }
+
+        // Validate company-specific fields
+        if (formData.cleanerType === 'Company' || formData.clientType === 'Company') {
+            if (!formData.companyName || formData.companyName.trim().length < 3) {
+                alert('Please enter your company name (at least 3 characters).');
+                return;
+            }
+            if (!formData.companyAddress || formData.companyAddress.trim().length < 10) {
+                alert('Please enter your company address (at least 10 characters).');
+                return;
+            }
+        }
+
         onUpdateUser(formData);
         setIsEditing(false);
     };
@@ -178,10 +288,10 @@ export const Dashboard: React.FC<DashboardProps> = ({ user, onUpdateUser, onNavi
     const bookings = user.bookingHistory || [];
     const sortedBookings = [...bookings].reverse();
 
-    // Determine the display name (Company Name if applicable, else First Name for welcome)
+    // Determine the display name (Company Name if applicable, else Full Name for welcome)
     const displayName = user.cleanerType === 'Company' && user.companyName 
         ? user.companyName 
-        : user.fullName.split(' ')[0];
+        : user.fullName || 'User';
 
     // Determine the name to display in profile header
     const profileDisplayName = formData.cleanerType === 'Company' && formData.companyName 
@@ -198,9 +308,64 @@ export const Dashboard: React.FC<DashboardProps> = ({ user, onUpdateUser, onNavi
                 accept="image/*,.pdf"
             />
             
-            <div className="flex flex-col sm:flex-row justify-between items-center mb-6 gap-4">
-                <h1 className="text-3xl font-bold text-dark text-center sm:text-left">Welcome back, {displayName}!</h1>
+            {/* Profile Header with Picture */}
+            <div className="bg-white rounded-lg shadow-md p-6 mb-6">
+                <div className="flex flex-col sm:flex-row items-center gap-6">
+                    {/* Profile Picture */}
+                    <div className="flex-shrink-0">
+                        {user.profilePicture || profilePhotoPreview ? (
+                            <img 
+                                src={user.profilePicture || profilePhotoPreview || ''} 
+                                alt="Profile" 
+                                className="w-24 h-24 rounded-full object-cover border-4 border-blue-500"
+                            />
+                        ) : (
+                            <div className="w-24 h-24 rounded-full bg-gradient-to-br from-blue-500 to-blue-600 flex items-center justify-center text-white text-3xl font-bold border-4 border-blue-500">
+                                {(displayName || 'U')[0].toUpperCase()}
+                            </div>
+                        )}
+                    </div>
+                    
+                    {/* User Info */}
+                    <div className="flex-grow text-center sm:text-left">
+                        <h1 className="text-3xl font-bold text-gray-800">
+                            {profileDisplayName || displayName || 'User'}
+                        </h1>
+                        <p className="text-gray-600 text-lg mt-1">{user.email}</p>
+                        {user.userType && (
+                            <span className="inline-block mt-2 px-3 py-1 bg-blue-100 text-blue-700 rounded-full text-sm font-medium">
+                                {user.userType}
+                            </span>
+                        )}
+                        {user.isVerified && (
+                            <span className="inline-block mt-2 ml-2 px-3 py-1 bg-green-100 text-green-700 rounded-full text-sm font-medium">
+                                ✓ Verified
+                            </span>
+                        )}
+                    </div>
+                </div>
             </div>
+
+            {/* Alert for incomplete profile */}
+            {isProfileIncomplete && (
+                <div className="p-4 rounded-md mb-6 bg-blue-100 border-blue-200 text-blue-800">
+                    <h4 className="font-bold">Complete Your Profile</h4>
+                    <p className="text-sm">
+                        Please complete your profile to get the most out of Skills Konnect. Add your personal information, professional details, and pricing.
+                    </p>
+                    <div className="mt-2">
+                        <button 
+                            onClick={() => {
+                                setActiveTab('profile');
+                                setIsEditing(true);
+                            }} 
+                            className="bg-blue-600 text-white px-3 py-1.5 rounded-md text-sm font-semibold hover:bg-blue-700"
+                        >
+                            Complete Profile Now
+                        </button>
+                    </div>
+                </div>
+            )}
 
              {isLimitReached && (
                 <div className="p-4 rounded-md mb-6 bg-red-100 border-red-200 text-red-800">
@@ -208,6 +373,17 @@ export const Dashboard: React.FC<DashboardProps> = ({ user, onUpdateUser, onNavi
                     <p className="text-sm">
                         You have reached your limit of <strong>{limit}</strong> new client{limit !== 1 ? 's' : ''} for this month on the <strong>{user.subscriptionTier}</strong> plan.
                     </p>
+                    {user.subscriptionTier === 'Free' && (
+                        <div className="mt-2 p-3 bg-red-50 rounded border border-red-300">
+                            <p className="text-sm font-semibold mb-2">⚠️ Free Tier Restrictions:</p>
+                            <ul className="text-sm space-y-1 list-disc list-inside">
+                                <li>Your profile is now hidden from client searches</li>
+                                <li>Messaging is disabled</li>
+                                <li>You cannot access job listings</li>
+                                <li>You cannot accept new bookings</li>
+                            </ul>
+                        </div>
+                    )}
                     <div className="mt-2">
                         <p className="text-sm mb-2">To accept jobs from new clients, please upgrade your plan.</p>
                         <button onClick={() => onNavigate('subscription')} className="bg-red-600 text-white px-3 py-1.5 rounded-md text-sm font-semibold hover:bg-red-700">
@@ -262,6 +438,10 @@ export const Dashboard: React.FC<DashboardProps> = ({ user, onUpdateUser, onNavi
                     <button onClick={() => setActiveTab('profile')} className={`${activeTab === 'profile' ? 'border-primary text-primary' : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'} whitespace-nowrap py-4 px-1 border-b-2 font-medium text-sm`}>
                         My Profile
                     </button>
+                    <button onClick={() => setActiveTab('listings')} className={`${activeTab === 'listings' ? 'border-primary text-primary' : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'} whitespace-nowrap py-4 px-1 border-b-2 font-medium text-sm flex items-center gap-2`}>
+                        <BriefcaseIcon className="w-4 h-4" />
+                        Job Listings
+                    </button>
                     <button onClick={() => setActiveTab('jobs')} className={`${activeTab === 'jobs' ? 'border-primary text-primary' : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'} whitespace-nowrap py-4 px-1 border-b-2 font-medium text-sm`}>
                         My Jobs & Payments
                     </button>
@@ -276,10 +456,43 @@ export const Dashboard: React.FC<DashboardProps> = ({ user, onUpdateUser, onNavi
                         <LifebuoyIcon className="w-4 h-4" />
                         Support
                     </button>
+                    <button onClick={() => setActiveTab('verification')} className={`${activeTab === 'verification' ? 'border-primary text-primary' : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'} whitespace-nowrap py-4 px-1 border-b-2 font-medium text-sm flex items-center gap-2`}>
+                        {user.isVerified ? '✓' : '○'} Verification
+                    </button>
                 </nav>
             </div>
             
-            {activeTab === 'profile' && (
+            {/* Profile Completion Banner */}
+            {isProfileIncomplete && activeTab === 'profile' && !showProfileCompletion && (
+                <div className="bg-yellow-50 border-l-4 border-yellow-400 p-4 mb-6">
+                    <div className="flex items-start">
+                        <div className="flex-1">
+                            <h3 className="text-sm font-medium text-yellow-800">Complete Your Profile</h3>
+                            <p className="mt-1 text-sm text-yellow-700">
+                                Your profile is incomplete. Please fill in all required fields to get started.
+                            </p>
+                        </div>
+                        <button
+                            onClick={() => setShowProfileCompletion(true)}
+                            className="ml-4 bg-yellow-600 text-white px-4 py-2 rounded-md text-sm font-medium hover:bg-yellow-700"
+                        >
+                            Complete Now
+                        </button>
+                    </div>
+                </div>
+            )}
+            
+            {showProfileCompletion && (
+                <div className="mb-6">
+                    <ProfileCompletionForm 
+                        user={user} 
+                        onSave={handleProfileUpdate}
+                        onCancel={() => setShowProfileCompletion(false)}
+                    />
+                </div>
+            )}
+            
+            {activeTab === 'profile' && !showProfileCompletion && (
                 <div className="bg-white rounded-lg shadow-lg overflow-hidden">
                     <div className="p-6 sm:flex sm:items-center sm:justify-between bg-gray-50 border-b">
                         <div className="sm:flex sm:items-center sm:space-x-5">
@@ -342,12 +555,36 @@ export const Dashboard: React.FC<DashboardProps> = ({ user, onUpdateUser, onNavi
                                 </div>
                             </div>
                             <div className="px-4 sm:px-6">
+                                <h3 className="text-lg font-medium text-gray-900 mt-4">Account Information</h3>
+                            </div>
+                            <div className="px-4 sm:px-6">
+                                {formData.role === 'cleaner' ? (
+                                    <ProfileField 
+                                        label="Account Type" 
+                                        value={formData.cleanerType === 'Company' ? 'Worker (Registered Company)' : 'Worker (Individual)'} 
+                                        isEditing={isEditing}
+                                    >
+                                        <select name="cleanerType" value={formData.cleanerType || 'Individual'} onChange={handleInputChange} className="block w-full rounded-md border-gray-300 shadow-sm focus:border-primary focus:ring-primary sm:text-sm">
+                                            <option value="Individual">Worker (Individual)</option>
+                                            <option value="Company">Worker (Registered Company)</option>
+                                        </select>
+                                    </ProfileField>
+                                ) : (
+                                    <ProfileField label="Account Type" value={formData.clientType === 'Company' ? 'Client (Company)' : 'Client (Individual)'} isEditing={isEditing}>
+                                        <select name="clientType" value={formData.clientType || 'Individual'} onChange={handleInputChange} className="block w-full rounded-md border-gray-300 shadow-sm focus:border-primary focus:ring-primary sm:text-sm">
+                                            <option value="Individual">Client (Individual)</option>
+                                            <option value="Company">Client (Company)</option>
+                                        </select>
+                                    </ProfileField>
+                                )}
+                            </div>
+                            <div className="px-4 sm:px-6">
                                 <h3 className="text-lg font-medium text-gray-900 mt-4">Personal Information</h3>
                             </div>
                              <div className="px-4 sm:px-6">
                                 <ProfileField label="Full Name" value={formData.fullName} isEditing={isEditing}>{renderValueOrInput('fullName', 'text', { maxLength: 100 })}</ProfileField>
                                 <ProfileField label="Phone Number" value={formData.phoneNumber} isEditing={isEditing}>{renderValueOrInput('phoneNumber', 'tel', { pattern: "[0-9]{10,11}", title: "Please enter a valid 10 or 11-digit phone number.", minLength: 10, maxLength: 11 })}</ProfileField>
-                                <ProfileField label="Address" value={formData.address} isEditing={isEditing}>{isEditing ? <textarea name="address" value={formData.address} onChange={handleInputChange} className="block w-full rounded-md border-gray-300 shadow-sm focus:border-primary focus:ring-primary sm:text-sm" rows={3} maxLength={250} /> : formData.address}</ProfileField>
+                                <ProfileField label="Address" value={formData.address} isEditing={isEditing}>{isEditing ? <textarea name="address" value={formData.address || ''} onChange={handleInputChange} className="block w-full rounded-md border-gray-300 shadow-sm focus:border-primary focus:ring-primary sm:text-sm" rows={3} maxLength={250} /> : formData.address}</ProfileField>
                                 
                                 <ProfileField label="State" value={formData.state} isEditing={isEditing}>
                                     <select name="state" value={formData.state} onChange={handleInputChange} className="block w-full rounded-md border-gray-300 shadow-sm focus:border-primary focus:ring-primary sm:text-sm">
@@ -398,99 +635,281 @@ export const Dashboard: React.FC<DashboardProps> = ({ user, onUpdateUser, onNavi
                                 </div>
                             )}
 
-                             <div className="px-4 sm:px-6">
-                                <h3 className="text-lg font-medium text-gray-900 mt-6">Professional Details</h3>
-                                <ProfileField label="Bio" value={formData.bio} isEditing={isEditing}>{isEditing ? <textarea name="bio" value={formData.bio} onChange={handleInputChange} className="block w-full rounded-md border-gray-300 shadow-sm focus:border-primary focus:ring-primary sm:text-sm" rows={4} maxLength={300}/> : formData.bio}</ProfileField>
-                                <ProfileField label="Years of Experience" value={formData.experience} isEditing={isEditing}>{renderValueOrInput('experience', 'number', { min: 0 })}</ProfileField>
-                                <ProfileField label="Services Offered" value={formData.services} isEditing={isEditing}>
-                                    <div className="w-full">
-                                        <select
-                                            className="block w-full rounded-md border-gray-300 shadow-sm focus:border-primary focus:ring-primary sm:text-sm mb-2"
-                                            onChange={(e) => {
-                                                const service = e.target.value;
-                                                if (service && !formData.services?.includes(service)) {
-                                                    setFormData((prev: any) => ({...prev, services: [...(prev.services || []), service]}));
-                                                }
-                                                e.target.value = "";
-                                            }}
-                                        >
-                                             <option value="">-- Add a service --</option>
-                                             {CLEANING_SERVICES.filter(s => !formData.services?.includes(s)).map(service => (
-                                                <option key={service} value={service}>{service}</option>
-                                             ))}
-                                        </select>
-                                         <div className="flex flex-wrap gap-2">
-                                            {formData.services?.map((s: string) => (
-                                                <span key={s} className="flex items-center bg-green-100 text-primary text-xs font-semibold px-2.5 py-1 rounded-full">
-                                                    {s}
-                                                    {isEditing && (
-                                                        <button 
-                                                            onClick={() => setFormData((prev: any) => ({...prev, services: prev.services?.filter((service: string) => service !== s)}))}
-                                                            className="ml-2 text-primary hover:text-red-500"
-                                                        >
-                                                            &times;
-                                                        </button>
-                                                    )}
-                                                </span>
-                                            ))}
-                                        </div>
+                            {/* Professional Details - Only for Cleaners */}
+                            {formData.role === 'cleaner' && (
+                                <>
+                                    <div className="px-4 sm:px-6">
+                                        <h3 className="text-lg font-medium text-gray-900 mt-6">Professional Details</h3>
+                                        
+                                        <ProfileField label="Skills Type" value={formData.services} isEditing={isEditing}>
+                                            <div className="w-full">
+                                                {isEditing && (
+                                                    <select
+                                                        className="block w-full rounded-md border-gray-300 shadow-sm focus:border-primary focus:ring-primary sm:text-sm mb-2"
+                                                        onChange={(e) => {
+                                                            const service = e.target.value;
+                                                            if (service && !formData.services?.includes(service)) {
+                                                                setFormData((prev: any) => ({...prev, services: [...(prev.services || []), service]}));
+                                                            }
+                                                            e.target.value = "";
+                                                        }}
+                                                    >
+                                                        <option value="">-- Add a skill --</option>
+                                                        {CLEANING_SERVICES.filter(s => !formData.services?.includes(s)).map(service => (
+                                                            <option key={service} value={service}>{service}</option>
+                                                        ))}
+                                                    </select>
+                                                )}
+                                                <div className="flex flex-wrap gap-2">
+                                                    {formData.services && formData.services.length > 0 ? formData.services.map((s: string) => (
+                                                        <span key={s} className="flex items-center bg-green-100 text-primary text-xs font-semibold px-2.5 py-1 rounded-full">
+                                                            {s}
+                                                            {isEditing && (
+                                                                <button 
+                                                                    onClick={() => setFormData((prev: any) => ({...prev, services: prev.services?.filter((service: string) => service !== s)}))}
+                                                                    className="ml-2 text-primary hover:text-red-500"
+                                                                >
+                                                                    &times;
+                                                                </button>
+                                                            )}
+                                                        </span>
+                                                    )) : <span className="text-sm text-gray-500">No skills selected</span>}
+                                                </div>
+                                            </div>
+                                        </ProfileField>
+                                        
+                                        <ProfileField label="Years of Experience" value={formData.experience ? `${formData.experience} years` : ''} isEditing={isEditing}>
+                                            {renderValueOrInput('experience', 'number', { min: 0, placeholder: 'e.g. 5' })}
+                                        </ProfileField>
+                                        
+                                        <ProfileField label="Professional Experience" value={formData.professionalExperience} isEditing={isEditing}>
+                                            {isEditing ? (
+                                                <textarea 
+                                                    name="professionalExperience" 
+                                                    value={formData.professionalExperience || ''} 
+                                                    onChange={handleInputChange} 
+                                                    className="block w-full rounded-md border-gray-300 shadow-sm focus:border-primary focus:ring-primary sm:text-sm" 
+                                                    rows={4} 
+                                                    maxLength={500}
+                                                    placeholder="Describe your professional experience, past roles, and achievements..."
+                                                />
+                                            ) : (
+                                                <div className="text-sm text-gray-900">
+                                                    {formData.professionalExperience || 'Not provided'}
+                                                </div>
+                                            )}
+                                        </ProfileField>
                                     </div>
-                                </ProfileField>
-                            </div>
 
-                            <div className="px-4 sm:px-6">
-                                <h3 className="text-lg font-medium text-gray-900 mt-6">Pricing</h3>
-                                <p className="mt-1 text-sm text-gray-500 mb-4">Set your rates. You can leave fields blank if they don't apply.</p>
-                                
-                                <ProfileField label="Charge per Hour (₦)" value={formData.chargeHourly ? `₦${formData.chargeHourly.toLocaleString()}` : ''} isEditing={isEditing}>
-                                    {renderValueOrInput('chargeHourly', 'number', { min: 0, placeholder: 'e.g. 3000' })}
-                                </ProfileField>
-                                
-                                <ProfileField label="Charge per Day (₦)" value={formData.chargeDaily ? `₦${formData.chargeDaily.toLocaleString()}` : ''} isEditing={isEditing}>
-                                    {renderValueOrInput('chargeDaily', 'number', { min: 0, placeholder: 'e.g. 15000' })}
-                                </ProfileField>
+                                    <div className="px-4 sm:px-6">
+                                        <h3 className="text-lg font-medium text-gray-900 mt-6">Pricing</h3>
+                                        <p className="mt-1 text-sm text-gray-500 mb-4">Set your rates. You can leave fields blank if they don't apply.</p>
+                                        
+                                        <ProfileField label="Charge per Hour (₦)" value={formData.chargeHourly ? `₦${formData.chargeHourly.toLocaleString()}` : ''} isEditing={isEditing}>
+                                            {renderValueOrInput('chargeHourly', 'number', { min: 0, placeholder: 'e.g. 3000' })}
+                                        </ProfileField>
+                                        
+                                        <ProfileField label="Charge per Day (₦)" value={formData.chargeDaily ? `₦${formData.chargeDaily.toLocaleString()}` : ''} isEditing={isEditing}>
+                                            {renderValueOrInput('chargeDaily', 'number', { min: 0, placeholder: 'e.g. 15000' })}
+                                        </ProfileField>
 
-                                <ProfileField label="Charge per Contract (₦)" value={formData.chargePerContractNegotiable ? 'Negotiable' : (formData.chargePerContract ? `₦${formData.chargePerContract.toLocaleString()}` : '')} isEditing={isEditing}>
-                                    <div className="flex flex-col gap-2 w-full">
-                                        <div className="flex items-center">
-                                            <input
-                                                type="checkbox"
-                                                id="negotiable"
-                                                name="chargePerContractNegotiable"
-                                                checked={formData.chargePerContractNegotiable || false}
-                                                onChange={(e) => {
-                                                    const checked = e.target.checked;
-                                                    setFormData((prev: any) => ({ 
-                                                        ...prev, 
-                                                        chargePerContractNegotiable: checked,
-                                                        chargePerContract: checked ? '' : prev.chargePerContract 
-                                                    }));
-                                                }}
-                                                className="h-4 w-4 text-primary focus:ring-secondary border-gray-300 rounded"
-                                            />
-                                            <label htmlFor="negotiable" className="ml-2 block text-sm text-gray-700">Negotiable</label>
-                                        </div>
-                                        {!formData.chargePerContractNegotiable && (
-                                            <input
-                                                type="number"
-                                                name="chargePerContract"
-                                                value={formData.chargePerContract || ''}
-                                                onChange={handleInputChange}
-                                                placeholder="e.g. 150000"
-                                                className="block w-full rounded-md border-gray-300 shadow-sm focus:border-primary focus:ring-primary sm:text-sm"
-                                            />
-                                        )}
+                                        <ProfileField label="Charge per Contract (₦)" value={formData.chargePerContractNegotiable ? 'Negotiable' : (formData.chargePerContract ? `₦${formData.chargePerContract.toLocaleString()}` : '')} isEditing={isEditing}>
+                                            <div className="flex flex-col gap-2 w-full">
+                                                <div className="flex items-center">
+                                                    <input
+                                                        type="checkbox"
+                                                        id="negotiable"
+                                                        name="chargePerContractNegotiable"
+                                                        checked={formData.chargePerContractNegotiable || false}
+                                                        onChange={(e) => {
+                                                            const checked = e.target.checked;
+                                                            setFormData((prev: any) => ({ 
+                                                                ...prev, 
+                                                                chargePerContractNegotiable: checked,
+                                                                chargePerContract: checked ? '' : prev.chargePerContract 
+                                                            }));
+                                                        }}
+                                                        className="h-4 w-4 text-primary focus:ring-secondary border-gray-300 rounded"
+                                                    />
+                                                    <label htmlFor="negotiable" className="ml-2 block text-sm text-gray-700">Negotiable</label>
+                                                </div>
+                                                {!formData.chargePerContractNegotiable && (
+                                                    <input
+                                                        type="number"
+                                                        name="chargePerContract"
+                                                        value={formData.chargePerContract || ''}
+                                                        onChange={handleInputChange}
+                                                        placeholder="e.g. 150000"
+                                                        className="block w-full rounded-md border-gray-300 shadow-sm focus:border-primary focus:ring-primary sm:text-sm"
+                                                    />
+                                                )}
+                                            </div>
+                                        </ProfileField>
                                     </div>
-                                </ProfileField>
-                            </div>
 
-                            <div className="px-4 sm:px-6">
-                                <h3 className="text-lg font-medium text-gray-900 mt-6">Payment Information</h3>
-                                <ProfileField label="Bank Name" value={formData.bankName} isEditing={isEditing}>{renderValueOrInput('bankName', 'text', { maxLength: 50 })}</ProfileField>
-                                <ProfileField label="Account Number" value={formData.accountNumber} isEditing={isEditing}>{renderValueOrInput('accountNumber', 'text', { pattern: "[0-9]{10}", title: "Please enter your 10-digit NUBAN account number.", minLength: 10, maxLength: 10 })}</ProfileField>
-                            </div>
+
+                                </>
+                            )}
                         </dl>
                     </div>
+                </div>
+            )}
+            
+            {activeTab === 'listings' && (
+                <div className="bg-white rounded-lg shadow-lg overflow-hidden p-6">
+                    <h2 className="text-2xl font-bold text-dark mb-6 flex items-center gap-2">
+                        <BriefcaseIcon className="w-6 h-6 text-primary"/>
+                        Available Job Listings
+                    </h2>
+                    
+                    {/* Subscription Check Banner */}
+                    {(!user.subscriptionTier || user.subscriptionTier === 'Free') && (
+                        <div className="mb-6 bg-yellow-50 border-l-4 border-yellow-500 p-4 rounded-lg">
+                            <div className="flex items-start">
+                                <div className="flex-shrink-0">
+                                    <svg className="h-6 w-6 text-yellow-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+                                    </svg>
+                                </div>
+                                <div className="ml-3">
+                                    <h3 className="text-sm font-semibold text-yellow-800">Subscribe to Apply for Jobs</h3>
+                                    <p className="text-sm text-yellow-700 mt-1">
+                                        Job listings are available to subscribed workers only. Upgrade your subscription to apply for these opportunities.
+                                    </p>
+                                    <button
+                                        onClick={() => onNavigate('subscription')}
+                                        className="mt-3 bg-yellow-600 text-white px-4 py-2 rounded-md text-sm font-semibold hover:bg-yellow-700"
+                                    >
+                                        View Subscription Plans
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                    )}
+                    
+                    {user.subscriptionTier && user.subscriptionTier !== 'Free' && (
+                        <>
+                            <div className="mb-6">
+                                <p className="text-gray-600">
+                                    Browse and apply for jobs posted by clients. Once you apply, clients can review your profile and contact you directly.
+                                </p>
+                            </div>
+                            
+                            {/* Search/Filter Section */}
+                            <div className="mb-6 grid grid-cols-1 md:grid-cols-3 gap-4">
+                                <input
+                                    type="text"
+                                    placeholder="Search by service..."
+                                    className="p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary"
+                                />
+                                <select className="p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary">
+                                    <option value="">All Locations</option>
+                                    {NIGERIA_LOCATIONS.map(loc => (
+                                        <option key={loc.name} value={loc.name}>{loc.name}</option>
+                                    ))}
+                                </select>
+                                <select className="p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary">
+                                    <option value="">All Budget Types</option>
+                                    <option value="Hourly">Hourly</option>
+                                    <option value="Daily">Daily</option>
+                                    <option value="Fixed">Fixed Price</option>
+                                </select>
+                            </div>
+                            
+                            {/* Job Listings */}
+                            <div className="space-y-4">
+                                {allJobs && allJobs.length > 0 ? (
+                                    allJobs.map(job => {
+                                        const hasApplied = user.appliedJobs?.includes(job.id) || false;
+                                        const isOwnJob = job.clientId === user.id;
+                                        
+                                        if (isOwnJob) return null; // Don't show user's own jobs
+                                        
+                                        return (
+                                            <div key={job.id} className="border border-gray-200 rounded-lg p-6 hover:shadow-md transition-shadow">
+                                                <div className="flex justify-between items-start mb-4">
+                                                    <div className="flex-1">
+                                                        <h3 className="text-xl font-bold text-gray-900 mb-2">
+                                                            {job.title}
+                                                        </h3>
+                                                        <p className="text-sm text-gray-600 mb-3">{job.description}</p>
+                                                        <div className="flex flex-wrap gap-2 mb-3">
+                                                            <span className="inline-flex items-center px-3 py-1 rounded-full text-xs font-medium bg-blue-100 text-blue-800">
+                                                                {job.service}
+                                                            </span>
+                                                            <span className="inline-flex items-center px-3 py-1 rounded-full text-xs font-medium bg-green-100 text-green-800">
+                                                                {job.status}
+                                                            </span>
+                                                        </div>
+                                                        <div className="grid grid-cols-2 md:grid-cols-4 gap-3 text-sm">
+                                                            <div>
+                                                                <span className="text-gray-500 block">Posted by:</span>
+                                                                <p className="font-medium text-dark">{job.clientName}</p>
+                                                            </div>
+                                                            <div>
+                                                                <span className="text-gray-500 block">Location:</span>
+                                                                <p className="font-medium text-dark">{job.city}, {job.state}</p>
+                                                            </div>
+                                                            <div>
+                                                                <span className="text-gray-500 block">Start Date:</span>
+                                                                <p className="font-medium text-dark">{new Date(job.startDate).toLocaleDateString()}</p>
+                                                            </div>
+                                                            <div>
+                                                                <span className="text-gray-500 block">Budget:</span>
+                                                                <p className="font-medium text-primary">₦{job.budget.toLocaleString()}</p>
+                                                                <p className="text-xs text-gray-500">({job.budgetType})</p>
+                                                            </div>
+                                                        </div>
+                                                        <div className="mt-3 text-xs text-gray-500">
+                                                            <span>{job.applicants?.length || 0} applicants</span>
+                                                            <span className="mx-2">•</span>
+                                                            <span>Posted {new Date(job.postedDate).toLocaleDateString()}</span>
+                                                        </div>
+                                                    </div>
+                                                    <div className="ml-4 flex flex-col gap-2">
+                                                        {hasApplied ? (
+                                                            <button
+                                                                disabled
+                                                                className="bg-gray-300 text-gray-600 px-6 py-2 rounded-lg font-medium cursor-not-allowed"
+                                                            >
+                                                                Applied ✓
+                                                            </button>
+                                                        ) : (
+                                                            <button
+                                                                onClick={async () => {
+                                                                    try {
+                                                                        await apiService.applyToJob(job.id);
+                                                                        // Update local user state to reflect the application
+                                                                        const updatedUser = {
+                                                                            ...user,
+                                                                            appliedJobs: [...(user.appliedJobs || []), job.id]
+                                                                        };
+                                                                        onUpdateUser(updatedUser);
+                                                                        alert('Application submitted! The client will review your profile and contact you if interested.');
+                                                                    } catch (error: any) {
+                                                                        alert(error.message || 'Failed to submit application. Please try again.');
+                                                                    }
+                                                                }}
+                                                                className="bg-primary text-white px-6 py-2 rounded-lg hover:bg-secondary font-medium"
+                                                            >
+                                                                Apply Now
+                                                            </button>
+                                                        )}
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        );
+                                    }).filter(Boolean)
+                                ) : (
+                                    <div className="text-center py-12 bg-gray-50 rounded-lg">
+                                        <BriefcaseIcon className="w-12 h-12 text-gray-400 mx-auto mb-3"/>
+                                        <p className="text-gray-600 font-medium">No job listings available at the moment</p>
+                                        <p className="text-sm text-gray-500 mt-2">Check back later for new opportunities</p>
+                                    </div>
+                                )}
+                            </div>
+                        </>
+                    )}
                 </div>
             )}
             
@@ -630,6 +1049,13 @@ export const Dashboard: React.FC<DashboardProps> = ({ user, onUpdateUser, onNavi
 
             {activeTab === 'support' && (
                 <SupportTicketSection userId={user.id} />
+            )}
+            
+            {activeTab === 'verification' && (
+                <VerificationSection 
+                    user={user} 
+                    onUpload={handleVerificationUpload}
+                />
             )}
         </div>
     );

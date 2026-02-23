@@ -1,5 +1,6 @@
-export const SKILL_TYPES = [
-    // Construction & Repair Trades
+// Comprehensive skill types organized by category
+export const skillCategories = {
+  "Construction & Repair Trades": [
     "Mechanic (Vehicle)",
     "Mechanic (Motor Bike)",
     "Electrician",
@@ -12,9 +13,9 @@ export const SKILL_TYPES = [
     "Fabricator",
     "Painter",
     "Home Decorator",
-    "Frame Maker",
-    
-    // Home & Property Services
+    "Frame Maker"
+  ],
+  "Home & Property Services": [
     "Roof Installer",
     "Tiler",
     "Glazier (Glass Cutting)",
@@ -24,16 +25,15 @@ export const SKILL_TYPES = [
     "Cleaner",
     "Interior Decorator",
     "Laundry Services",
-    "Pest Control Technician",
-    
-    // Personal & Everyday Services
+    "Pest Control Technician"
+  ],
+  "Personal & Everyday Services": [
     "Tailor",
     "Seamstress",
     "Fashion Designer",
     "Fashion Stylist",
     "Barber",
-    "Hairdresser",
-    "Hair Stylist",
+    "Hairdresser / Hair Stylist",
     "Beautician",
     "Makeup Artist",
     "Pedicurist",
@@ -43,9 +43,9 @@ export const SKILL_TYPES = [
     "Aso-Oke Specialist",
     "Maid (Home Helper)",
     "Dry Cleaner",
-    "Errand Services",
-    
-    // Events & Hospitality
+    "Errand Services"
+  ],
+  "Events & Hospitality": [
     "Catering and Baking",
     "Chef",
     "Baker",
@@ -55,14 +55,13 @@ export const SKILL_TYPES = [
     "Event Decorator",
     "Event Security / Crowd Control",
     "Ushers",
-    "Event Rentals",
-    "Party Rentals",
-    "Event Centre",
+    "Event Rentals / Party Rentals",
+    "Event Centre / Hall",
     "Gift Packaging",
     "Souvenir Maker",
-    "Event Branding",
-    
-    // Entertainment & Creative Arts
+    "Event Branding"
+  ],
+  "Entertainment & Creative Arts": [
     "Actor / Actress",
     "Artist",
     "Singer",
@@ -73,16 +72,15 @@ export const SKILL_TYPES = [
     "DJ",
     "Live Band",
     "Music Producer",
-    "Sound Engineer",
-    "Voice-over Artist",
-    "Voice Coach",
+    "Sound Engineer / Technician",
+    "Voice-over Artist / Voice Coach",
     "Model / Movie Extras",
     "Scriptwriter",
     "Creative Director",
     "Stylist",
-    "Bead Maker",
-    
-    // Tech, Media & Digital Services
+    "Bead Maker"
+  ],
+  "Tech, Media & Digital Services": [
     "Software Developer",
     "Web Developer",
     "Mobile App Developer",
@@ -105,21 +103,35 @@ export const SKILL_TYPES = [
     "Copywriter",
     "Computer Technician",
     "Phone Technician",
-    "Satellite Cable Installer",
-    
-    // Professional & Business Services
+    "Satellite Cable Installer"
+  ],
+  "Professional & Business Services": [
     "Project Management",
     "Account Management",
     "Customer Support",
     "Virtual Assistant",
     "Tutoring",
-    "Email Marketing",
-    
-    // Transport & Logistics
+    "Email Marketing"
+  ],
+  "Transport & Logistics": [
     "Vehicle Driver",
     "Motor Bike Driver / Dispatch Rider",
     "Logistics Services"
-];
+  ]
+};
 
-// For backward compatibility
-export const CLEANING_SERVICES = SKILL_TYPES;
+// Flatten all skills into a single array for dropdown
+export const allSkills = Object.entries(skillCategories).flatMap(([category, skills]) => 
+  skills.map(skill => ({ category, skill }))
+);
+
+// Get all unique skill names
+export const skillNames = allSkills.map(s => s.skill);
+
+// Charge rate types
+export const chargeRateTypes = [
+  "Per Hour",
+  "Per Day",
+  "Contract",
+  "Negotiable"
+];

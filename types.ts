@@ -62,6 +62,28 @@ export interface Booking {
   jobApprovedByClient?: boolean;
 }
 
+export interface Job {
+  id: string;
+  title: string;
+  description: string;
+  service: string;
+  location: string;
+  state?: string;
+  city?: string;
+  budget: number;
+  budgetType: 'Hourly' | 'Daily' | 'Monthly' | 'Fixed';
+  startDate: string;
+  endDate?: string;
+  status: 'Open' | 'In Progress' | 'Completed' | 'Cancelled';
+  clientId: string;
+  clientName: string;
+  postedDate: string;
+  applicants?: string[]; // Array of worker IDs who applied
+  selectedWorkerId?: string; // Worker assigned to the job
+  requirements?: string[];
+  visibility: 'Public' | 'Subscribers Only';
+}
+
 export type TicketCategory = 'Technical Issue' | 'Payment Issue' | 'Booking Dispute' | 'Account Verification' | 'Other';
 
 export interface SupportTicket {
@@ -78,57 +100,101 @@ export interface SupportTicket {
     updatedAt?: string;
 }
 
+// User Type - determines which fields are required
+export type UserType = 
+  | 'Client (Individual)' 
+  | 'Client (Registered Company)' 
+  | 'Worker (Individual)' 
+  | 'Worker (Registered Company)';
+
+export type ChargeRateType = 'Per Hour' | 'Per Day' | 'Contract' | 'Negotiable';
+
+export interface VerificationDocuments {
+  governmentId?: string; // For individual clients
+  companyRegistrationCert?: string; // For companies
+  skillTrainingCert?: string; // For workers
+}
+
 export interface User {
   id: string;
   email: string;
   password?: string;
-  phoneNumber: string;
-  role: UserRole;
-  fullName: string;
-  gender: 'Male' | 'Female' | 'Other';
-  state: string;
-  city: string;
-  otherCity?: string;
-  address: string;
-  selfie?: File | string;
-  governmentId?: File | string;
-  clientType?: 'Individual' | 'Company';
+  
+  // User Type Selection (REQUIRED)
+  userType?: UserType;
+  
+  // Common fields for Individual Clients & Workers
+  fullName?: string;
+  gender?: 'Male' | 'Female' | 'Other';
+  
+  // Contact Information (All user types)
+  phoneCountryCode?: string; // e.g., "+234"
+  phoneNumber?: string;
+  
+  // Location (All user types)
+  country?: string;
+  state?: string; // Province/Region
+  city?: string;
+  streetAddress?: string; // For individuals
+  officeAddress?: string; // For companies
+  workplaceAddress?: string; // Optional for Client (Individual)
+  
+  // Company-specific fields
   companyName?: string;
-  companyAddress?: string;
+  companyRegistrationNumber?: string;
+  
+  // Worker-specific fields
+  skillType?: string[]; // Multiple skills allowed
+  yearsOfExperience?: number;
+  chargeHourly?: number; // Hourly rate
+  chargeDaily?: number; // Daily rate
+  chargeRate?: number; // Legacy contract rate
+  chargeRateType?: ChargeRateType;
+  profilePicture?: string; // URL or base64
+  
+  // Verification
+  isVerified?: boolean;
+  verificationDocuments?: VerificationDocuments;
+  
+  // Legacy fields for backward compatibility
+  role: UserRole;
   bookingHistory?: Booking[];
+  postedJobs?: Job[]; // Jobs posted by client
+  appliedJobs?: string[]; // Job IDs worker has applied to
   isAdmin?: boolean;
-  adminRole?: AdminRole; // New field to distinguish admin types
+  adminRole?: AdminRole;
   isSuspended?: boolean;
-  // Cleaner-specific
-  cleanerType?: 'Individual' | 'Company';
+  
+  // Cleaner/Worker legacy fields
   experience?: number;
   services?: string[];
   bio?: string;
-  profilePhoto?: File | string;
-  nin?: string;
-  businessRegDoc?: File | string;
-  chargeHourly?: number;
-  chargeDaily?: number;
-  chargePerContract?: number;
-  chargePerContractNegotiable?: boolean;
+  professionalExperience?: string; // Detailed professional experience description
   accountNumber?: string;
   bankName?: string;
-  subscriptionTier?: 'Free' | 'Standard' | 'Pro' | 'Premium';
-  pendingSubscription?: 'Free' | 'Standard' | 'Pro' | 'Premium'; // The plan they've requested to upgrade to
+  subscriptionTier?: string; // Changed to support new plan names like Basic, Pro, Elite, Regular, Silver, etc.
+  pendingSubscription?: string;
   subscriptionReceipt?: Receipt;
-  subscriptionEndDate?: string; // e.g., '2025-07-31'
+  subscriptionEndDate?: string;
+  trialStartDate?: string; // For tracking trial periods
+  trialEndDate?: string;
   reviewsData?: Review[];
-  // New fields for usage tracking
-  monthlyNewClientsIds?: string[]; // Array of unique client IDs for the month
-  monthlyUsageResetDate?: string; // e.g., '2024-08-01'
+  monthlyNewClientsIds?: string[];
+  monthlyUsageResetDate?: string;
+  monthlyJobPostsCount?: number; // For tracking client job posting limits
 }
 
 export interface SubscriptionPlan {
-    name: 'Free' | 'Standard' | 'Pro' | 'Premium';
+    name: string; // Supports Free, Basic, Pro, Elite, Regular, Silver, Gold, Diamond
     priceMonthly: number;
     priceYearly: number;
+    currency?: string; // 'NGN', 'USD', etc. (defaults to NGN if not specified)
     features: string[];
     isRecommended?: boolean;
+    maxClients?: number; // For worker plans
+    hasJobAccess?: boolean; // For worker plans - access to job listings
+    maxJobPosts?: number; // For client plans
+    trialDays?: number; // For free plans with trial periods
 }
 
 export interface Message {
@@ -151,6 +217,7 @@ export type View =
   | 'landing' 
   | 'auth'
   | 'signup' 
+  | 'setupProfile'
   | 'clientDashboard' 
   | 'cleanerDashboard' 
   | 'cleanerProfile'

@@ -29,8 +29,8 @@ export const Footer: React.FC<FooterProps> = ({ onNavigate }) => {
                 <div className="grid grid-cols-2 md:grid-cols-5 gap-8">
                     <div className="col-span-2 md:col-span-2">
                          <div className="flex items-center gap-2 text-2xl font-bold text-primary">
-                            <SparklesIcon className="w-8 h-8" />
-                            <span>CleanConnect</span>
+                            <img src="/logo.png" alt="Skills Konnect" className="w-12 h-12 object-contain" />
+                            <span>Skills Konnect</span>
                         </div>
                         <p className="mt-2 text-gray-500 max-w-xs">
                             Connecting Nigeria with trusted, professional cleaners for a spotless space, every time.
@@ -75,7 +75,7 @@ export const Footer: React.FC<FooterProps> = ({ onNavigate }) => {
                 </div>
 
                 <div className="mt-12 border-t pt-8 flex flex-col sm:flex-row justify-between items-center">
-                    <p className="text-sm text-gray-500">&copy; {new Date().getFullYear()} CleanConnect. All rights reserved.</p>
+                    <p className="text-sm text-gray-500">&copy; {new Date().getFullYear()} Skills Konnect. All rights reserved.</p>
                     <div className="flex space-x-6 mt-4 sm:mt-0">
                        <a href="https://facebook.com" target="_blank" rel="noopener noreferrer" className="text-gray-400 hover:text-primary transition-colors">
                            <span className="sr-only">Facebook</span>

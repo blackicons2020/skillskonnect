@@ -1,5 +1,5 @@
 
-import { User, Cleaner, Booking, AdminRole, Chat, Message, SupportTicket, Review } from '../types';
+import { User, Cleaner, Booking, AdminRole, Chat, Message, SupportTicket, Review, Job } from '../types';
 
 // ==========================================
 // CONFIGURATION
@@ -28,7 +28,7 @@ const API_URL = getApiUrl();
 // ==========================================
 
 const getHeaders = () => {
-    const token = localStorage.getItem('cleanconnect_token');
+    const token = localStorage.getItem('skillskonnect_token');
     const headers: HeadersInit = {
         'Content-Type': 'application/json',
     };
@@ -97,7 +97,7 @@ export const apiService = {
     },
 
     logout: async () => {
-        localStorage.removeItem('cleanconnect_token');
+        localStorage.removeItem('skillskonnect_token');
     },
 
     register: async (userData: Partial<User>): Promise<User> => {
@@ -127,6 +127,55 @@ export const apiService = {
         const response = await fetch(`${API_URL}/cleaners`, {
             method: 'GET',
             headers: { 'Content-Type': 'application/json' },
+        });
+        return handleResponse(response);
+    },
+
+    getAllJobs: async (): Promise<Job[]> => {
+        const response = await fetch(`${API_URL}/jobs`, {
+            method: 'GET',
+            headers: { 'Content-Type': 'application/json' },
+        });
+        return handleResponse(response);
+    },
+
+    updateJob: async (jobId: string, updates: Partial<Job>): Promise<Job> => {
+        const response = await fetch(`${API_URL}/jobs/${jobId}`, {
+            method: 'PUT',
+            headers: getHeaders(),
+            body: JSON.stringify(updates),
+        });
+        return handleResponse(response);
+    },
+
+    cancelJob: async (jobId: string): Promise<Job> => {
+        const response = await fetch(`${API_URL}/jobs/${jobId}/cancel`, {
+            method: 'PUT',
+            headers: getHeaders(),
+        });
+        return handleResponse(response);
+    },
+
+    deleteJob: async (jobId: string): Promise<void> => {
+        const response = await fetch(`${API_URL}/jobs/${jobId}`, {
+            method: 'DELETE',
+            headers: getHeaders(),
+        });
+        return handleResponse(response);
+    },
+
+    getJobApplicants: async (jobId: string): Promise<User[]> => {
+        const response = await fetch(`${API_URL}/jobs/${jobId}/applicants`, {
+            method: 'GET',
+            headers: getHeaders(),
+        });
+        return handleResponse(response);
+    },
+
+    applyToJob: async (jobId: string): Promise<{ message: string; job: Job }> => {
+        const response = await fetch(`${API_URL}/jobs/${jobId}/apply`, {
+            method: 'POST',
+            headers: getHeaders(),
         });
         return handleResponse(response);
     },

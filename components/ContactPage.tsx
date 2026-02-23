@@ -111,7 +111,7 @@ export const ContactPage: React.FC = () => {
                                 <div className="ml-4">
                                     <h3 className="text-lg font-medium text-dark">Email</h3>
                                     <p className="mt-1 text-gray-600">Our support team is here to help.</p>
-                                    <a href="mailto:cleanconnectng@gmail.com" className="mt-2 text-primary font-semibold hover:underline">cleanconnectng@gmail.com</a>
+                                    <a href="mailto:skillskonnectng@gmail.com" className="mt-2 text-primary font-semibold hover:underline">skillskonnectng@gmail.com</a>
                                 </div>
                             </div>
                             <div className="flex items-start">

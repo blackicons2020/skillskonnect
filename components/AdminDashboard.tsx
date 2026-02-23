@@ -2,7 +2,7 @@
 
 
 import React, { useState, useMemo, useEffect } from 'react';
-import { User, Booking, Receipt, AdminRole, SupportTicket } from '../types';
+import { User, Booking, Receipt, AdminRole, SupportTicket, Job } from '../types';
 import { UserGroupIcon, StarIcon, XCircleIcon, EyeIcon, LifebuoyIcon } from './icons';
 import { UserDetailsModal } from './UserDetailsModal';
 import { AdminConfirmationModal } from './AdminConfirmationModal';
@@ -13,6 +13,7 @@ import { apiService } from '../services/apiService';
 interface AdminDashboardProps {
     user: User;
     allUsers: User[];
+    allJobs?: Job[];
     onUpdateUser: (user: User) => void;
     onDeleteUser: (userId: string) => void;
     onMarkAsPaid: (bookingId: string) => void;
@@ -69,11 +70,11 @@ const CreateAdminModal: React.FC<{ onClose: () => void; onCreate: (data: any) =>
     );
 };
 
-export const AdminDashboard: React.FC<AdminDashboardProps> = ({ user: currentUser, allUsers, onUpdateUser, onDeleteUser, onMarkAsPaid, onConfirmPayment, onApproveSubscription }) => {
+export const AdminDashboard: React.FC<AdminDashboardProps> = ({ user: currentUser, allUsers, allJobs = [], onUpdateUser, onDeleteUser, onMarkAsPaid, onConfirmPayment, onApproveSubscription }) => {
     // Current user context is now passed directly as a prop, avoiding redundant fetches
 
     // Initial state setup to avoid flashing incorrect tabs
-    const [activeTab, setActiveTab] = useState<'clients' | 'cleaners' | 'payments' | 'confirmations' | 'allBookings' | 'admins' | 'support'>('clients');
+    const [activeTab, setActiveTab] = useState<'clients' | 'cleaners' | 'payments' | 'confirmations' | 'allBookings' | 'admins' | 'support' | 'jobs'>('clients');
     
     const [searchTerm, setSearchTerm] = useState('');
     const [userToView, setUserToView] = useState<User | null>(null);
@@ -551,6 +552,16 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ user: currentUse
                             Support Tickets
                         </button>
                     )}
+                    <button
+                        onClick={() => setActiveTab('jobs')}
+                        className={`${
+                            activeTab === 'jobs'
+                            ? 'border-primary text-primary'
+                            : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
+                        } whitespace-nowrap py-4 px-1 border-b-2 font-medium text-sm`}
+                    >
+                        Job Postings ({allJobs.length})
+                    </button>
                 </nav>
             </div>
             
@@ -717,9 +728,86 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ user: currentUse
                         </div>
                     </div>
                 )}
+
+                {activeTab === 'jobs' && (
+                    <div className="p-4">
+                        <h3 className="text-xl font-semibold mb-4">All Job Postings</h3>
+                        {allJobs.length > 0 ? (
+                            <div className="overflow-x-auto">
+                                <table className="w-full">
+                                    <thead className="bg-gray-50">
+                                        <tr>
+                                            <th className="px-4 py-3 text-left text-xs font-bold text-gray-700 uppercase">Job Title</th>
+                                            <th className="px-4 py-3 text-left text-xs font-bold text-gray-700 uppercase">Posted By</th>
+                                            <th className="px-4 py-3 text-left text-xs font-bold text-gray-700 uppercase">Service</th>
+                                            <th className="px-4 py-3 text-left text-xs font-bold text-gray-700 uppercase">Location</th>
+                                            <th className="px-4 py-3 text-left text-xs font-bold text-gray-700 uppercase">Budget</th>
+                                            <th className="px-4 py-3 text-left text-xs font-bold text-gray-700 uppercase">Status</th>
+                                            <th className="px-4 py-3 text-left text-xs font-bold text-gray-700 uppercase">Posted Date</th>
+                                            <th className="px-4 py-3 text-left text-xs font-bold text-gray-700 uppercase">Applicants</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody className="bg-white divide-y divide-gray-200">
+                                        {allJobs.map((job) => (
+                                            <tr key={job.id} className="hover:bg-gray-50">
+                                                <td className="px-4 py-4">
+                                                    <div>
+                                                        <p className="font-semibold text-gray-900">{job.title}</p>
+                                                        <p className="text-xs text-gray-500 mt-1 line-clamp-1">{job.description}</p>
+                                                    </div>
+                                                </td>
+                                                <td className="px-4 py-4 text-sm text-gray-700">{job.clientName}</td>
+                                                <td className="px-4 py-4 text-sm text-gray-700">{job.service}</td>
+                                                <td className="px-4 py-4 text-sm text-gray-700">
+                                                    {job.city && job.state ? `${job.city}, ${job.state}` : job.location}
+                                                </td>
+                                                <td className="px-4 py-4 text-sm text-gray-700">
+                                                    ₦{job.budget.toLocaleString()}
+                                                    <span className="text-xs text-gray-500 block">{job.budgetType}</span>
+                                                </td>
+                                                <td className="px-4 py-4">
+                                                    <span className={`px-2 py-1 text-xs font-bold rounded-full ${
+                                                        job.status === 'Open' ? 'bg-green-100 text-green-800' :
+                                                        job.status === 'In Progress' ? 'bg-blue-100 text-blue-800' :
+                                                        job.status === 'Completed' ? 'bg-gray-100 text-gray-800' :
+                                                        'bg-red-100 text-red-800'
+                                                    }`}>
+                                                        {job.status}
+                                                    </span>
+                                                </td>
+                                                <td className="px-4 py-4 text-sm text-gray-700">
+                                                    {new Date(job.postedDate).toLocaleDateString()}
+                                                </td>
+                                                <td className="px-4 py-4 text-sm text-gray-700 text-center">
+                                                    {job.applicants?.length || 0}
+                                                </td>
+                                            </tr>
+                                        ))}
+                                    </tbody>
+                                </table>
+                            </div>
+                        ) : (
+                            <p className="text-gray-500 text-center py-8">No jobs posted yet.</p>
+                        )}
+                    </div>
+                )}
             </div>
             
-            {userToView && <UserDetailsModal user={userToView} onClose={() => setUserToView(null)} />}
+            {userToView && (
+                <UserDetailsModal 
+                    user={userToView} 
+                    onClose={() => setUserToView(null)} 
+                    isAdmin={true}
+                    onApproveVerification={(userId) => {
+                        onUpdateUser({ ...userToView, isVerified: true });
+                        setUserToView(null);
+                    }}
+                    onRejectVerification={(userId) => {
+                        onUpdateUser({ ...userToView, isVerified: false, verificationDocuments: undefined });
+                        setUserToView(null);
+                    }}
+                />
+            )}
 
             {userToSuspend && (
                 <AdminConfirmationModal

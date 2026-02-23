@@ -30,7 +30,7 @@ export const HelpCenterPage: React.FC = () => {
                             <p>Simply use the search bar on our homepage to find cleaners in your area. You can filter by service type and location. Once you find a cleaner you like, click "Book Now" on their profile to start the process.</p>
                         </FAQItem>
                         <FAQItem question="What is the Escrow payment system?">
-                            <p>Our Escrow system provides a secure way to pay. You pay CleanConnect, and we hold the funds until you confirm the job has been completed to your satisfaction. This adds a layer of protection for both you and the cleaner. A 10% service fee applies to all Escrow payments.</p>
+                            <p>Our Escrow system provides a secure way to pay. You pay Skills Konnect, and we hold the funds until you confirm the job has been completed to your satisfaction. This adds a layer of protection for both you and the service provider. A 10% service fee applies to all Escrow payments.</p>
                         </FAQItem>
                         <FAQItem question="How do I confirm a job is completed?">
                             <p>After a job is done, go to the "My Bookings" tab on your dashboard. You will see a button to "Approve Job Completion" or "Mark as Completed". Clicking this will notify us (for Escrow) or simply update the job status (for direct payments).</p>

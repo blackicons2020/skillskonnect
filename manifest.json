@@ -1,8 +1,8 @@
 
 {
-  "name": "CleanConnect",
-  "short_name": "CleanConnect",
-  "description": "Find trusted cleaners in Nigeria",
+  "name": "Skills Konnect",
+  "short_name": "Skills Konnect",
+  "description": "Connect with skilled professionals in Nigeria",
   "start_url": "/",
   "display": "standalone",
   "background_color": "#F7FAFC",

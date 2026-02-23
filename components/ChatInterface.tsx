@@ -52,9 +52,14 @@ export const ChatInterface: React.FC<ChatInterfaceProps> = ({ currentUser }) => 
         const text = newMessage;
         setNewMessage(''); // Optimistic clear
 
-        await apiService.sendMessage(selectedChat.id, currentUser.id, text);
-        loadMessages(selectedChat.id);
-        loadChats(); // Update last message in sidebar
+        try {
+            await apiService.sendMessage(selectedChat.id, currentUser.id, text);
+            await loadMessages(selectedChat.id); // Reload messages to show the new one
+            loadChats(); // Update last message in sidebar
+        } catch (error) {
+            console.error('Failed to send message:', error);
+            setNewMessage(text); // Restore message on error
+        }
     };
 
     const scrollToBottom = () => {
@@ -68,7 +73,19 @@ export const ChatInterface: React.FC<ChatInterfaceProps> = ({ currentUser }) => 
 
     const formatTime = (isoString: string) => {
         const date = new Date(isoString);
-        return date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+        const now = new Date();
+        const diff = now.getTime() - date.getTime();
+        const days = Math.floor(diff / (1000 * 60 * 60 * 24));
+        
+        if (days === 0) {
+            return date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+        } else if (days === 1) {
+            return 'Yesterday ' + date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+        } else if (days < 7) {
+            return date.toLocaleDateString([], { weekday: 'short' }) + ' ' + date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+        } else {
+            return date.toLocaleDateString([], { month: 'short', day: 'numeric' }) + ' ' + date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+        }
     };
 
     if (loading) {
@@ -133,24 +150,53 @@ export const ChatInterface: React.FC<ChatInterfaceProps> = ({ currentUser }) => 
                                 <div className="bg-primary/10 p-2 rounded-full">
                                     <UserIcon className="w-5 h-5 text-primary"/>
                                 </div>
-                                <h3 className="font-bold text-gray-800">{getOtherParticipantName(selectedChat)}</h3>
+                                <div>
+                                    <h3 className="font-bold text-gray-800">{getOtherParticipantName(selectedChat)}</h3>
+                                    {messages.length > 0 && (
+                                        <p className="text-xs text-gray-500">{messages.length} message{messages.length !== 1 ? 's' : ''}</p>
+                                    )}
+                                </div>
                             </div>
                         </div>
 
                         <div className="flex-grow p-4 overflow-y-auto bg-gray-50 space-y-4">
-                            {messages.map(msg => {
-                                const isMe = msg.senderId === currentUser.id;
-                                return (
-                                    <div key={msg.id} className={`flex ${isMe ? 'justify-end' : 'justify-start'}`}>
-                                        <div className={`max-w-[75%] rounded-lg px-4 py-2 shadow-sm ${isMe ? 'bg-primary text-white rounded-br-none' : 'bg-white text-gray-800 border border-gray-200 rounded-bl-none'}`}>
-                                            <p>{msg.text}</p>
-                                            <p className={`text-[10px] mt-1 text-right ${isMe ? 'text-green-100' : 'text-gray-400'}`}>
-                                                {formatTime(msg.timestamp)}
-                                            </p>
-                                        </div>
-                                    </div>
-                                );
-                            })}
+                            {messages.length === 0 ? (
+                                <div className="flex items-center justify-center h-full text-gray-400">
+                                    <p className="text-center">
+                                        <span className="block text-4xl mb-2">💬</span>
+                                        <span className="text-sm">No messages yet.<br/>Start the conversation!</span>
+                                    </p>
+                                </div>
+                            ) : (
+                                messages.map((msg, index) => {
+                                    const isMe = msg.senderId === currentUser.id;
+                                    const prevMsg = index > 0 ? messages[index - 1] : null;
+                                    const showDateSeparator = prevMsg && 
+                                        new Date(msg.timestamp).toDateString() !== new Date(prevMsg.timestamp).toDateString();
+                                    
+                                    return (
+                                        <React.Fragment key={msg.id}>
+                                            {showDateSeparator && (
+                                                <div className="flex items-center gap-2 my-4">
+                                                    <div className="flex-1 border-t border-gray-300"></div>
+                                                    <span className="text-xs text-gray-500 font-medium px-2">
+                                                        {new Date(msg.timestamp).toLocaleDateString([], { month: 'short', day: 'numeric', year: 'numeric' })}
+                                                    </span>
+                                                    <div className="flex-1 border-t border-gray-300"></div>
+                                                </div>
+                                            )}
+                                            <div className={`flex ${isMe ? 'justify-end' : 'justify-start'}`}>
+                                                <div className={`max-w-[75%] rounded-lg px-4 py-2 shadow-sm ${isMe ? 'bg-primary text-white rounded-br-none' : 'bg-white text-gray-800 border border-gray-200 rounded-bl-none'}`}>
+                                                    <p className="whitespace-pre-wrap break-words">{msg.text}</p>
+                                                    <p className={`text-[10px] mt-1 text-right ${isMe ? 'text-green-100' : 'text-gray-400'}`}>
+                                                        {formatTime(msg.timestamp)}
+                                                    </p>
+                                                </div>
+                                            </div>
+                                        </React.Fragment>
+                                    );
+                                })
+                            )}
                             <div ref={messagesEndRef} />
                         </div>
 
@@ -167,10 +213,14 @@ export const ChatInterface: React.FC<ChatInterfaceProps> = ({ currentUser }) => 
                                     type="submit" 
                                     disabled={!newMessage.trim()}
                                     className="bg-primary text-white p-3 rounded-lg hover:bg-secondary disabled:bg-gray-300 transition-colors"
+                                    title="Send message"
                                 >
                                     <PaperAirplaneIcon className="w-5 h-5 transform rotate-90" />
                                 </button>
                             </form>
+                            <p className="text-[10px] text-gray-400 mt-2 text-center">
+                                💾 Messages are automatically saved
+                            </p>
                         </div>
                     </>
                 ) : (

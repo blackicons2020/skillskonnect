@@ -108,7 +108,7 @@ const admin: RequestHandler = (req, res, next) => {
 // ROUTES: AUTH
 // ============================================================================
 app.post('/api/auth/register', async (req: ExpressRequest, res: ExpressResponse) => {
-  const { email, password, role, fullName, phoneNumber, state, city, otherCity, address, clientType, cleanerType, companyName, companyAddress, experience, services, bio, chargeHourly, chargeDaily, chargePerContract, chargePerContractNegotiable, bankName, accountNumber, profilePhoto, governmentId, businessRegDoc } = req.body;
+  const { email, password, role, fullName, phoneNumber, state, city, otherCity, address, clientType, cleanerType, companyName, companyAddress, experience, services, bio, chargeHourly, chargeDaily, chargePerContract, chargePerContractNegotiable, bankName, accountNumber, profilePhoto, governmentId, businessRegDoc, gender } = req.body;
 
   try {
     const userExists = await pool.query('SELECT * FROM users WHERE email = $1', [email]);
@@ -118,19 +118,63 @@ app.post('/api/auth/register', async (req: ExpressRequest, res: ExpressResponse)
     const hashedPassword = await bcrypt.hash(password, salt);
     const servicesJson = services ? JSON.stringify(services) : null; 
 
+    // Use provided values or defaults for minimal signup
+    const userRole = role || 'client';
+    const userName = fullName || '';
+    const userPhone = phoneNumber || '';
+    const userState = state || '';
+    const userCity = city || '';
+    const userAddress = address || '';
+    const userGender = gender || 'Male';
+
     const result = await pool.query(
       `INSERT INTO users (
-        email, password_hash, role, full_name, phone_number, state, city, other_city, address, 
+        email, password_hash, role, full_name, phone_number, gender, state, city, other_city, address, 
         client_type, cleaner_type, company_name, company_address, experience, services, bio, 
         charge_hourly, charge_daily, charge_per_contract, charge_per_contract_negotiable,
         bank_name, account_number, profile_photo, government_id, business_reg_doc, subscription_tier, created_at
-      ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19, $20, $21, $22, $23, $24, $25, 'Free', NOW()) RETURNING *`,
-      [email, hashedPassword, role, fullName, phoneNumber, state, city, otherCity, address, clientType, cleanerType, companyName, companyAddress, experience, servicesJson, bio, chargeHourly, chargeDaily, chargePerContract, chargePerContractNegotiable, bankName, accountNumber, profilePhoto, governmentId, businessRegDoc]
+      ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19, $20, $21, $22, $23, $24, $25, $26, 'Free', NOW()) RETURNING *`,
+      [email, hashedPassword, userRole, userName, userPhone, userGender, userState, userCity, otherCity, userAddress, clientType, cleanerType, companyName, companyAddress, experience, servicesJson, bio, chargeHourly, chargeDaily, chargePerContract, chargePerContractNegotiable, bankName, accountNumber, profilePhoto, governmentId, businessRegDoc]
     );
 
     const user = result.rows[0];
+
+    // Return formatted user data
+    const userData = {
+      id: user.id,
+      fullName: user.full_name,
+      email: user.email,
+      role: user.role,
+      phoneNumber: user.phone_number,
+      gender: user.gender,
+      address: user.address,
+      state: user.state,
+      city: user.city,
+      otherCity: user.other_city,
+      profilePhoto: user.profile_photo,
+      isAdmin: user.is_admin,
+      adminRole: user.admin_role,
+      subscriptionTier: user.subscription_tier,
+      cleanerType: user.cleaner_type,
+      clientType: user.client_type,
+      companyName: user.company_name,
+      companyAddress: user.company_address,
+      experience: user.experience,
+      bio: user.bio,
+      services: user.services ? (typeof user.services === 'string' ? JSON.parse(user.services) : user.services) : [],
+      chargeHourly: user.charge_hourly,
+      chargeDaily: user.charge_daily,
+      chargePerContract: user.charge_per_contract,
+      chargePerContractNegotiable: user.charge_per_contract_negotiable,
+      bankName: user.bank_name,
+      accountNumber: user.account_number,
+      bookingHistory: [],
+      reviewsData: [],
+      isSuspended: user.is_suspended
+    };
+
     res.status(201).json({
-      ...user,
+      ...userData,
       token: generateToken(user.id, user.role, user.is_admin, user.admin_role)
     });
   } catch (error) { handleError(res, error, 'Registration failed'); }
@@ -139,23 +183,58 @@ app.post('/api/auth/register', async (req: ExpressRequest, res: ExpressResponse)
 app.post('/api/auth/login', async (req: ExpressRequest, res: ExpressResponse) => {
   const { email, password } = req.body;
   try {
-    const result = await pool.query('SELECT * FROM users WHERE email = $1', [email]);
+    const result = await pool.query(`
+      SELECT 
+        u.*, 
+        (SELECT json_agg(b.*) FROM bookings b WHERE b.client_id = u.id OR b.cleaner_id = u.id) as booking_history,
+        (SELECT json_agg(r.*) FROM reviews r WHERE r.cleaner_id = u.id) as reviews_data
+      FROM users u WHERE u.email = $1
+    `, [email]);
+    
     const user = result.rows[0];
 
     if (user && (await bcrypt.compare(password, user.password_hash))) {
       if (user.is_suspended) return res.status(403).json({ message: 'Account is suspended.' });
       
-      // Normalize DB keys to frontend expectations (camelCase)
+      // Normalize DB keys to frontend expectations (camelCase) - return complete user data
       const userData = {
         id: user.id,
         fullName: user.full_name,
         email: user.email,
         role: user.role,
+        phoneNumber: user.phone_number,
+        gender: user.gender,
+        address: user.address,
+        state: user.state,
+        city: user.city,
+        otherCity: user.other_city,
+        profilePhoto: user.profile_photo,
         isAdmin: user.is_admin,
         adminRole: user.admin_role,
-        profilePhoto: user.profile_photo,
         subscriptionTier: user.subscription_tier,
-        // ... other fields loaded in getMe usually
+        cleanerType: user.cleaner_type,
+        clientType: user.client_type,
+        companyName: user.company_name,
+        companyAddress: user.company_address,
+        experience: user.experience,
+        bio: user.bio,
+        services: user.services ? (typeof user.services === 'string' ? JSON.parse(user.services) : user.services) : [],
+        chargeHourly: user.charge_hourly,
+        chargeDaily: user.charge_daily,
+        chargePerContract: user.charge_per_contract,
+        chargePerContractNegotiable: user.charge_per_contract_negotiable,
+        bankName: user.bank_name,
+        accountNumber: user.account_number,
+        bookingHistory: user.booking_history || [],
+        reviewsData: user.reviews_data || [],
+        pendingSubscription: user.pending_subscription,
+        subscriptionReceipt: user.subscription_receipt ? JSON.parse(user.subscription_receipt) : null,
+        subscriptionEndDate: user.subscription_end_date,
+        isSuspended: user.is_suspended,
+        governmentId: user.government_id,
+        businessRegDoc: user.business_reg_doc,
+        monthlyNewClientsIds: user.monthly_new_clients_ids ? (typeof user.monthly_new_clients_ids === 'string' ? JSON.parse(user.monthly_new_clients_ids) : user.monthly_new_clients_ids) : [],
+        monthlyUsageResetDate: user.monthly_usage_reset_date
       };
       
       res.json({ token: generateToken(user.id, user.role, user.is_admin, user.admin_role), user: userData });
@@ -227,6 +306,7 @@ app.get('/api/users/me', protect, async (req: ExpressRequest, res: ExpressRespon
       email: user.email,
       role: user.role,
       phoneNumber: user.phone_number,
+      gender: user.gender,
       address: user.address,
       state: user.state,
       city: user.city,
@@ -241,7 +321,7 @@ app.get('/api/users/me', protect, async (req: ExpressRequest, res: ExpressRespon
       companyAddress: user.company_address,
       experience: user.experience,
       bio: user.bio,
-      services: typeof user.services === 'string' ? JSON.parse(user.services) : user.services,
+      services: user.services ? (typeof user.services === 'string' ? JSON.parse(user.services) : user.services) : [],
       chargeHourly: user.charge_hourly,
       chargeDaily: user.charge_daily,
       chargePerContract: user.charge_per_contract,
@@ -252,9 +332,12 @@ app.get('/api/users/me', protect, async (req: ExpressRequest, res: ExpressRespon
       reviewsData: user.reviews_data || [],
       pendingSubscription: user.pending_subscription,
       subscriptionReceipt: user.subscription_receipt ? JSON.parse(user.subscription_receipt) : null,
+      subscriptionEndDate: user.subscription_end_date,
       isSuspended: user.is_suspended,
       governmentId: user.government_id,
-      businessRegDoc: user.business_reg_doc
+      businessRegDoc: user.business_reg_doc,
+      monthlyNewClientsIds: user.monthly_new_clients_ids ? (typeof user.monthly_new_clients_ids === 'string' ? JSON.parse(user.monthly_new_clients_ids) : user.monthly_new_clients_ids) : [],
+      monthlyUsageResetDate: user.monthly_usage_reset_date
     };
 
     res.json(formattedUser);
@@ -263,32 +346,79 @@ app.get('/api/users/me', protect, async (req: ExpressRequest, res: ExpressRespon
 
 app.put('/api/users/me', protect, async (req: ExpressRequest, res: ExpressResponse) => {
   const authReq = req as AuthRequest;
-  const { fullName, phoneNumber, address, bio, services, experience, chargeHourly, chargeDaily, chargePerContract, chargePerContractNegotiable, profilePhoto, state, city, otherCity, companyName, companyAddress, bankName, accountNumber } = req.body;
+  const { role, fullName, phoneNumber, gender, address, bio, services, experience, chargeHourly, chargeDaily, chargePerContract, chargePerContractNegotiable, profilePhoto, state, city, otherCity, companyName, companyAddress, bankName, accountNumber, clientType, cleanerType, governmentId, businessRegDoc } = req.body;
   try {
+    // Get current user data to preserve what's not being updated
+    const currentUser = await pool.query('SELECT * FROM users WHERE id = $1', [authReq.user!.id]);
+    if (currentUser.rows.length === 0) return res.status(404).json({ message: 'User not found' });
+
     const result = await pool.query(
       `UPDATE users SET 
-        full_name = COALESCE($1, full_name),
-        phone_number = COALESCE($2, phone_number),
-        address = COALESCE($3, address),
-        bio = COALESCE($4, bio),
-        services = COALESCE($5, services),
-        experience = COALESCE($6, experience),
-        charge_hourly = COALESCE($7, charge_hourly),
-        charge_daily = COALESCE($8, charge_daily),
-        charge_per_contract = COALESCE($9, charge_per_contract),
-        profile_photo = COALESCE($10, profile_photo),
-        state = COALESCE($11, state),
-        city = COALESCE($12, city),
-        other_city = COALESCE($13, other_city),
-        company_name = COALESCE($14, company_name),
-        company_address = COALESCE($15, company_address),
-        bank_name = COALESCE($16, bank_name),
-        account_number = COALESCE($17, account_number),
-        charge_per_contract_negotiable = COALESCE($18, charge_per_contract_negotiable)
-       WHERE id = $19 RETURNING *`,
-      [fullName, phoneNumber, address, bio, services ? JSON.stringify(services) : null, experience, chargeHourly, chargeDaily, chargePerContract, profilePhoto, state, city, otherCity, companyName, companyAddress, bankName, accountNumber, chargePerContractNegotiable, authReq.user!.id]
+        role = COALESCE($1, role),
+        full_name = COALESCE($2, full_name),
+        phone_number = COALESCE($3, phone_number),
+        gender = COALESCE($4, gender),
+        address = COALESCE($5, address),
+        bio = COALESCE($6, bio),
+        services = COALESCE($7, services),
+        experience = COALESCE($8, experience),
+        charge_hourly = COALESCE($9, charge_hourly),
+        charge_daily = COALESCE($10, charge_daily),
+        charge_per_contract = COALESCE($11, charge_per_contract),
+        profile_photo = COALESCE($12, profile_photo),
+        state = COALESCE($13, state),
+        city = COALESCE($14, city),
+        other_city = COALESCE($15, other_city),
+        company_name = COALESCE($16, company_name),
+        company_address = COALESCE($17, company_address),
+        bank_name = COALESCE($18, bank_name),
+        account_number = COALESCE($19, account_number),
+        charge_per_contract_negotiable = COALESCE($20, charge_per_contract_negotiable),
+        client_type = COALESCE($21, client_type),
+        cleaner_type = COALESCE($22, cleaner_type),
+        government_id = COALESCE($23, government_id),
+        business_reg_doc = COALESCE($24, business_reg_doc)
+       WHERE id = $25 RETURNING *`,
+      [role, fullName, phoneNumber, gender, address, bio, services ? JSON.stringify(services) : null, experience, chargeHourly, chargeDaily, chargePerContract, profilePhoto, state, city, otherCity, companyName, companyAddress, bankName, accountNumber, chargePerContractNegotiable, clientType, cleanerType, governmentId, businessRegDoc, authReq.user!.id]
     );
-    res.json(result.rows[0]);
+    
+    const updatedUser = result.rows[0];
+    
+    // Return formatted user data
+    const userData = {
+      id: updatedUser.id,
+      fullName: updatedUser.full_name,
+      email: updatedUser.email,
+      role: updatedUser.role,
+      phoneNumber: updatedUser.phone_number,
+      gender: updatedUser.gender,
+      address: updatedUser.address,
+      state: updatedUser.state,
+      city: updatedUser.city,
+      otherCity: updatedUser.other_city,
+      profilePhoto: updatedUser.profile_photo,
+      isAdmin: updatedUser.is_admin,
+      adminRole: updatedUser.admin_role,
+      subscriptionTier: updatedUser.subscription_tier,
+      cleanerType: updatedUser.cleaner_type,
+      clientType: updatedUser.client_type,
+      companyName: updatedUser.company_name,
+      companyAddress: updatedUser.company_address,
+      experience: updatedUser.experience,
+      bio: updatedUser.bio,
+      services: updatedUser.services ? (typeof updatedUser.services === 'string' ? JSON.parse(updatedUser.services) : updatedUser.services) : [],
+      chargeHourly: updatedUser.charge_hourly,
+      chargeDaily: updatedUser.charge_daily,
+      chargePerContract: updatedUser.charge_per_contract,
+      chargePerContractNegotiable: updatedUser.charge_per_contract_negotiable,
+      bankName: updatedUser.bank_name,
+      accountNumber: updatedUser.account_number,
+      governmentId: updatedUser.government_id,
+      businessRegDoc: updatedUser.business_reg_doc,
+      isSuspended: updatedUser.is_suspended
+    };
+    
+    res.json(userData);
   } catch (error) { handleError(res, error, 'Update failed'); }
 });
 

@@ -46,6 +46,25 @@ export const CleanerCard: React.FC<CleanerCardProps> = ({ cleaner, onClick }) =>
             <MapPinIcon className="w-4 h-4 mr-1 text-gray-400" />
             {locationString}, {cleaner.state}
         </p>
+        {cleaner.experience > 0 && (
+            <p className="text-xs text-gray-500 mt-1">
+                💼 {cleaner.experience} {cleaner.experience === 1 ? 'year' : 'years'} experience
+            </p>
+        )}
+        {cleaner.serviceTypes && cleaner.serviceTypes.length > 0 && (
+            <div className="flex flex-wrap gap-1 mt-2">
+                {cleaner.serviceTypes.slice(0, 3).map((service, idx) => (
+                    <span key={idx} className="inline-block bg-blue-50 text-blue-700 text-xs px-2 py-0.5 rounded-full">
+                        {service}
+                    </span>
+                ))}
+                {cleaner.serviceTypes.length > 3 && (
+                    <span className="text-xs text-gray-400 self-center">
+                        +{cleaner.serviceTypes.length - 3} more
+                    </span>
+                )}
+            </div>
+        )}
          <div className="mt-2">
             {cleaner.chargeHourly ? (
                 <>

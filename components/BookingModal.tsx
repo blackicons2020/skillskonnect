@@ -49,7 +49,7 @@ export const BookingModal: React.FC<BookingModalProps> = ({ cleaner, user, onClo
                                 <input type="radio" name="paymentMethod" value="Escrow" checked={paymentMethod === 'Escrow'} onChange={() => setPaymentMethod('Escrow')} className="mt-1 h-4 w-4 text-primary border-gray-300 focus:ring-primary"/>
                                 <div className="ml-3 text-sm">
                                     <p className="font-bold text-gray-900">Pay via Escrow</p>
-                                    <p className="text-gray-500">Pay securely to CleanConnect. We hold the payment until you approve the job is complete. An extra 10% service fee applies.</p>
+                                    <p className="text-gray-500">Pay securely to Skills Konnect. We hold the payment until you approve the job is complete. An extra 10% service fee applies.</p>
                                     <p className="font-semibold text-primary mt-1">Total: ₦{totalEscrowAmount.toLocaleString()} (₦{baseAmount.toLocaleString()} + ₦{escrowFee.toLocaleString()} fee)</p>
                                 </div>
                             </label>
@@ -57,7 +57,7 @@ export const BookingModal: React.FC<BookingModalProps> = ({ cleaner, user, onClo
                                 <input type="radio" name="paymentMethod" value="Direct" checked={paymentMethod === 'Direct'} onChange={() => setPaymentMethod('Direct')} className="mt-1 h-4 w-4 text-primary border-gray-300 focus:ring-primary"/>
                                 <div className="ml-3 text-sm">
                                     <p className="font-bold text-gray-900">Pay Cleaner Directly</p>
-                                    <p className="text-gray-500">Arrange payment directly with the cleaner upon job completion. CleanConnect is not liable for direct payments.</p>
+                                    <p className="text-gray-500">Arrange payment directly with the service provider upon job completion. Skills Konnect is not liable for direct payments.</p>
                                      <p className="font-semibold text-primary mt-1">Total: ₦{baseAmount.toLocaleString()}</p>
                                 </div>
                             </label>

@@ -9,13 +9,13 @@ import { SubscriptionPaymentDetailsModal } from './components/SubscriptionPaymen
 import { StarIcon, ChatBubbleLeftRightIcon } from './components/icons';
 import { ErrorBoundary } from './components/ErrorBoundary';
 
-import { User, Cleaner, View, SubscriptionPlan, Review, Receipt } from './types';
+import { User, Cleaner, View, SubscriptionPlan, Review, Receipt, Job } from './types';
 import { apiService } from './services/apiService';
 
 // Lazy Load Pages to optimize initial bundle size
 const LandingPage = React.lazy(() => import('./components/LandingPage').then(module => ({ default: module.LandingPage })));
 const Auth = React.lazy(() => import('./components/Auth').then(module => ({ default: module.Auth })));
-const SignupForm = React.lazy(() => import('./components/SignupForm').then(module => ({ default: module.SignupForm })));
+const SetupProfile = React.lazy(() => import('./components/SetupProfile').then(module => ({ default: module.SetupProfile })));
 const Dashboard = React.lazy(() => import('./components/Dashboard').then(module => ({ default: module.Dashboard })));
 const AdminDashboard = React.lazy(() => import('./components/AdminDashboard').then(module => ({ default: module.AdminDashboard })));
 const SubscriptionPage = React.lazy(() => import('./components/SubscriptionPage').then(module => ({ default: module.SubscriptionPage })));
@@ -38,28 +38,28 @@ interface CleanerProfileProps {
 const CleanerProfile: React.FC<CleanerProfileProps> = ({ cleaner, onNavigate, onBook }) => {
     return (
         <div className="p-8 container mx-auto">
-        <button onClick={() => onNavigate('searchResults')} className="text-primary mb-4 font-semibold hover:underline flex items-center gap-1">
-            <span>&larr;</span> Back to Results
-        </button>
-        <div className="bg-white p-6 rounded-lg shadow-lg">
-            <img src={cleaner.photoUrl} alt={cleaner.name} className="w-32 h-32 rounded-full mx-auto object-cover mb-4 ring-4 ring-primary/20" />
-            <h2 className="text-3xl font-bold text-center">{cleaner.name}</h2>
-            <div className="flex items-center justify-center mt-2 space-x-2 text-gray-700">
-                <StarIcon className="w-5 h-5 text-yellow-400" />
-                <span className="font-bold text-lg">{cleaner.rating.toFixed(1)}</span>
-                <span className="text-gray-500">({cleaner.reviews} reviews)</span>
-            </div>
-            <p className="mt-4 max-w-2xl mx-auto text-center">{cleaner.bio}</p>
-             <div className="flex justify-center mt-8 gap-4">
-                <button 
-                    onClick={() => onBook(cleaner)}
-                    className="w-full max-w-xs bg-primary text-white p-3 rounded-lg font-bold hover:bg-secondary"
-                >
-                    Book this Cleaner
-                </button>
+            <button onClick={() => onNavigate('searchResults')} className="text-primary mb-4 font-semibold hover:underline flex items-center gap-1">
+                <span>&larr;</span> Back to Results
+            </button>
+            <div className="bg-white p-6 rounded-lg shadow-lg">
+                <img src={cleaner.photoUrl} alt={cleaner.name} className="w-32 h-32 rounded-full mx-auto object-cover mb-4 ring-4 ring-primary/20" />
+                <h2 className="text-3xl font-bold text-center">{cleaner.name}</h2>
+                <div className="flex items-center justify-center mt-2 space-x-2 text-gray-700">
+                    <StarIcon className="w-5 h-5 text-yellow-400" />
+                    <span className="font-bold text-lg">{cleaner.rating.toFixed(1)}</span>
+                    <span className="text-gray-500">({cleaner.reviews} reviews)</span>
+                </div>
+                <p className="mt-4 max-w-2xl mx-auto text-center">{cleaner.bio}</p>
+                <div className="flex justify-center mt-8 gap-4">
+                    <button
+                        onClick={() => onBook(cleaner)}
+                        className="w-full max-w-xs bg-primary text-white p-3 rounded-lg font-bold hover:bg-secondary"
+                    >
+                        Book this Cleaner
+                    </button>
+                </div>
             </div>
         </div>
-    </div>
     )
 };
 
@@ -82,12 +82,9 @@ const App: React.FC = () => {
     const [user, setUser] = useState<User | null>(null);
     const [allUsers, setAllUsers] = useState<User[]>([]);
     const [allCleaners, setAllCleaners] = useState<Cleaner[]>([]);
+    const [allJobs, setAllJobs] = useState<Job[]>([]);
     const [selectedCleaner, setSelectedCleaner] = useState<Cleaner | null>(null);
-    
-    const [signupEmail, setSignupEmail] = useState<string | null>(null);
-    const [signupName, setSignupName] = useState<string | null>(null);
-    const [signupPassword, setSignupPassword] = useState<string | null>(null);
-    
+
     const [initialAuthTab, setInitialAuthTab] = useState<'login' | 'signup'>('login');
     const [initialFilters, setInitialFilters] = useState<SearchFilters | null>(null);
     const [authMessage, setAuthMessage] = useState<{ type: 'success' | 'error', text: string } | null>(null);
@@ -102,22 +99,26 @@ const App: React.FC = () => {
     const [bookingDetailsForEscrow, setBookingDetailsForEscrow] = useState<{ cleaner: Cleaner; totalAmount: number } | null>(null);
     const [isSubPaymentModalOpen, setIsSubPaymentModalOpen] = useState(false);
     const [planToUpgrade, setPlanToUpgrade] = useState<SubscriptionPlan | null>(null);
-    
+
     // State to remember booking intention for logged-out users
     const [cleanerToRememberForBooking, setCleanerToRememberForBooking] = useState<Cleaner | null>(null);
-    
+
     // State to pass initial active tab to dashboards
     const [dashboardInitialTab, setDashboardInitialTab] = useState<'find' | 'bookings' | 'messages' | 'profile' | 'jobs' | 'reviews'>('find');
+
+    // Fetch all available jobs from the API
 
     // Refetches all app data. Used after state-changing actions.
     const refetchAllData = async (currentUser: User) => {
         try {
-            const [cleaners, users] = await Promise.all([
+            const [cleaners, users, jobs] = await Promise.all([
                 apiService.getAllCleaners(),
-                currentUser.isAdmin ? apiService.adminGetAllUsers() : Promise.resolve([])
+                currentUser.isAdmin ? apiService.adminGetAllUsers() : Promise.resolve([]),
+                apiService.getAllJobs()
             ]);
             setAllCleaners(cleaners);
             setAllUsers(users);
+            setAllJobs(jobs);
         } catch (error: any) {
             setAppError("Failed to refresh application data: " + error.message);
         }
@@ -129,21 +130,25 @@ const App: React.FC = () => {
         const checkSession = async () => {
             setIsLoading(true);
             setAppError(null);
-            
-            // Always fetch cleaners first so landing page works
+
+            // Always fetch cleaners and jobs first so landing page and worker dashboard works
             try {
-                const cleaners = await apiService.getAllCleaners();
+                const [cleaners, jobs] = await Promise.all([
+                    apiService.getAllCleaners(),
+                    apiService.getAllJobs()
+                ]);
                 setAllCleaners(cleaners);
+                setAllJobs(jobs);
             } catch (error: any) {
-                console.error("Failed to fetch cleaners:", error);
+                console.error("Failed to fetch initial data:", error);
                 if (error.message.includes('Failed to fetch')) {
                     setAppError("Could not connect to the backend server. Please ensure the server is running and accessible.");
                 } else {
-                    setAppError("An error occurred while fetching cleaners.");
+                    setAppError("An error occurred while fetching initial data.");
                 }
             }
 
-            const token = localStorage.getItem('cleanconnect_token');
+            const token = localStorage.getItem('skillskonnect_token');
             if (token) {
                 try {
                     const currentUser = await apiService.getMe();
@@ -153,7 +158,7 @@ const App: React.FC = () => {
                     handleLogout();
                 }
             }
-            
+
             setIsLoading(false);
         };
         checkSession();
@@ -164,19 +169,19 @@ const App: React.FC = () => {
         window.scrollTo(0, 0);
         // Reset dashboard tab to default when navigating normally
         if (targetView === 'clientDashboard') setDashboardInitialTab('find');
-        if (targetView === 'cleanerDashboard') setDashboardInitialTab('profile');
+        if (targetView === 'cleanerDashboard') setDashboardInitialTab('jobs');
     };
 
     const handleNavigateToAuth = (tab: 'login' | 'signup') => {
         setInitialAuthTab(tab);
         setView('auth');
     };
-    
+
     const handleLoginAttempt = async (email: string, password?: string) => {
         setAuthMessage(null);
         try {
             const { token, user: loggedInUser } = await apiService.login(email, password);
-            localStorage.setItem('cleanconnect_token', token);
+            localStorage.setItem('skillskonnect_token', token);
             await handleAuthSuccess(loggedInUser);
         } catch (error: any) {
             setAuthMessage({ type: 'error', text: error.message || 'Login failed. Please try again.' });
@@ -185,21 +190,21 @@ const App: React.FC = () => {
 
     const handleSocialAuth = async (provider: 'google' | 'apple', email?: string, name?: string, flow?: 'login' | 'signup') => {
         setAuthMessage(null);
-        
+
         if (flow === 'signup') {
             setSignupEmail(email || '');
             setSignupName(name || '');
             // For social signup, we skip password or generate a placeholder internally if needed by backend,
             // but here we just proceed to the form to collect other details.
             // We set a dummy password to satisfy the current flow which expects it for manual signup.
-            setSignupPassword('SocialAuth123!'); 
+            setSignupPassword('SocialAuth123!');
             setView('signup');
             return;
         }
 
         try {
             const { token, user: loggedInUser } = await apiService.socialLogin(provider, email, name);
-            localStorage.setItem('cleanconnect_token', token);
+            localStorage.setItem('skillskonnect_token', token);
             await handleAuthSuccess(loggedInUser);
         } catch (error: any) {
             setAuthMessage({ type: 'error', text: error.message || 'Social login failed.' });
@@ -228,7 +233,7 @@ const App: React.FC = () => {
             }
             return;
         }
-        
+
         if (shouldNavigate) {
             if (userData.isAdmin) {
                 handleNavigate('adminDashboard');
@@ -237,51 +242,48 @@ const App: React.FC = () => {
             }
         }
     };
-    
-    const handleInitialSignup = (email: string, password: string) => {
+
+    const handleDirectSignup = async (email: string, password: string) => {
         setAuthMessage(null);
-        setSignupEmail(email);
-        setSignupName(null); // Clear any previous social name
-        setSignupPassword(password);
-        setView('signup');
-    };
-    
-    const handleSignupComplete = async (newUser: User) => {
-        if (!signupPassword) {
-            alert("An error occurred during signup. Password was not provided.");
-            handleNavigateToAuth('signup');
-            return;
-        }
-        const newUserWithPassword: User = { ...newUser, password: signupPassword };
         try {
-            // apiService.register returns the User object, which usually contains the token in the response from the backend.
-            const response: any = await apiService.register(newUserWithPassword);
+            // Register with minimal data - email and password only
+            const response: any = await apiService.register({ 
+                email, 
+                password, 
+                role: 'client' // Default to client, can be changed in profile
+            });
             
             if (response.token) {
-                // Auto-login after successful registration
-                localStorage.setItem('cleanconnect_token', response.token);
-                setAuthMessage({ type: 'success', text: "Account created successfully!" });
-                await handleAuthSuccess(response);
+                localStorage.setItem('skillskonnect_token', response.token);
+                setUser(response);
+                await refetchAllData(response);
+                setAuthMessage({ type: 'success', text: 'Account created successfully! Please complete your profile.' });
+                
+                // Redirect directly to dashboard based on role
+                if (response.isAdmin) {
+                    handleNavigate('adminDashboard');
+                } else {
+                    handleNavigate(response.role === 'client' ? 'clientDashboard' : 'cleanerDashboard');
+                }
             } else {
-                // Fallback if no token returned (legacy behavior)
-                setAuthMessage({ type: 'success', text: "Account created! Please log in." });
+                setAuthMessage({ type: 'success', text: 'Account created! Please log in.' });
                 handleNavigateToAuth('login');
             }
         } catch (error: any) {
-            alert(error.message || "Signup failed. A user with this email may already exist.");
-            handleNavigateToAuth('signup');
+            setAuthMessage({ type: 'error', text: error.message || 'Signup failed. A user with this email may already exist.' });
         }
     };
+
 
     const handleLogout = () => {
         apiService.logout();
         setUser(null);
         setAllUsers([]);
-        localStorage.removeItem('cleanconnect_token');
+        localStorage.removeItem('skillskonnect_token');
         setCleanerToRememberForBooking(null);
         handleNavigate('landing');
     };
-    
+
     const handleSelectCleaner = (cleaner: Cleaner) => {
         setSelectedCleaner(cleaner);
         handleNavigate('cleanerProfile');
@@ -302,17 +304,39 @@ const App: React.FC = () => {
         try {
             const updatedUser = await apiService.updateUser(updatedData);
             setUser(updatedUser);
+            
+            // Check if postedJobs changed (client posting/updating jobs)
+            const jobsChanged = user && user.postedJobs?.length !== updatedUser.postedJobs?.length;
+            
             if (updatedUser.isAdmin) {
                 await refetchAllData(updatedUser);
+            } else if (jobsChanged && updatedUser.role === 'client') {
+                // Refetch jobs so workers can see the new/updated jobs
+                try {
+                    const jobs = await apiService.getAllJobs();
+                    setAllJobs(jobs);
+                } catch (error: any) {
+                    console.error("Failed to refresh jobs:", error);
+                }
             }
-            alert("Profile updated successfully!");
-        } catch(error: any) {
+            
+            // Check if this was a subscription update
+            const isSubscriptionUpdate = user && user.subscriptionTier !== updatedUser.subscriptionTier;
+            
+            if (isSubscriptionUpdate) {
+                alert(`✓ Subscription upgraded to ${updatedUser.subscriptionTier} plan!\n\nYou now have access to all ${updatedUser.subscriptionTier} features.`);
+            } else if (jobsChanged) {
+                // Don't show alert, the job posting form already shows success
+            } else {
+                alert("Profile updated successfully!");
+            }
+        } catch (error: any) {
             alert(`Failed to update profile: ${error.message}`);
         }
     };
 
     const handleConfirmBooking = async (paymentMethod: 'Direct' | 'Escrow', cleaner: Cleaner) => {
-         if (!user) return;
+        if (!user) return;
         try {
             const baseAmount = cleaner.chargeHourly || cleaner.chargeDaily || cleaner.chargePerContract || 5000;
             const bookingData = {
@@ -324,8 +348,8 @@ const App: React.FC = () => {
                 paymentMethod,
             };
             const newBooking = await apiService.createBooking(bookingData);
-            
-            setUser(prev => prev ? ({...prev, bookingHistory: [...(prev.bookingHistory || []), newBooking] }) : null);
+
+            setUser(prev => prev ? ({ ...prev, bookingHistory: [...(prev.bookingHistory || []), newBooking] }) : null);
 
             handleCloseBookingModals();
             alert(`Booking created! ${paymentMethod === 'Escrow' ? 'Please upload your payment receipt from your dashboard.' : ''}`);
@@ -334,39 +358,39 @@ const App: React.FC = () => {
             alert(`Booking failed: ${error.message}`);
         }
     };
-    
+
     const handleCancelBooking = async (bookingId: string) => {
         try {
             const cancelledBooking = await apiService.cancelBooking(bookingId);
-            setUser(prev => prev ? ({...prev, bookingHistory: prev.bookingHistory?.map(b => b.id === bookingId ? cancelledBooking : b)}) : null);
+            setUser(prev => prev ? ({ ...prev, bookingHistory: prev.bookingHistory?.map(b => b.id === bookingId ? cancelledBooking : b) }) : null);
             alert("Booking cancelled successfully.");
-        } catch(e: any) { alert(`Cancellation failed: ${e.message}`); }
+        } catch (e: any) { alert(`Cancellation failed: ${e.message}`); }
     };
 
     const handleApproveJobCompletion = async (bookingId: string) => {
         try {
             const completedBooking = await apiService.markJobComplete(bookingId);
-            setUser(prev => prev ? ({...prev, bookingHistory: prev.bookingHistory?.map(b => b.id === bookingId ? completedBooking : b)}) : null);
-        } catch(e: any) { alert(`Failed to mark as complete: ${e.message}`); }
+            setUser(prev => prev ? ({ ...prev, bookingHistory: prev.bookingHistory?.map(b => b.id === bookingId ? completedBooking : b) }) : null);
+        } catch (e: any) { alert(`Failed to mark as complete: ${e.message}`); }
     };
 
     const handleReviewSubmit = async (bookingId: string, cleanerId: string, reviewData: Omit<Review, 'reviewerName'>) => {
         try {
-            await apiService.submitReview(bookingId, {...reviewData, cleanerId});
-            setUser(prev => prev ? ({...prev, bookingHistory: prev.bookingHistory?.map(b => b.id === bookingId ? {...b, reviewSubmitted: true} : b)}) : null);
+            await apiService.submitReview(bookingId, { ...reviewData, cleanerId });
+            setUser(prev => prev ? ({ ...prev, bookingHistory: prev.bookingHistory?.map(b => b.id === bookingId ? { ...b, reviewSubmitted: true } : b) }) : null);
             alert("Review submitted successfully!");
-        } catch(e: any) { alert(`Failed to submit review: ${e.message}`); }
+        } catch (e: any) { alert(`Failed to submit review: ${e.message}`); }
     };
-    
+
     // Admin Actions
     const handleDeleteUser = async (userId: string) => {
         try {
             await apiService.adminDeleteUser(userId);
             setAllUsers(prev => prev.filter(u => u.id !== userId));
             alert("User deleted successfully.");
-        } catch(e: any) { alert(`Failed to delete user: ${e.message}`); }
+        } catch (e: any) { alert(`Failed to delete user: ${e.message}`); }
     };
-    
+
     const handleStartBookingProcess = (cleaner: Cleaner) => {
         if (!user) {
             setCleanerToRememberForBooking(cleaner);
@@ -385,7 +409,7 @@ const App: React.FC = () => {
             handleNavigateToAuth('login');
             return;
         }
-        
+
         try {
             await apiService.createChat(user.id, cleaner.id, user.fullName, cleaner.name);
             setDashboardInitialTab('messages');
@@ -407,9 +431,9 @@ const App: React.FC = () => {
         setIsBookingModalOpen(false);
         setIsEscrowModalOpen(true);
     };
-    
+
     const handleUpgradeRequest = (plan: SubscriptionPlan) => { setIsSubPaymentModalOpen(true); setPlanToUpgrade(plan); };
-    
+
     const handleConfirmSubscriptionRequest = async (plan: SubscriptionPlan) => {
         try {
             const updatedUser = await apiService.requestSubscriptionUpgrade(plan);
@@ -421,7 +445,7 @@ const App: React.FC = () => {
             alert(`Failed to request upgrade: ${error.message}`);
         }
     };
-    
+
     const handleUploadBookingReceipt = async (bookingId: string, receipt: Receipt) => {
         try {
             const updatedUser = await apiService.uploadReceipt(bookingId, receipt, 'booking');
@@ -431,7 +455,7 @@ const App: React.FC = () => {
             alert(`Failed to upload receipt: ${error.message}`);
         }
     };
-    
+
     const handleUploadSubscriptionReceipt = async (receipt: Receipt) => {
         if (!user) return;
         try {
@@ -442,7 +466,7 @@ const App: React.FC = () => {
             alert(`Failed to upload receipt: ${error.message}`);
         }
     };
-    
+
     const handleMarkAsPaid = async (bookingId: string) => {
         if (!user) return;
         try {
@@ -484,88 +508,79 @@ const App: React.FC = () => {
 
         switch (view) {
             case 'auth':
-                return <Auth 
+                return <Auth
                     initialTab={initialAuthTab}
-                    onNavigate={handleNavigate} 
+                    onNavigate={handleNavigate}
                     onLoginAttempt={handleLoginAttempt}
-                    onSocialAuth={handleSocialAuth}
-                    onInitialSignup={handleInitialSignup}
+                    onSignup={handleDirectSignup}
                     authMessage={authMessage}
                     onAuthMessageDismiss={() => setAuthMessage(null)}
                 />;
-            case 'signup':
-                if (signupEmail) {
-                    return <SignupForm 
-                        email={signupEmail} 
-                        initialName={signupName || undefined} // Pass the name captured from social modal
-                        onComplete={handleSignupComplete} 
-                        onNavigate={handleNavigate}
-                    />;
-                }
-                handleNavigate('auth');
-                return null;
             case 'clientDashboard':
                 if (user && user.role === 'client') {
-                    return <ClientDashboard 
-                                user={user} 
-                                allCleaners={allCleaners}
-                                onSelectCleaner={handleSelectCleaner}
-                                initialFilters={initialFilters}
-                                clearInitialFilters={() => setInitialFilters(null)}
-                                onNavigate={handleNavigate}
-                                onCancelBooking={handleCancelBooking}
-                                onReviewSubmit={handleReviewSubmit}
-                                onApproveJobCompletion={handleApproveJobCompletion}
-                                onUploadBookingReceipt={handleUploadBookingReceipt}
-                                onUpdateUser={handleUpdateUser}
-                                appError={appError}
-                                initialTab={dashboardInitialTab as any}
-                           />;
+                    return <ClientDashboard
+                        user={user}
+                        allCleaners={allCleaners}
+                        allUsers={allUsers}
+                        onSelectCleaner={handleSelectCleaner}
+                        initialFilters={initialFilters}
+                        clearInitialFilters={() => setInitialFilters(null)}
+                        onNavigate={handleNavigate}
+                        onCancelBooking={handleCancelBooking}
+                        onReviewSubmit={handleReviewSubmit}
+                        onApproveJobCompletion={handleApproveJobCompletion}
+                        onUploadBookingReceipt={handleUploadBookingReceipt}
+                        onUpdateUser={handleUpdateUser}
+                        appError={appError}
+                        initialTab={dashboardInitialTab as any}
+                    />;
                 }
                 handleNavigate('auth');
                 return null;
             case 'cleanerDashboard':
                 if (user && user.role === 'cleaner') {
-                    return <Dashboard 
-                                user={user} 
-                                onUpdateUser={handleUpdateUser} 
-                                onNavigate={handleNavigate} 
-                                onUploadSubscriptionReceipt={handleUploadSubscriptionReceipt} 
-                                initialTab={dashboardInitialTab as any}
-                            />;
+                    return <Dashboard
+                        user={user}
+                        onUpdateUser={handleUpdateUser}
+                        onNavigate={handleNavigate}
+                        onUploadSubscriptionReceipt={handleUploadSubscriptionReceipt}
+                        initialTab={dashboardInitialTab as any}
+                        allJobs={allJobs}
+                    />;
                 }
                 handleNavigate('auth');
                 return null;
             case 'adminDashboard':
                 if (user && user.isAdmin) {
-                    return <AdminDashboard 
-                                user={user}
-                                allUsers={allUsers}
-                                onUpdateUser={handleUpdateUser}
-                                onDeleteUser={handleDeleteUser}
-                                onMarkAsPaid={handleMarkAsPaid}
-                                onConfirmPayment={handleConfirmEscrowPayment}
-                                onApproveSubscription={handleApproveSubscription}
-                           />;
+                    return <AdminDashboard
+                        user={user}
+                        allUsers={allUsers}
+                        allJobs={allJobs}
+                        onUpdateUser={handleUpdateUser}
+                        onDeleteUser={handleDeleteUser}
+                        onMarkAsPaid={handleMarkAsPaid}
+                        onConfirmPayment={handleConfirmEscrowPayment}
+                        onApproveSubscription={handleApproveSubscription}
+                    />;
                 }
                 handleNavigate('auth');
                 return null;
             case 'cleanerProfile':
                 if (selectedCleaner) {
-                    return <CleanerProfile cleaner={selectedCleaner} onNavigate={handleNavigate} onBook={handleStartBookingProcess}/>;
+                    return <CleanerProfile cleaner={selectedCleaner} onNavigate={handleNavigate} onBook={handleStartBookingProcess} />;
                 }
                 handleNavigate('landing');
                 return null;
             case 'subscription':
-                if (user && user.role === 'cleaner') {
-                    return <SubscriptionPage 
-                                currentPlan={user.subscriptionTier || 'Free'} 
-                                onSelectPlan={handleUpgradeRequest} 
-                           />;
+                if (user) {
+                    return <SubscriptionPage
+                        user={user}
+                        onSelectPlan={handleUpgradeRequest}
+                    />;
                 }
-                 handleNavigate('cleanerDashboard');
+                handleNavigate('landing');
                 return null;
-             case 'searchResults':
+            case 'searchResults':
                 return <SearchResultsPage
                     allCleaners={allCleaners}
                     onSelectCleaner={handleSelectCleaner}
@@ -581,9 +596,9 @@ const App: React.FC = () => {
             case 'privacy': return <PrivacyPage />;
             case 'landing':
             default:
-                return <LandingPage 
+                return <LandingPage
                     cleaners={allCleaners}
-                    onNavigate={handleNavigate} 
+                    onNavigate={handleNavigate}
                     onSelectCleaner={handleSelectCleaner}
                     onSearch={handleSearchFromHero}
                     appError={appError}
@@ -601,8 +616,8 @@ const App: React.FC = () => {
                     </Suspense>
                 </main>
                 <Footer onNavigate={handleNavigate} />
-                
-                 {isBookingModalOpen && cleanerToBook && user && (
+
+                {isBookingModalOpen && cleanerToBook && user && (
                     <BookingModal
                         cleaner={cleanerToBook}
                         user={user}
@@ -619,14 +634,16 @@ const App: React.FC = () => {
                         onConfirmBooking={handleConfirmBooking}
                     />
                 )}
-                {isSubPaymentModalOpen && planToUpgrade && (
+                {isSubPaymentModalOpen && planToUpgrade && user && (
                     <SubscriptionPaymentDetailsModal
                         plan={planToUpgrade}
+                        user={user}
                         onClose={() => {
                             setIsSubPaymentModalOpen(false);
                             setPlanToUpgrade(null);
                         }}
                         onConfirm={handleConfirmSubscriptionRequest}
+                        onUpdateUser={handleUpdateUser}
                     />
                 )}
             </ErrorBoundary>

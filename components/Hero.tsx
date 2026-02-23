@@ -24,10 +24,10 @@ export const Hero: React.FC<HeroProps> = ({ onSearch }) => {
             <div className="absolute inset-0 bg-black/60"></div>
             <div className="relative container mx-auto px-4 sm:px-6 lg:px-8 h-full flex flex-col justify-center items-center text-center text-white">
                 <h1 className="text-4xl md:text-5xl lg:text-6xl font-extrabold tracking-tight mb-6">
-                    Find Trusted Cleaners Near You
+                    Find Trusted Professionals Near You
                 </h1>
                 <p className="text-lg md:text-xl max-w-3xl mx-auto text-gray-200 mb-10">
-                    Connect instantly with top-rated professionals for home, office, and specialized cleaning services.
+                    Connect instantly with top-rated skilled professionals across 100+ categories - from tech to trades, events to creative arts.
                 </p>
                 
                 {/* Search Box Container */}

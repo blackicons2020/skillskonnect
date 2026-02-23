@@ -10,7 +10,7 @@ export const RoleSelection: React.FC<RoleSelectionProps> = ({ onSelect }) => {
         <div className="min-h-full flex items-center justify-center py-12 px-4 sm:px-6 lg:px-8">
             <div className="max-w-md w-full space-y-8">
                 <div className="text-center">
-                    <h2 className="text-3xl font-extrabold text-dark">How would you like to join CleanConnect?</h2>
+                    <h2 className="text-3xl font-extrabold text-dark">How would you like to join Skills Konnect?</h2>
                     <p className="mt-2 text-sm text-gray-600">Choose your role to get started.</p>
                 </div>
                 <div className="mt-8 bg-white p-8 rounded-lg shadow-lg space-y-6">

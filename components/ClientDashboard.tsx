@@ -1,16 +1,20 @@
 
 import React, { useState, useEffect, useMemo, useRef } from 'react';
-import { Cleaner, User, View, Booking, Review, Receipt } from '../types';
+import { Cleaner, User, View, Booking, Review, Receipt, VerificationDocuments, Job } from '../types';
 import { SparklesIcon, MapPinIcon, BriefcaseIcon, ChevronDownIcon, StarIcon, CreditCardIcon, UserGroupIcon, ChatBubbleLeftRightIcon, LifebuoyIcon, PencilIcon, UserIcon } from './icons';
 import { CleanerCard } from './CleanerCard';
 import { getAiRecommendedServices } from '../services/geminiService';
 import { CLEANING_SERVICES } from '../constants/services';
 import { CancellationConfirmationModal } from './CancellationConfirmationModal';
 import { ReviewModal } from './ReviewModal';
+import { JobApplicantsModal } from './JobApplicantsModal';
+import { EditJobModal } from './EditJobModal';
 import { apiService } from '../services/apiService';
 import { ChatInterface } from './ChatInterface';
 import { SupportTicketSection } from './SupportTicketSection';
 import { NIGERIA_LOCATIONS } from '../constants/locations';
+import ProfileCompletionForm from './ProfileCompletionForm';
+import VerificationSection from './VerificationSection';
 
 interface ServiceRecommendationsProps {
     isLoading: boolean;
@@ -79,7 +83,8 @@ const ProfileField: React.FC<{ label: string; value?: string | number | null | s
 
 interface ClientDashboardProps {
     user: User;
-    allCleaners: Cleaner[]; 
+    allCleaners: Cleaner[];
+    allUsers?: User[];
     onSelectCleaner: (cleaner: Cleaner) => void;
     initialFilters?: { service: string, location: string, minPrice: string, maxPrice: string, minRating: string } | null;
     clearInitialFilters: () => void;
@@ -90,13 +95,103 @@ interface ClientDashboardProps {
     onUploadBookingReceipt: (bookingId: string, receipt: Receipt) => void;
     onUpdateUser: (user: User) => void;
     appError: string | null;
-    initialTab?: 'find' | 'bookings' | 'messages' | 'support' | 'profile';
+    initialTab?: 'find' | 'bookings' | 'messages' | 'support' | 'profile' | 'verification' | 'jobs';
 }
 
-export const ClientDashboard: React.FC<ClientDashboardProps> = ({ user, allCleaners, onSelectCleaner, initialFilters, clearInitialFilters, onNavigate, onCancelBooking, onReviewSubmit, onApproveJobCompletion, onUploadBookingReceipt, onUpdateUser, appError, initialTab }) => {
+export const ClientDashboard: React.FC<ClientDashboardProps> = ({ user, allCleaners, allUsers = [], onSelectCleaner, initialFilters, clearInitialFilters, onNavigate, onCancelBooking, onReviewSubmit, onApproveJobCompletion, onUploadBookingReceipt, onUpdateUser, appError, initialTab }) => {
     const [recommendations, setRecommendations] = useState<string[]>([]);
     const [isRecsLoading, setIsRecsLoading] = useState(true);
-    const [activeTab, setActiveTab] = useState<'find' | 'bookings' | 'messages' | 'support' | 'profile'>(initialTab || 'find');
+    
+    // Job management state
+    const [jobToViewApplicants, setJobToViewApplicants] = useState<Job | null>(null);
+    const [jobToEdit, setJobToEdit] = useState<Job | null>(null);
+    const [jobToDelete, setJobToDelete] = useState<Job | null>(null);
+    const [jobApplicants, setJobApplicants] = useState<User[]>([]);
+    const [isLoadingApplicants, setIsLoadingApplicants] = useState(false);
+    
+    // Check if profile is incomplete
+    const isProfileIncomplete = !user.userType || !user.phoneNumber || !user.country;
+    
+    // Set initial tab - if profile is incomplete, always start with profile, otherwise use initialTab or 'find'
+    const [activeTab, setActiveTab] = useState<'find' | 'bookings' | 'messages' | 'support' | 'profile' | 'verification' | 'jobs'>(
+        isProfileIncomplete ? 'profile' : (initialTab || 'find')
+    );
+    const [showProfileCompletion, setShowProfileCompletion] = useState(isProfileIncomplete);
+    
+    // Handler for profile updates
+    const handleProfileUpdate = async (updates: Partial<User>) => {
+        await onUpdateUser({ ...user, ...updates });
+        setShowProfileCompletion(false);
+    };
+    
+    // Handler for verification document upload
+    const handleVerificationUpload = async (documents: VerificationDocuments) => {
+        await onUpdateUser({ ...user, verificationDocuments: documents });
+    };
+    
+    // Job management handlers
+    const handleViewApplicants = async (job: Job) => {
+        setJobToViewApplicants(job);
+        setIsLoadingApplicants(true);
+        try {
+            const applicants = await apiService.getJobApplicants(job.id);
+            setJobApplicants(applicants);
+        } catch (error: any) {
+            alert(`Failed to load applicants: ${error.message}`);
+            setJobApplicants([]);
+        } finally {
+            setIsLoadingApplicants(false);
+        }
+    };
+    
+    const handleEditJob = async (jobId: string, updates: Partial<Job>) => {
+        try {
+            const updatedJob = await apiService.updateJob(jobId, updates);
+            // Update local user state with edited job
+            const updatedPostedJobs = user.postedJobs?.map(j => 
+                j.id === jobId ? updatedJob : j
+            );
+            await onUpdateUser({ ...user, postedJobs: updatedPostedJobs });
+            alert('Job updated successfully!');
+        } catch (error: any) {
+            alert(`Failed to update job: ${error.message}`);
+            throw error;
+        }
+    };
+    
+    const handleCancelJob = async (jobId: string) => {
+        if (!confirm('Are you sure you want to cancel this job? This action cannot be undone.')) {
+            return;
+        }
+        try {
+            const cancelledJob = await apiService.cancelJob(jobId);
+            // Update local user state
+            const updatedPostedJobs = user.postedJobs?.map(j => 
+                j.id === jobId ? cancelledJob : j
+            );
+            await onUpdateUser({ ...user, postedJobs: updatedPostedJobs });
+            alert('Job cancelled successfully!');
+        } catch (error: any) {
+            alert(`Failed to cancel job: ${error.message}`);
+        }
+    };
+    
+    const handleDeleteJob = async (jobId: string) => {
+        if (!confirm('Are you sure you want to delete this job? This action cannot be undone.')) {
+            return;
+        }
+        try {
+            await apiService.deleteJob(jobId);
+            // Remove job from local user state
+            const updatedPostedJobs = user.postedJobs?.filter(j => j.id !== jobId);
+            await onUpdateUser({ ...user, postedJobs: updatedPostedJobs });
+            setJobToDelete(null);
+            alert('Job deleted successfully!');
+        } catch (error: any) {
+            alert(`Failed to delete job: ${error.message}`);
+        }
+    };
+    
     const [bookingToCancel, setBookingToCancel] = useState<Booking | null>(null);
     const [bookingToReview, setBookingToReview] = useState<Booking | null>(null);
     const [activeFilters, setActiveFilters] = useState({ service: '', location: '', minPrice: '', maxPrice: '', minRating: '' });
@@ -118,15 +213,23 @@ export const ClientDashboard: React.FC<ClientDashboardProps> = ({ user, allClean
                 setIsAdvancedOpen(true);
             }
             clearInitialFilters();
-            setActiveTab('find');
+            // Only switch to find tab if profile is complete
+            if (!isProfileIncomplete) {
+                setActiveTab('find');
+            }
         }
-    }, [initialFilters, clearInitialFilters]);
+    }, [initialFilters, clearInitialFilters, isProfileIncomplete]);
 
     useEffect(() => {
         if (initialTab) {
-            setActiveTab(initialTab);
+            // If profile is incomplete, ignore initialTab and stay on profile
+            if (isProfileIncomplete) {
+                setActiveTab('profile');
+            } else {
+                setActiveTab(initialTab);
+            }
         }
-    }, [initialTab]);
+    }, [initialTab, isProfileIncomplete]);
 
     useEffect(() => {
         setIsRecsLoading(true);
@@ -192,7 +295,10 @@ export const ClientDashboard: React.FC<ClientDashboardProps> = ({ user, allClean
     
     const handleRecommendationSelect = (service: string) => {
         setActiveFilters(prev => ({ ...prev, service }));
-        setActiveTab('find');
+        // Only switch to find tab if profile is complete
+        if (!isProfileIncomplete) {
+            setActiveTab('find');
+        }
         window.scrollTo(0, 0);
     };
 
@@ -287,7 +393,7 @@ export const ClientDashboard: React.FC<ClientDashboardProps> = ({ user, allClean
     // Determine the display name (Company Name if applicable, else First Name)
     const displayName = user.clientType === 'Company' && user.companyName 
         ? user.companyName 
-        : user.fullName.split(' ')[0];
+        : user.fullName.split(' ')[0] || 'User';
 
     // Determine the name to display in profile header
     const profileDisplayName = profileFormData.clientType === 'Company' && profileFormData.companyName 
@@ -297,18 +403,62 @@ export const ClientDashboard: React.FC<ClientDashboardProps> = ({ user, allClean
     return (
         <div className="p-4 sm:p-8 container mx-auto">
              <input type="file" ref={fileInputRef} onChange={handleFileSelected} className="hidden" accept="image/*,.pdf" />
-             <div className="flex flex-col sm:flex-row justify-between items-center mb-6 gap-4">
-                <h1 className="text-3xl font-bold text-dark text-center sm:text-left">Welcome back, {displayName}!</h1>
+             
+             {/* Profile Header with Name and Email */}
+             <div className="bg-white rounded-lg shadow-md p-6 mb-6">
+                <div className="flex flex-col sm:flex-row items-center gap-6">
+                    {/* Profile Avatar */}
+                    <div className="flex-shrink-0">
+                        {user.profilePicture ? (
+                            <img 
+                                src={user.profilePicture} 
+                                alt="Profile" 
+                                className="w-24 h-24 rounded-full object-cover border-4 border-blue-500"
+                            />
+                        ) : (
+                            <div className="w-24 h-24 rounded-full bg-gradient-to-br from-purple-500 to-purple-600 flex items-center justify-center text-white text-3xl font-bold border-4 border-purple-500">
+                                {(displayName || 'U')[0].toUpperCase()}
+                            </div>
+                        )}
+                    </div>
+                    
+                    {/* User Info */}
+                    <div className="flex-grow text-center sm:text-left">
+                        <h1 className="text-3xl font-bold text-gray-800">
+                            {profileDisplayName || displayName || 'User'}
+                        </h1>
+                        <p className="text-gray-600 text-lg mt-1">{user.email}</p>
+                        {user.userType && (
+                            <span className="inline-block mt-2 px-3 py-1 bg-purple-100 text-purple-700 rounded-full text-sm font-medium">
+                                {user.userType}
+                            </span>
+                        )}
+                        {user.isVerified && (
+                            <span className="inline-block mt-2 ml-2 px-3 py-1 bg-green-100 text-green-700 rounded-full text-sm font-medium">
+                                ✓ Verified
+                            </span>
+                        )}
+                    </div>
+                </div>
             </div>
 
             <div className="border-b border-gray-200 mb-6 overflow-x-auto">
                 <nav className="-mb-px flex space-x-8" aria-label="Tabs">
-                    <button onClick={() => setActiveTab('find')} className={`${activeTab === 'find' ? 'border-primary text-primary' : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'} whitespace-nowrap py-4 px-1 border-b-2 font-medium text-sm`}>
-                        Find a Cleaner
-                    </button>
+                    {/* Only show Find a Cleaner tab if profile is complete */}
+                    {!isProfileIncomplete && (
+                        <button onClick={() => setActiveTab('find')} className={`${activeTab === 'find' ? 'border-primary text-primary' : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'} whitespace-nowrap py-4 px-1 border-b-2 font-medium text-sm`}>
+                            Find a Cleaner
+                        </button>
+                    )}
                     <button onClick={() => setActiveTab('bookings')} className={`${activeTab === 'bookings' ? 'border-primary text-primary' : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'} whitespace-nowrap py-4 px-1 border-b-2 font-medium text-sm`}>
                         My Bookings
                     </button>
+                    {!isProfileIncomplete && (
+                        <button onClick={() => setActiveTab('jobs')} className={`${activeTab === 'jobs' ? 'border-primary text-primary' : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'} whitespace-nowrap py-4 px-1 border-b-2 font-medium text-sm flex items-center gap-2`}>
+                            <BriefcaseIcon className="w-4 h-4" />
+                            Job Listings
+                        </button>
+                    )}
                     <button onClick={() => setActiveTab('messages')} className={`${activeTab === 'messages' ? 'border-primary text-primary' : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'} whitespace-nowrap py-4 px-1 border-b-2 font-medium text-sm flex items-center gap-2`}>
                         <ChatBubbleLeftRightIcon className="w-4 h-4" />
                         Messages
@@ -321,10 +471,36 @@ export const ClientDashboard: React.FC<ClientDashboardProps> = ({ user, allClean
                         <UserIcon className="w-4 h-4" />
                         My Profile
                     </button>
+                    <button onClick={() => setActiveTab('verification')} className={`${activeTab === 'verification' ? 'border-primary text-primary' : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'} whitespace-nowrap py-4 px-1 border-b-2 font-medium text-sm`}>
+                        {user.isVerified ? '✓' : '○'} Verification
+                    </button>
                 </nav>
             </div>
             
-            {activeTab === 'find' && (
+            {/* Profile Completion Banner */}
+            {isProfileIncomplete && (
+                <div className="bg-blue-50 border-l-4 border-blue-400 p-4 mb-6">
+                    <div className="flex items-start">
+                        <div className="flex-1">
+                            <h3 className="text-sm font-medium text-blue-800">Welcome! Complete Your Profile</h3>
+                            <p className="mt-1 text-sm text-blue-700">
+                                Please complete your profile to access all features including search and booking.
+                            </p>
+                        </div>
+                        <button
+                            onClick={() => {
+                                setActiveTab('profile');
+                                setShowProfileCompletion(true);
+                            }}
+                            className="ml-4 bg-blue-600 text-white px-4 py-2 rounded-md text-sm font-medium hover:bg-blue-700"
+                        >
+                            Complete Profile
+                        </button>
+                    </div>
+                </div>
+            )}
+            
+            {activeTab === 'find' && !isProfileIncomplete && (
                 <div>
                      <div className="bg-white p-6 rounded-lg shadow-md">
                         <h2 className="text-lg font-bold mb-4">Search Cleaners</h2>
@@ -516,6 +692,302 @@ export const ClientDashboard: React.FC<ClientDashboardProps> = ({ user, allClean
                 </div>
             )}
              
+            {activeTab === 'jobs' && (
+                <div className="space-y-6">
+                    {/* Subscription Check Banner */}
+                    {(!user.subscriptionTier || user.subscriptionTier === 'Free') && (
+                        <div className="bg-gradient-to-r from-purple-50 to-blue-50 border-l-4 border-purple-500 p-6 rounded-lg shadow-md">
+                            <div className="flex items-start">
+                                <div className="flex-shrink-0">
+                                    <svg className="h-8 w-8 text-purple-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" />
+                                    </svg>
+                                </div>
+                                <div className="ml-4 flex-1">
+                                    <h3 className="text-lg font-semibold text-purple-900">Subscribe to Post Jobs</h3>
+                                    <p className="mt-2 text-sm text-purple-800">
+                                        To post job listings and connect with skilled workers, you need an active subscription. 
+                                        <span className="font-semibold"> Note: </span>All clients can search and book workers directly without subscription.
+                                    </p>
+                                    <button
+                                        onClick={() => onNavigate('subscription')}
+                                        className="mt-4 bg-purple-600 text-white px-6 py-2 rounded-md font-semibold hover:bg-purple-700 transition-colors"
+                                    >
+                                        View Subscription Plans
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                    )}
+
+                    {/* Job Posting Limit Banner - Show usage for subscribed clients */}
+                    {user.subscriptionTier && user.subscriptionTier !== 'Free' && (() => {
+                        const currentJobCount = (user.postedJobs || []).filter(j => j.status === 'Open').length;
+                        const jobLimits: { [key: string]: number } = {
+                            'Regular': 3,
+                            'Silver': 6,
+                            'Gold': 10,
+                            'Diamond': 999
+                        };
+                        const maxJobs = jobLimits[user.subscriptionTier] || 3;
+                        const isAtLimit = currentJobCount >= maxJobs && maxJobs < 999;
+                        const percentage = maxJobs < 999 ? Math.min((currentJobCount / maxJobs) * 100, 100) : 0;
+                        
+                        return (
+                            <div className={`p-4 rounded-lg border-l-4 ${isAtLimit ? 'bg-red-50 border-red-500' : percentage > 70 ? 'bg-yellow-50 border-yellow-500' : 'bg-green-50 border-green-500'}`}>
+                                <div className="flex items-center justify-between">
+                                    <div>
+                                        <h4 className={`font-semibold ${isAtLimit ? 'text-red-800' : percentage > 70 ? 'text-yellow-800' : 'text-green-800'}`}>
+                                            Job Posting Limit
+                                        </h4>
+                                        <p className={`text-sm ${isAtLimit ? 'text-red-700' : percentage > 70 ? 'text-yellow-700' : 'text-green-700'}`}>
+                                            {maxJobs < 999 
+                                                ? `${currentJobCount} of ${maxJobs} active jobs posted`
+                                                : `${currentJobCount} active jobs (Unlimited)`
+                                            }
+                                        </p>
+                                    </div>
+                                    {isAtLimit && (
+                                        <button
+                                            onClick={() => onNavigate('subscription')}
+                                            className="bg-red-600 text-white px-4 py-2 rounded-md font-semibold hover:bg-red-700 transition-colors text-sm"
+                                        >
+                                            Upgrade Plan
+                                        </button>
+                                    )}
+                                </div>
+                                {maxJobs < 999 && (
+                                    <div className="mt-3 bg-gray-200 rounded-full h-2">
+                                        <div 
+                                            className={`h-2 rounded-full transition-all ${isAtLimit ? 'bg-red-600' : percentage > 70 ? 'bg-yellow-600' : 'bg-green-600'}`}
+                                            style={{ width: `${percentage}%` }}
+                                        />
+                                    </div>
+                                )}
+                            </div>
+                        );
+                    })()}
+
+                    {/* Job Posting Form - Only if subscribed and under limit */}
+                    {user.subscriptionTier && user.subscriptionTier !== 'Free' && (() => {
+                        const currentJobCount = (user.postedJobs || []).filter(j => j.status === 'Open').length;
+                        const jobLimits: { [key: string]: number } = {
+                            'Regular': 3,
+                            'Silver': 6,
+                            'Gold': 10,
+                            'Diamond': 999
+                        };
+                        const maxJobs = jobLimits[user.subscriptionTier] || 3;
+                        const canPost = currentJobCount < maxJobs;
+                        
+                        if (!canPost) {
+                            return (
+                                <div className="bg-red-50 border border-red-200 p-6 rounded-lg">
+                                    <h3 className="text-lg font-semibold text-red-900 mb-2">Job Posting Limit Reached</h3>
+                                    <p className="text-red-800 mb-4">
+                                        You've reached your plan's limit of {maxJobs} active job postings. 
+                                        Upgrade your plan or close existing jobs to post new ones.
+                                    </p>
+                                    <button
+                                        onClick={() => onNavigate('subscription')}
+                                        className="bg-red-600 text-white px-6 py-2 rounded-md font-semibold hover:bg-red-700 transition-colors"
+                                    >
+                                        View Upgrade Options
+                                    </button>
+                                </div>
+                            );
+                        }
+                        
+                        return (
+                            <div className="bg-white p-6 rounded-lg shadow-md">
+                                <h2 className="text-2xl font-bold text-dark mb-4">Post a New Job</h2>
+                                <form className="space-y-4" onSubmit={(e) => {
+                                    e.preventDefault();
+                                    const formData = new FormData(e.currentTarget);
+                                    const newJob: Job = {
+                                        id: Date.now().toString(),
+                                        title: formData.get('title') as string,
+                                        description: formData.get('description') as string,
+                                        service: formData.get('service') as string,
+                                        location: formData.get('location') as string,
+                                        state: formData.get('state') as string,
+                                        city: formData.get('city') as string,
+                                        budget: Number(formData.get('budget')),
+                                        budgetType: formData.get('budgetType') as 'Hourly' | 'Daily' | 'Monthly' | 'Fixed',
+                                        startDate: formData.get('startDate') as string,
+                                        status: 'Open',
+                                        clientId: user.id,
+                                        clientName: user.fullName || 'Unknown',
+                                        postedDate: new Date().toISOString(),
+                                        applicants: [],
+                                        visibility: 'Subscribers Only'
+                                    };
+                                    
+                                    // Add to user's posted jobs
+                                    const updatedUser = {
+                                        ...user,
+                                        postedJobs: [...(user.postedJobs || []), newJob]
+                                    };
+                                    onUpdateUser(updatedUser);
+                                    e.currentTarget.reset();
+                                    alert('Job posted successfully! Workers will be able to apply.');
+                                }}>
+                                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                    <div className="md:col-span-2">
+                                        <label htmlFor="title" className="block text-sm font-medium text-gray-700 mb-1">Job Title</label>
+                                        <input type="text" id="title" name="title" required className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary focus:border-primary" placeholder="e.g., Deep Cleaning for Office Space" />
+                                    </div>
+
+                                    <div>
+                                        <label htmlFor="service" className="block text-sm font-medium text-gray-700 mb-1">Service Type</label>
+                                        <select id="service" name="service" required className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary focus:border-primary">
+                                            <option value="">Select Service</option>
+                                            {CLEANING_SERVICES.map(service => (
+                                                <option key={service} value={service}>{service}</option>
+                                            ))}
+                                        </select>
+                                    </div>
+
+                                    <div>
+                                        <label htmlFor="startDate" className="block text-sm font-medium text-gray-700 mb-1">Start Date</label>
+                                        <input type="date" id="startDate" name="startDate" required className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary focus:border-primary" />
+                                    </div>
+
+                                    <div>
+                                        <label htmlFor="state" className="block text-sm font-medium text-gray-700 mb-1">State</label>
+                                        <select id="state" name="state" required className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary focus:border-primary">
+                                            <option value="">Select State</option>
+                                            {NIGERIA_LOCATIONS.map(loc => (
+                                                <option key={loc.name} value={loc.name}>{loc.name}</option>
+                                            ))}
+                                        </select>
+                                    </div>
+
+                                    <div>
+                                        <label htmlFor="city" className="block text-sm font-medium text-gray-700 mb-1">City</label>
+                                        <input type="text" id="city" name="city" required className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary focus:border-primary" placeholder="Enter city" />
+                                    </div>
+
+                                    <div>
+                                        <label htmlFor="budgetType" className="block text-sm font-medium text-gray-700 mb-1">Budget Type</label>
+                                        <select id="budgetType" name="budgetType" required className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary focus:border-primary">
+                                            <option value="Hourly">Hourly Rate</option>
+                                            <option value="Daily">Daily Rate</option>
+                                            <option value="Monthly">Monthly Rate</option>
+                                            <option value="Fixed">Fixed Price</option>
+                                        </select>
+                                    </div>
+
+                                    <div>
+                                        <label htmlFor="budget" className="block text-sm font-medium text-gray-700 mb-1">Budget (₦)</label>
+                                        <input type="number" id="budget" name="budget" required min="0" step="100" className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary focus:border-primary" placeholder="Enter budget amount" />
+                                    </div>
+
+                                    <div className="md:col-span-2">
+                                        <label htmlFor="location" className="block text-sm font-medium text-gray-700 mb-1">Full Address/Location</label>
+                                        <input type="text" id="location" name="location" required className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary focus:border-primary" placeholder="Enter complete address" />
+                                    </div>
+
+                                    <div className="md:col-span-2">
+                                        <label htmlFor="description" className="block text-sm font-medium text-gray-700 mb-1">Job Description</label>
+                                        <textarea id="description" name="description" required rows={4} className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary focus:border-primary" placeholder="Describe the job requirements, expectations, and any special instructions..."></textarea>
+                                    </div>
+                                </div>
+
+                                <button type="submit" className="w-full bg-primary text-white px-6 py-3 rounded-lg font-semibold hover:bg-secondary transition-colors">
+                                    Post Job
+                                </button>
+                            </form>
+                        </div>
+                    );
+                    })()}
+
+                    {/* Posted Jobs List */}
+                    <div className="bg-white p-6 rounded-lg shadow-md">
+                        <h2 className="text-2xl font-bold text-dark mb-4">My Posted Jobs</h2>
+                        {user.postedJobs && user.postedJobs.length > 0 ? (
+                            <div className="space-y-4">
+                                {user.postedJobs.map(job => (
+                                    <div key={job.id} className="p-4 border border-gray-200 rounded-lg hover:shadow-md transition-shadow">
+                                        <div className="flex justify-between items-start mb-3">
+                                            <div>
+                                                <h3 className="text-lg font-bold text-dark">{job.title}</h3>
+                                                <p className="text-sm text-gray-600 mt-1">{job.service}</p>
+                                            </div>
+                                            <span className={`px-3 py-1 rounded-full text-xs font-semibold ${
+                                                job.status === 'Open' ? 'bg-green-100 text-green-800' :
+                                                job.status === 'In Progress' ? 'bg-blue-100 text-blue-800' :
+                                                job.status === 'Completed' ? 'bg-gray-100 text-gray-800' :
+                                                'bg-red-100 text-red-800'
+                                            }`}>
+                                                {job.status}
+                                            </span>
+                                        </div>
+                                        <p className="text-sm text-gray-700 mb-3">{job.description}</p>
+                                        <div className="grid grid-cols-2 md:grid-cols-4 gap-3 text-sm">
+                                            <div>
+                                                <span className="text-gray-500">Location:</span>
+                                                <p className="font-medium text-dark">{job.city}, {job.state}</p>
+                                            </div>
+                                            <div>
+                                                <span className="text-gray-500">Budget:</span>
+                                                <p className="font-medium text-primary">₦{job.budget.toLocaleString()} ({job.budgetType})</p>
+                                            </div>
+                                            <div>
+                                                <span className="text-gray-500">Start Date:</span>
+                                                <p className="font-medium text-dark">{new Date(job.startDate).toLocaleDateString()}</p>
+                                            </div>
+                                            <div>
+                                                <span className="text-gray-500">Applicants:</span>
+                                                <p className="font-medium text-dark">{job.applicants?.length || 0} Applied</p>
+                                            </div>
+                                        </div>
+                                        <div className="mt-3 pt-3 border-t flex flex-wrap gap-2">
+                                            <button 
+                                                onClick={() => handleViewApplicants(job)}
+                                                className="text-sm text-primary hover:text-secondary font-semibold"
+                                            >
+                                                View Applications ({job.applicants?.length || 0})
+                                            </button>
+                                            <button 
+                                                onClick={() => setJobToEdit(job)}
+                                                className="text-sm text-gray-600 hover:text-gray-800 font-semibold"
+                                            >
+                                                Edit Job
+                                            </button>
+                                            {job.status === 'Open' && (
+                                                <>
+                                                    <button 
+                                                        onClick={() => handleCancelJob(job.id)}
+                                                        className="text-sm text-orange-600 hover:text-orange-800 font-semibold"
+                                                    >
+                                                        Cancel Job
+                                                    </button>
+                                                    <button 
+                                                        onClick={() => setJobToDelete(job)}
+                                                        className="text-sm text-red-600 hover:text-red-800 font-semibold"
+                                                    >
+                                                        Delete Job
+                                                    </button>
+                                                </>
+                                            )}
+                                        </div>
+                                    </div>
+                                ))}
+                            </div>
+                        ) : (
+                            <div className="text-center py-12">
+                                <BriefcaseIcon className="w-16 h-16 mx-auto text-gray-400 mb-4" />
+                                <p className="text-gray-500">No jobs posted yet.</p>
+                                {user.subscriptionTier && user.subscriptionTier !== 'Free' && (
+                                    <p className="text-sm text-gray-400 mt-2">Post your first job above to connect with skilled workers!</p>
+                                )}
+                            </div>
+                        )}
+                    </div>
+                </div>
+            )}
+            
             {activeTab === 'messages' && (
                 <div className="bg-white p-6 rounded-lg shadow-md min-h-[600px]">
                     <ChatInterface currentUser={user} />
@@ -527,7 +999,17 @@ export const ClientDashboard: React.FC<ClientDashboardProps> = ({ user, allClean
             )}
 
             {activeTab === 'profile' && (
-                <div className="bg-white rounded-lg shadow-lg overflow-hidden">
+                <>
+                    {showProfileCompletion ? (
+                        <div className="mb-6">
+                            <ProfileCompletionForm 
+                                user={user} 
+                                onSave={handleProfileUpdate}
+                                onCancel={() => setShowProfileCompletion(false)}
+                            />
+                        </div>
+                    ) : (
+                        <div className="bg-white rounded-lg shadow-lg overflow-hidden">
                     <div className="p-6 sm:flex sm:items-center sm:justify-between bg-gray-50 border-b">
                         <div className="sm:flex sm:items-center sm:space-x-5">
                              <div className="relative">
@@ -620,10 +1102,65 @@ export const ClientDashboard: React.FC<ClientDashboardProps> = ({ user, allClean
                         </dl>
                     </div>
                 </div>
+                    )}
+                </>
+            )}
+
+            {activeTab === 'verification' && (
+                <VerificationSection 
+                    user={user} 
+                    onUpload={handleVerificationUpload}
+                />
             )}
 
              {bookingToCancel && (<CancellationConfirmationModal booking={bookingToCancel} onClose={() => setBookingToCancel(null)} onConfirm={(id) => { onCancelBooking(id); setBookingToCancel(null); }} />)}
              {bookingToReview && (<ReviewModal booking={bookingToReview} onClose={() => setBookingToReview(null)} onSubmit={(data) => { onReviewSubmit(bookingToReview.id, bookingToReview.cleanerId, data); setBookingToReview(null); }} />)}
+             
+             {/* Job Management Modals */}
+             {jobToViewApplicants && (
+                 <JobApplicantsModal 
+                     job={jobToViewApplicants}
+                     allUsers={jobApplicants}
+                     onClose={() => {
+                         setJobToViewApplicants(null);
+                         setJobApplicants([]);
+                     }}
+                     onStartChat={handleMessageCleaner}
+                     isLoading={isLoadingApplicants}
+                 />
+             )}
+             {jobToEdit && (
+                 <EditJobModal 
+                     job={jobToEdit}
+                     onClose={() => setJobToEdit(null)}
+                     onSave={handleEditJob}
+                 />
+             )}
+             {jobToDelete && (
+                 <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+                     <div className="bg-white rounded-lg shadow-xl max-w-md w-full p-6">
+                         <h2 className="text-xl font-bold text-gray-900 mb-4">Delete Job</h2>
+                         <p className="text-gray-700 mb-6">
+                             Are you sure you want to permanently delete <strong>"{jobToDelete.title}"</strong>? 
+                             This action cannot be undone.
+                         </p>
+                         <div className="flex gap-3">
+                             <button
+                                 onClick={() => setJobToDelete(null)}
+                                 className="flex-1 bg-gray-600 text-white px-4 py-2 rounded-lg font-semibold hover:bg-gray-700"
+                             >
+                                 Cancel
+                             </button>
+                             <button
+                                 onClick={() => handleDeleteJob(jobToDelete.id)}
+                                 className="flex-1 bg-red-600 text-white px-4 py-2 rounded-lg font-semibold hover:bg-red-700"
+                             >
+                                 Delete Job
+                             </button>
+                         </div>
+                     </div>
+                 </div>
+             )}
         </div>
     );
 };

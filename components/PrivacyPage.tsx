@@ -12,7 +12,7 @@ export const PrivacyPage: React.FC = () => {
                     <p>We collect information you provide directly to us, such as when you create an account, including your name, email, phone number, address, and payment information. We also collect information about your use of our services, such as booking history.</p>
 
                     <h2>2. How We Use Your Information</h2>
-                    <p>We use your information to operate, maintain, and provide the features of the CleanConnect platform. This includes connecting Clients with Cleaners, processing payments, and communicating with you.</p>
+                    <p>We use your information to operate, maintain, and provide the features of the Skills Konnect platform. This includes connecting Clients with skilled professionals across various service categories, processing payments, and communicating with you.</p>
 
                     <h2>3. Information Sharing</h2>
                     <p>We may share necessary information between a Client and a Cleaner to facilitate a booking. We do not sell your personal data to third parties. We may share information with law enforcement if required by law.</p>

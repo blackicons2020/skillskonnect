@@ -6,6 +6,9 @@ import { XCircleIcon, EyeIcon } from './icons';
 interface UserDetailsModalProps {
     user: User;
     onClose: () => void;
+    isAdmin?: boolean;
+    onApproveVerification?: (userId: string) => void;
+    onRejectVerification?: (userId: string) => void;
 }
 
 const DetailRow: React.FC<{ label: string; value?: string | number | null | string[] }> = ({ label, value }) => (
@@ -23,12 +26,50 @@ const DetailRow: React.FC<{ label: string; value?: string | number | null | stri
     </div>
 );
 
-const DocumentRow: React.FC<{ label: string; doc?: File | string }> = ({ label, doc }) => {
+const DocumentRow: React.FC<{ label: string; doc?: File | string; showPreview?: boolean }> = ({ label, doc, showPreview = false }) => {
     if (!doc) return <DetailRow label={label} value="Not Uploaded" />;
     
     // For demo purposes, if it's a File object (not uploaded to cloud), create a local URL.
     // In production with backend, this would be a URL string.
     const url = doc instanceof File ? URL.createObjectURL(doc) : doc;
+    
+    if (showPreview) {
+        return (
+            <div className="py-3">
+                <dt className="text-sm font-medium text-gray-700 mb-2">{label}</dt>
+                <dd className="mt-1">
+                    <div className="border border-gray-300 rounded-lg overflow-hidden bg-gray-50">
+                        <img 
+                            src={url} 
+                            alt={label}
+                            className="w-full h-auto max-h-[400px] object-contain"
+                            onError={(e) => {
+                                // Fallback for non-image files
+                                const target = e.target as HTMLImageElement;
+                                target.style.display = 'none';
+                                const parent = target.parentElement;
+                                if (parent) {
+                                    parent.innerHTML = `<div class="p-8 text-center">
+                                        <p class="text-gray-600">Preview not available</p>
+                                        <a href="${url}" target="_blank" rel="noopener noreferrer" class="text-primary hover:underline mt-2 inline-block">Download Document</a>
+                                    </div>`;
+                                }
+                            }}
+                        />
+                    </div>
+                    <a 
+                        href={url} 
+                        target="_blank" 
+                        rel="noopener noreferrer" 
+                        className="inline-flex items-center gap-1 text-sm text-primary hover:underline mt-2"
+                    >
+                        <EyeIcon className="w-4 h-4" />
+                        Open in new tab
+                    </a>
+                </dd>
+            </div>
+        );
+    }
     
     return (
         <div className="grid grid-cols-3 gap-4 py-2 items-center">
@@ -43,13 +84,27 @@ const DocumentRow: React.FC<{ label: string; doc?: File | string }> = ({ label, 
     );
 };
 
-export const UserDetailsModal: React.FC<UserDetailsModalProps> = ({ user, onClose }) => {
+export const UserDetailsModal: React.FC<UserDetailsModalProps> = ({ user, onClose, isAdmin = false, onApproveVerification, onRejectVerification }) => {
     const isCleaner = user.role === 'cleaner';
     const locationString = user.city === 'Other' && user.otherCity ? user.otherCity : user.city;
 
+    const handleApprove = () => {
+        if (onApproveVerification) {
+            onApproveVerification(user.id);
+            onClose();
+        }
+    };
+
+    const handleReject = () => {
+        if (onRejectVerification && confirm('Are you sure you want to reject this user\'s verification? They will need to re-upload documents.')) {
+            onRejectVerification(user.id);
+            onClose();
+        }
+    };
+
     return (
         <div className="fixed inset-0 bg-black bg-opacity-60 flex items-center justify-center z-50 p-4" aria-modal="true" role="dialog">
-            <div className="bg-white rounded-2xl shadow-xl w-full max-w-2xl max-h-[90vh] overflow-y-auto transform transition-all">
+            <div className="bg-white rounded-2xl shadow-xl w-full max-w-3xl max-h-[95vh] overflow-y-auto transform transition-all">
                 <div className="p-6 sticky top-0 bg-white border-b z-10">
                     <button onClick={onClose} className="absolute top-4 right-4 text-gray-400 hover:text-gray-600">
                         <XCircleIcon className="w-6 h-6" />
@@ -90,6 +145,8 @@ export const UserDetailsModal: React.FC<UserDetailsModalProps> = ({ user, onClos
                             <div className="mt-6">
                                 <h4 className="font-semibold text-dark mb-2">Professional Profile</h4>
                                 <dl className="divide-y divide-gray-200">
+                                    <DetailRow label="Skills" value={user.skillType} />
+                                    <DetailRow label="Years of Experience" value={user.yearsOfExperience} />
                                     <DetailRow label="Experience" value={`${user.experience} years`} />
                                     <DetailRow label="Bio" value={user.bio} />
                                     <DetailRow label="Services" value={user.services} />
@@ -111,10 +168,41 @@ export const UserDetailsModal: React.FC<UserDetailsModalProps> = ({ user, onClos
                     
                     <div className="mt-6">
                         <h4 className="font-semibold text-dark mb-2">Verification Documents</h4>
-                        <dl className="divide-y divide-gray-200">
-                            <DocumentRow label="Government ID" doc={user.governmentId} />
-                            {user.cleanerType === 'Company' && <DocumentRow label="Business Registration" doc={user.businessRegDoc} />}
-                        </dl>
+                        {user.verificationDocuments ? (
+                            <div className="space-y-4">
+                                <DocumentRow label="Government ID" doc={user.verificationDocuments.governmentId} showPreview={isAdmin} />
+                                {(user.clientType === 'Company' || user.cleanerType === 'Company') && (
+                                    <DocumentRow label="Company Registration Certificate" doc={user.verificationDocuments.companyRegistrationCert} showPreview={isAdmin} />
+                                )}
+                                {isCleaner && (
+                                    <DocumentRow label="Skill Training Certificate" doc={user.verificationDocuments.skillTrainingCert} showPreview={isAdmin} />
+                                )}
+                            </div>
+                        ) : (
+                            <p className="text-sm text-gray-500 py-2">No verification documents uploaded.</p>
+                        )}
+                        
+                        {isAdmin && user.verificationDocuments && !user.isVerified && (
+                            <div className="mt-4 flex gap-3">
+                                <button
+                                    onClick={handleApprove}
+                                    className="flex-1 bg-primary text-white px-4 py-2 rounded-md hover:bg-green-700 font-semibold"
+                                >
+                                    Approve Verification
+                                </button>
+                                <button
+                                    onClick={handleReject}
+                                    className="flex-1 bg-red-600 text-white px-4 py-2 rounded-md hover:bg-red-700 font-semibold"
+                                >
+                                    Reject Verification
+                                </button>
+                            </div>
+                        )}
+                        {user.isVerified && (
+                            <div className="mt-4 p-3 bg-green-50 border border-green-200 rounded-md">
+                                <p className="text-sm text-green-800 font-semibold">✓ User is verified</p>
+                            </div>
+                        )}
                     </div>
 
                     <div className="mt-6">

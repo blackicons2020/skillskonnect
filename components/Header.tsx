@@ -19,8 +19,8 @@ export const Header: React.FC<HeaderProps> = ({ user, onNavigate, onLogout, onNa
             className="flex items-center gap-2 text-2xl font-bold text-primary cursor-pointer"
             onClick={() => onNavigate('landing')}
           >
-            <SparklesIcon className="w-8 h-8" />
-            <span>CleanConnect</span>
+            <img src="/logo.png" alt="Skills Konnect" className="w-12 h-12 object-contain" />
+            <span>Skills Konnect</span>
           </div>
           <div className="flex items-center space-x-3 sm:space-x-4">
             {user ? (
