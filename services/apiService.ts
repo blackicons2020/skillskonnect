@@ -9,10 +9,8 @@ const getApiUrl = () => {
     try {
         const env = (import.meta as any).env;
         if (env) {
-            // In production, use relative path. In dev, use env var or localhost.
-            return env.PROD 
-                ? '/api' 
-                : (env.VITE_API_URL || 'http://localhost:5000/api');
+            // Use VITE_API_URL if set (for production deployments), otherwise use localhost
+            return env.VITE_API_URL || 'http://localhost:5000/api';
         }
     } catch (e) {
         // Ignore errors if import.meta is not supported
