@@ -95,11 +95,12 @@ interface ClientDashboardProps {
     onApproveJobCompletion: (bookingId: string) => void;
     onUploadBookingReceipt: (bookingId: string, receipt: Receipt) => void;
     onUpdateUser: (user: User) => void;
+    onRefreshJobs?: () => Promise<void>;
     appError: string | null;
     initialTab?: 'find' | 'bookings' | 'messages' | 'support' | 'profile' | 'verification' | 'jobs';
 }
 
-export const ClientDashboard: React.FC<ClientDashboardProps> = ({ user, allCleaners, allUsers = [], onSelectCleaner, initialFilters, clearInitialFilters, onNavigate, onCancelBooking, onReviewSubmit, onApproveJobCompletion, onUploadBookingReceipt, onUpdateUser, appError, initialTab }) => {
+export const ClientDashboard: React.FC<ClientDashboardProps> = ({ user, allCleaners, allUsers = [], onSelectCleaner, initialFilters, clearInitialFilters, onNavigate, onCancelBooking, onReviewSubmit, onApproveJobCompletion, onUploadBookingReceipt, onUpdateUser, onRefreshJobs, appError, initialTab }) => {
     const [recommendations, setRecommendations] = useState<string[]>([]);
     const [isRecsLoading, setIsRecsLoading] = useState(true);
     
@@ -848,6 +849,12 @@ export const ClientDashboard: React.FC<ClientDashboardProps> = ({ user, allClean
                                             monthlyJobPostsCount: (user.monthlyJobPostsCount || 0) + 1
                                         };
                                         onUpdateUser(updatedUser);
+                                        
+                                        // Immediately refresh jobs so Worker/Admin dashboards see the new job
+                                        if (onRefreshJobs) {
+                                            await onRefreshJobs();
+                                        }
+                                        
                                         formEl.reset();
                                         alert('Job posted successfully! Workers will be able to apply.');
                                     } catch (error: any) {

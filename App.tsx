@@ -124,6 +124,16 @@ const App: React.FC = () => {
         }
     };
 
+    // Refetch jobs only (used after job posting)
+    const refetchJobs = async () => {
+        try {
+            const jobs = await apiService.getAllJobs();
+            setAllJobs(jobs);
+        } catch (error: any) {
+            console.error("Failed to refresh jobs:", error);
+        }
+    };
+
 
     // On initial app load, check for an existing session token
     useEffect(() => {
@@ -541,6 +551,7 @@ const App: React.FC = () => {
                         onApproveJobCompletion={handleApproveJobCompletion}
                         onUploadBookingReceipt={handleUploadBookingReceipt}
                         onUpdateUser={handleUpdateUser}
+                        onRefreshJobs={refetchJobs}
                         appError={appError}
                         initialTab={dashboardInitialTab as any}
                     />;
