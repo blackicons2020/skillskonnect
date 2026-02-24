@@ -156,10 +156,6 @@ export const SetupProfile: React.FC<SetupProfileProps> = ({ user, onSave, onNavi
                 alert('Please select at least one service/skill from the dropdown menu.');
                 return;
             }
-            if (!formData.bio || formData.bio.trim().length < 20) {
-                alert('Please write a brief bio about yourself (at least 20 characters).');
-                return;
-            }
             if (!profilePhoto) {
                 alert('Please upload a profile photo to be visible to clients.');
                 return;

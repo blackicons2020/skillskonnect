@@ -198,10 +198,6 @@ export const Dashboard: React.FC<DashboardProps> = ({ user, onUpdateUser, onNavi
                 alert('Please select at least one service/skill.');
                 return;
             }
-            if (!formData.bio || formData.bio.trim().length < 20) {
-                alert('Please write a brief bio about yourself (at least 20 characters).');
-                return;
-            }
 
             // Validate bank details if provided
             if (formData.bankName || formData.accountNumber) {
