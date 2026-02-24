@@ -7,7 +7,7 @@ interface AuthProps {
     initialTab: 'login' | 'signup';
     onNavigate: (v: View) => void;
     onLoginAttempt: (email: string, password?: string) => void;
-    onSignup: (email: string, password: string) => Promise<void>;
+    onSignup: (email: string, password: string, userType: 'client' | 'worker') => Promise<void>;
     authMessage: { type: 'success' | 'error', text: string } | null;
     onAuthMessageDismiss: () => void;
 }
@@ -106,26 +106,31 @@ const LoginTab: React.FC<LoginTabProps> = ({ email, setEmail, password, setPassw
     );
 };
 interface SignupTabProps {
-    onSignup: (email: string, password: string) => Promise<void>;
+    onSignup: (email: string, password: string, userType: 'client' | 'worker') => Promise<void>;
 }
 
 const SignupTab: React.FC<SignupTabProps> = ({ onSignup }) => {
     const [email, setEmail] = useState('');
     const [password, setPassword] = useState('');
     const [confirmPassword, setConfirmPassword] = useState('');
+    const [userType, setUserType] = useState<'client' | 'worker' | ''>('');
     const [showPassword, setShowPassword] = useState(false);
     const [showConfirmPassword, setShowConfirmPassword] = useState(false);
     const [isLoading, setIsLoading] = useState(false);
 
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
+        if (!userType) {
+            alert('Please select whether you are a Client or a Worker.');
+            return;
+        }
         if (password !== confirmPassword) {
             alert('Passwords do not match.');
             return;
         }
         setIsLoading(true);
         try {
-            await onSignup(email.trim(), password);
+            await onSignup(email.trim(), password, userType);
         } finally {
             setIsLoading(false);
         }
@@ -135,6 +140,37 @@ const SignupTab: React.FC<SignupTabProps> = ({ onSignup }) => {
         <div>
             <form onSubmit={handleSubmit}>
                 <div className="space-y-4">
+                    <div>
+                        <label className="block text-sm font-medium text-gray-700 mb-2">I want to join as</label>
+                        <div className="grid grid-cols-2 gap-3">
+                            <button
+                                type="button"
+                                onClick={() => setUserType('client')}
+                                className={`py-3 px-4 rounded-lg border-2 text-center font-semibold transition-all ${
+                                    userType === 'client'
+                                        ? 'border-primary bg-primary/10 text-primary'
+                                        : 'border-gray-300 text-gray-600 hover:border-gray-400'
+                                }`}
+                            >
+                                <span className="block text-lg">👤</span>
+                                <span className="text-sm">Client</span>
+                                <span className="block text-xs text-gray-500 mt-0.5">I need services</span>
+                            </button>
+                            <button
+                                type="button"
+                                onClick={() => setUserType('worker')}
+                                className={`py-3 px-4 rounded-lg border-2 text-center font-semibold transition-all ${
+                                    userType === 'worker'
+                                        ? 'border-primary bg-primary/10 text-primary'
+                                        : 'border-gray-300 text-gray-600 hover:border-gray-400'
+                                }`}
+                            >
+                                <span className="block text-lg">🛠️</span>
+                                <span className="text-sm">Worker</span>
+                                <span className="block text-xs text-gray-500 mt-0.5">I offer services</span>
+                            </button>
+                        </div>
+                    </div>
                     <div>
                         <label htmlFor="signup-email" className="block text-sm font-medium text-gray-700">Email address</label>
                         <input type="email" id="signup-email" value={email} onChange={(e) => setEmail(e.target.value)} required className="mt-1 block w-full px-3 py-2 border border-gray-600 rounded-md shadow-sm placeholder-gray-400 focus:outline-none focus:ring-primary focus:border-primary sm:text-sm bg-dark text-light" placeholder="you@example.com" />

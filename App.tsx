@@ -238,14 +238,14 @@ const App: React.FC = () => {
         }
     };
 
-    const handleDirectSignup = async (email: string, password: string) => {
+    const handleDirectSignup = async (email: string, password: string, userType: 'client' | 'worker' = 'client') => {
         setAuthMessage(null);
         try {
-            // Register with minimal data - email and password only
+            // Register with minimal data - email, password, and userType
             const response: any = await apiService.register({ 
                 email, 
                 password, 
-                userType: 'client' // Default to client, can be changed in profile
+                userType
             });
             
             if (response.token && response.user) {
@@ -256,8 +256,10 @@ const App: React.FC = () => {
                 // Redirect directly to dashboard based on userType
                 if (response.user.role === 'admin') {
                     handleNavigate('adminDashboard');
+                } else if (response.user.userType === 'worker' || userType === 'worker') {
+                    handleNavigate('cleanerDashboard');
                 } else {
-                    handleNavigate(response.user.userType === 'client' ? 'clientDashboard' : 'cleanerDashboard');
+                    handleNavigate('clientDashboard');
                 }
             } else {
                 setAuthMessage({ type: 'success', text: 'Account created! Please log in.' });
