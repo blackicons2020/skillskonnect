@@ -253,17 +253,16 @@ const App: React.FC = () => {
                 userType: 'client' // Default to client, can be changed in profile
             });
             
-            if (response.token) {
+            if (response.token && response.user) {
                 localStorage.setItem('skillskonnect_token', response.token);
-                setUser(response);
-                await refetchAllData(response);
-                setAuthMessage({ type: 'success', text: 'Account created successfully! Please complete your profile.' });
+                setUser(response.user);
+                await refetchAllData(response.user);
                 
-                // Redirect directly to dashboard based on role
-                if (response.isAdmin) {
+                // Redirect directly to dashboard based on userType
+                if (response.user.role === 'admin') {
                     handleNavigate('adminDashboard');
                 } else {
-                    handleNavigate(response.role === 'client' ? 'clientDashboard' : 'cleanerDashboard');
+                    handleNavigate(response.user.userType === 'client' ? 'clientDashboard' : 'cleanerDashboard');
                 }
             } else {
                 setAuthMessage({ type: 'success', text: 'Account created! Please log in.' });
