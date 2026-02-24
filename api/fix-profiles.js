@@ -13,9 +13,13 @@ async function fixExistingProfiles() {
     await mongoose.connect(MONGO_URL);
     console.log('\n✅ Connected to MongoDB\n');
 
-    // Find workers with complete data but isProfileComplete = false    const workersToFix = await User.find({ 
+    // Find workers with complete data but isProfileComplete = false
+    const workersToFix = await User.find({ 
       userType: 'worker',
-      isProfileComplete: { $ne: true },
+      $or: [
+        { isProfileComplete: false },
+        { isProfileComplete: { $exists: false } }
+      ],
       fullName: { $exists: true, $ne: '' },
       phoneNumber: { $exists: true, $ne: '' },
       services: { $exists: true, $ne: [] }
@@ -37,7 +41,10 @@ async function fixExistingProfiles() {
     // Find clients with complete data but isProfileComplete = false
     const clientsToFix = await User.find({ 
       userType: 'client',
-      isProfileComplete: { $ne: true },
+      $or: [
+        { isProfileComplete: false },
+        { isProfileComplete: { $exists: false } }
+      ],
       fullName: { $exists: true, $ne: '' },
       phoneNumber: { $exists: true, $ne: '' }
     });

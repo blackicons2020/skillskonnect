@@ -1,0 +1,3 @@
+# Ignore backend folders - these deploy to Render, not Vercel
+api
+backend
