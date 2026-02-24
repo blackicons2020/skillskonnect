@@ -191,16 +191,6 @@ JobSchema.set('toJSON', {
   }
 });
 
-BookingSchema.set('toJSON', {
-  virtuals: true,
-  transform: (doc, ret) => {
-    ret.id = ret._id.toString();
-    delete ret._id;
-    delete ret.__v;
-    return ret;
-  }
-});
-
 const BookingSchema = new mongoose.Schema({
   service: { type: String, required: true },
   date: { type: String, required: true },
@@ -220,6 +210,16 @@ const BookingSchema = new mongoose.Schema({
   },
   jobApprovedByClient: { type: Boolean, default: false }
 }, { timestamps: true });
+
+BookingSchema.set('toJSON', {
+  virtuals: true,
+  transform: (doc, ret) => {
+    ret.id = ret._id.toString();
+    delete ret._id;
+    delete ret.__v;
+    return ret;
+  }
+});
 
 const ChatSchema = new mongoose.Schema({
   participants: [String],
