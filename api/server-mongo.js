@@ -277,12 +277,29 @@ mongoose.connect(MONGO_URL)
 
 // ==================== AUTH MIDDLEWARE ====================
 
+// Helper to strip MongoDB-internal fields from an object (recursive)
+function stripMongoFields(obj) {
+  if (!obj || typeof obj !== 'object') return obj;
+  if (Array.isArray(obj)) return obj.map(stripMongoFields);
+  const cleaned = { ...obj };
+  delete cleaned._id;
+  delete cleaned.__v;
+  // Recurse into nested objects/arrays
+  for (const key of Object.keys(cleaned)) {
+    if (cleaned[key] && typeof cleaned[key] === 'object') {
+      cleaned[key] = stripMongoFields(cleaned[key]);
+    }
+  }
+  return cleaned;
+}
+
 // Helper to normalize user data for frontend compatibility
 function normalizeUser(user) {
   const userObj = user.toObject ? user.toObject() : { ...user };
   // Map _id to id
   if (userObj._id) {
     userObj.id = userObj._id.toString();
+    delete userObj._id;  // Remove _id after mapping to id
   }
   // Map userType to role for frontend compatibility
   if (userObj.role === 'user' || !userObj.role) {
@@ -421,8 +438,31 @@ app.get('/api/users/me', authenticateToken, async (req, res) => {
 app.put('/api/users/me', authenticateToken, async (req, res) => {
   try {
     const updateData = { ...req.body };
+    // Strip email, password and MongoDB system fields to prevent immutable field errors
     delete updateData.email;
     delete updateData.password;
+    delete updateData._id;
+    delete updateData.__v;
+    delete updateData.id;  // Frontend id field, not needed in DB
+    // Strip _id from all nested arrays (postedJobs, bookingHistory, reviewsData, etc.)
+    for (const key of Object.keys(updateData)) {
+      if (Array.isArray(updateData[key])) {
+        updateData[key] = updateData[key].map(item => {
+          if (item && typeof item === 'object') {
+            const cleaned = { ...item };
+            delete cleaned._id;
+            delete cleaned.__v;
+            return cleaned;
+          }
+          return item;
+        });
+      } else if (updateData[key] && typeof updateData[key] === 'object') {
+        const cleaned = { ...updateData[key] };
+        delete cleaned._id;
+        delete cleaned.__v;
+        updateData[key] = cleaned;
+      }
+    }
 
     // Auto-set isProfileComplete to true when required fields are present
     const user = await User.findOne({ email: req.user.email });
@@ -571,8 +611,52 @@ app.get('/api/jobs', async (req, res) => {
     if (category) query.category = category;
     if (clientId) query.clientId = clientId;
 
-    const jobs = await Job.find(query).sort({ createdAt: -1 });
-    res.json(jobs);
+    // Fetch from Jobs collection
+    const jobsFromCollection = await Job.find(query).sort({ createdAt: -1 });
+    const jobIdsInCollection = new Set(jobsFromCollection.map(j => j._id.toString()));
+
+    // Also gather legacy jobs from users' postedJobs arrays (jobs posted before Jobs collection was used)
+    const usersWithJobs = await User.find({ 'postedJobs.0': { $exists: true } }).select('postedJobs fullName email');
+    const legacyJobs = [];
+    for (const user of usersWithJobs) {
+      if (!user.postedJobs) continue;
+      for (const job of user.postedJobs) {
+        const jobId = job.id || (job._id ? job._id.toString() : null);
+        // Skip if already in Jobs collection
+        if (jobId && jobIdsInCollection.has(jobId)) continue;
+        // Apply filters
+        if (clientId && job.clientId !== clientId) continue;
+        if (status && job.status !== status) continue;
+        // Ensure required fields
+        const normalizedJob = {
+          id: jobId || `legacy-${Date.now()}-${Math.random()}`,
+          title: job.title || 'Untitled Job',
+          description: job.description || '',
+          service: job.service || job.category || 'General',
+          location: job.location || '',
+          state: job.state || '',
+          city: job.city || '',
+          budget: job.budget || 0,
+          budgetType: job.budgetType || 'Fixed',
+          startDate: job.startDate || '',
+          postedDate: job.postedDate || job.createdAt || new Date().toISOString(),
+          status: job.status || 'Open',
+          clientId: job.clientId || user._id.toString(),
+          clientName: job.clientName || user.fullName || user.email,
+          applicants: job.applicants || [],
+          visibility: job.visibility || 'Subscribers Only'
+        };
+        legacyJobs.push(normalizedJob);
+      }
+    }
+
+    // Merge: collection jobs first, then legacy jobs
+    const allJobs = [
+      ...jobsFromCollection.map(j => j.toJSON()),
+      ...legacyJobs
+    ];
+
+    res.json(allJobs);
   } catch (error) {
     res.status(500).json({ error: error.message });
   }
