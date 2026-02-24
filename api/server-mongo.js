@@ -798,6 +798,52 @@ app.get('/api/search/workers', authenticateToken, async (req, res) => {
   }
 });
 
+// ==================== SUBSCRIPTION ROUTES ====================
+
+app.post('/api/users/subscription/upgrade', authenticateToken, async (req, res) => {
+  try {
+    const { plan } = req.body;
+    
+    if (!plan) {
+      return res.status(400).json({ error: 'Plan name is required' });
+    }
+
+    const user = await User.findOne({ email: req.user.email });
+    if (!user) {
+      return res.status(404).json({ error: 'User not found' });
+    }
+
+    user.pendingSubscription = plan;
+    await user.save();
+
+    res.json(normalizeUser(user.toObject()));
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
+app.post('/api/users/subscription/receipt', authenticateToken, async (req, res) => {
+  try {
+    const { name, dataUrl } = req.body;
+    
+    if (!name || !dataUrl) {
+      return res.status(400).json({ error: 'Receipt name and dataUrl are required' });
+    }
+
+    const user = await User.findOne({ email: req.user.email });
+    if (!user) {
+      return res.status(404).json({ error: 'User not found' });
+    }
+
+    user.subscriptionReceipt = { name, dataUrl };
+    await user.save();
+
+    res.json(normalizeUser(user.toObject()));
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
 // ==================== ADMIN ROUTES ====================
 
 app.get('/api/admin/stats', authenticateToken, async (req, res) => {
@@ -855,6 +901,38 @@ app.delete('/api/admin/users/:userId', authenticateToken, async (req, res) => {
 
     await User.findByIdAndDelete(req.params.userId);
     res.json({ message: 'User deleted successfully' });
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
+app.post('/api/admin/users/:userId/approve-subscription', authenticateToken, async (req, res) => {
+  try {
+    // Check admin permission
+    if (req.user.role !== 'admin' && req.user.role !== 'super-admin') {
+      return res.status(403).json({ error: 'Admin access required' });
+    }
+
+    const user = await User.findById(req.params.userId);
+    if (!user) {
+      return res.status(404).json({ error: 'User not found' });
+    }
+
+    if (!user.pendingSubscription) {
+      return res.status(400).json({ error: 'No pending subscription for this user' });
+    }
+
+    // Move pending subscription to active subscription
+    user.subscriptionTier = user.pendingSubscription;
+    user.pendingSubscription = undefined;
+    user.subscriptionReceipt = undefined;
+
+    await user.save();
+
+    res.json({ 
+      message: 'Subscription approved successfully',
+      user: normalizeUser(user.toObject())
+    });
   } catch (error) {
     res.status(500).json({ error: error.message });
   }
