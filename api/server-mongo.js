@@ -168,6 +168,26 @@ const JobSchema = new mongoose.Schema({
   }
 }, { timestamps: true });
 
+const BookingSchema = new mongoose.Schema({
+  service: { type: String, required: true },
+  date: { type: String, required: true },
+  amount: { type: Number, required: true },
+  totalAmount: Number,
+  status: { type: String, default: 'Upcoming', enum: ['Upcoming', 'Completed', 'Cancelled'] },
+  clientName: String,
+  cleanerName: String,
+  clientId: { type: String, required: true },
+  cleanerId: { type: String, required: true },
+  reviewSubmitted: { type: Boolean, default: false },
+  paymentMethod: { type: String, required: true, enum: ['Escrow', 'Direct'] },
+  paymentStatus: { type: String, default: 'Not Applicable', enum: ['Pending Payment', 'Pending Admin Confirmation', 'Confirmed', 'Pending Payout', 'Paid', 'Not Applicable'] },
+  paymentReceipt: {
+    name: String,
+    dataUrl: String
+  },
+  jobApprovedByClient: { type: Boolean, default: false }
+}, { timestamps: true });
+
 const ChatSchema = new mongoose.Schema({
   participants: [String],
   messages: [{
@@ -187,6 +207,7 @@ const ChatSchema = new mongoose.Schema({
 // Create models
 const User = mongoose.model('User', UserSchema);
 const Job = mongoose.model('Job', JobSchema);
+const Booking = mongoose.model('Booking', BookingSchema);
 const Chat = mongoose.model('Chat', ChatSchema);
 
 // ==================== MONGODB CONNECTION ====================
@@ -1048,15 +1069,42 @@ app.post('/api/contact', async (req, res) => {
   }
 });
 
-// Bookings endpoint (maps to jobs)
+// Bookings endpoint
 app.post('/api/bookings', authenticateToken, async (req, res) => {
   try {
-    const newJob = await Job.create({
-      ...req.body,
-      clientId: req.user.userId,
-      status: 'open'
+    const user = await User.findOne({ email: req.user.email });
+    if (!user) {
+      return res.status(404).json({ error: 'User not found' });
+    }
+
+    const { cleanerId, service, date, amount, totalAmount, paymentMethod } = req.body;
+    
+    // Get cleaner info
+    const cleaner = await User.findById(cleanerId);
+    if (!cleaner) {
+      return res.status(404).json({ error: 'Worker not found' });
+    }
+
+    const newBooking = await Booking.create({
+      clientId: user._id.toString(),
+      clientName: user.fullName || user.email,
+      cleanerId,
+      cleanerName: cleaner.fullName || cleaner.email,
+      service,
+      date,
+      amount,
+      totalAmount: totalAmount || amount,
+      paymentMethod,
+      status: 'Upcoming',
+      paymentStatus: paymentMethod === 'Direct' ? 'Not Applicable' : 'Pending Payment'
     });
-    res.status(201).json(newJob);
+
+    const bookingObj = newBooking.toObject();
+    bookingObj.id = bookingObj._id.toString();
+    delete bookingObj._id;
+    delete bookingObj.__v;
+
+    res.status(201).json(bookingObj);
   } catch (error) {
     res.status(500).json({ error: error.message });
   }

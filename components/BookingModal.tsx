@@ -11,17 +11,11 @@ interface BookingModalProps {
 }
 
 export const BookingModal: React.FC<BookingModalProps> = ({ cleaner, user, onClose, onConfirmBooking, onProceedToEscrow }) => {
-    const [paymentMethod, setPaymentMethod] = useState<'Escrow' | 'Direct'>('Escrow');
+    const [paymentMethod] = useState<'Escrow' | 'Direct'>('Direct');
     const baseAmount = cleaner.chargeHourly || cleaner.chargeDaily || cleaner.chargePerContract || 5000;
-    const escrowFee = baseAmount * 0.10;
-    const totalEscrowAmount = baseAmount + escrowFee;
 
     const handleConfirm = () => {
-        if (paymentMethod === 'Direct') {
-            onConfirmBooking('Direct', cleaner);
-        } else {
-            onProceedToEscrow({ cleaner, totalAmount: totalEscrowAmount });
-        }
+        onConfirmBooking('Direct', cleaner);
     };
 
     return (
@@ -43,24 +37,20 @@ export const BookingModal: React.FC<BookingModalProps> = ({ cleaner, user, onClo
                     </div>
 
                     <div>
-                        <h4 className="text-md font-semibold text-gray-800 mb-3">Select Payment Method</h4>
-                        <div className="space-y-4">
-                            <label className={`flex items-start p-4 border-2 rounded-lg cursor-pointer transition-all ${paymentMethod === 'Escrow' ? 'border-primary bg-green-50' : 'border-gray-200'}`}>
-                                <input type="radio" name="paymentMethod" value="Escrow" checked={paymentMethod === 'Escrow'} onChange={() => setPaymentMethod('Escrow')} className="mt-1 h-4 w-4 text-primary border-gray-300 focus:ring-primary"/>
-                                <div className="ml-3 text-sm">
-                                    <p className="font-bold text-gray-900">Pay via Escrow</p>
-                                    <p className="text-gray-500">Pay securely to Skills Konnect. We hold the payment until you approve the job is complete. An extra 10% service fee applies.</p>
-                                    <p className="font-semibold text-primary mt-1">Total: ₦{totalEscrowAmount.toLocaleString()} (₦{baseAmount.toLocaleString()} + ₦{escrowFee.toLocaleString()} fee)</p>
+                        <h4 className="text-md font-semibold text-gray-800 mb-3">Payment Method</h4>
+                        <div className="p-4 border-2 border-primary bg-green-50 rounded-lg">
+                            <div className="text-sm">
+                                <p className="font-bold text-gray-900 mb-2">Direct Payment</p>
+                                <p className="text-gray-600 mb-3">
+                                    After booking, you'll receive the worker's contact information. Arrange payment directly with the service provider upon job completion.
+                                </p>
+                                <div className="bg-blue-50 border border-blue-200 rounded-md p-3">
+                                    <p className="text-xs text-blue-800">
+                                        <strong>Note:</strong> Skills Konnect facilitates connections but is not responsible for direct payment transactions. Please ensure clear communication with your service provider.
+                                    </p>
                                 </div>
-                            </label>
-                            <label className={`flex items-start p-4 border-2 rounded-lg cursor-pointer transition-all ${paymentMethod === 'Direct' ? 'border-primary bg-green-50' : 'border-gray-200'}`}>
-                                <input type="radio" name="paymentMethod" value="Direct" checked={paymentMethod === 'Direct'} onChange={() => setPaymentMethod('Direct')} className="mt-1 h-4 w-4 text-primary border-gray-300 focus:ring-primary"/>
-                                <div className="ml-3 text-sm">
-                                    <p className="font-bold text-gray-900">Pay Cleaner Directly</p>
-                                    <p className="text-gray-500">Arrange payment directly with the service provider upon job completion. Skills Konnect is not liable for direct payments.</p>
-                                     <p className="font-semibold text-primary mt-1">Total: ₦{baseAmount.toLocaleString()}</p>
-                                </div>
-                            </label>
+                                <p className="font-semibold text-primary mt-3">Worker's Charge: ₦{baseAmount.toLocaleString()}</p>
+                            </div>
                         </div>
                     </div>
                     
@@ -69,7 +59,7 @@ export const BookingModal: React.FC<BookingModalProps> = ({ cleaner, user, onClo
                             onClick={handleConfirm}
                             className="w-full flex justify-center items-center rounded-md border border-transparent bg-primary px-4 py-3 text-base font-medium text-white shadow-sm hover:bg-secondary focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-2"
                         >
-                            {paymentMethod === 'Escrow' ? 'Proceed to Pay' : 'Confirm Booking'}
+                            Confirm Booking
                         </button>
                     </div>
                 </div>
