@@ -136,22 +136,32 @@ export interface User {
   country?: string;
   state?: string; // Province/Region
   city?: string;
+  otherCity?: string; // For when city is 'Other'
   streetAddress?: string; // For individuals
+  address?: string; // Legacy field for address
   officeAddress?: string; // For companies
+  companyAddress?: string; // Legacy field for company address
   workplaceAddress?: string; // Optional for Client (Individual)
   
   // Company-specific fields
   companyName?: string;
   companyRegistrationNumber?: string;
   
+  // User type indicators
+  clientType?: 'Individual' | 'Company';
+  cleanerType?: 'Individual' | 'Company';
+  
   // Worker-specific fields
   skillType?: string[]; // Multiple skills allowed
   yearsOfExperience?: number;
   chargeHourly?: number; // Hourly rate
   chargeDaily?: number; // Daily rate
+  chargePerContract?: number; // Contract rate
+  chargePerContractNegotiable?: boolean; // If contract rate is negotiable
   chargeRate?: number; // Legacy contract rate
   chargeRateType?: ChargeRateType;
   profilePicture?: string; // URL or base64
+  profilePhoto?: string | File; // Legacy field for profile picture
   
   // Verification
   isVerified?: boolean;

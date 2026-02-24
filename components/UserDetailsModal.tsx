@@ -1,7 +1,8 @@
 
-import React from 'react';
+import React, { useState } from 'react';
 import { User } from '../types';
 import { XCircleIcon, EyeIcon } from './icons';
+import { DocumentViewerModal } from './DocumentViewerModal';
 
 interface UserDetailsModalProps {
     user: User;
@@ -26,46 +27,57 @@ const DetailRow: React.FC<{ label: string; value?: string | number | null | stri
     </div>
 );
 
-const DocumentRow: React.FC<{ label: string; doc?: File | string; showPreview?: boolean }> = ({ label, doc, showPreview = false }) => {
+const DocumentRow: React.FC<{ label: string; doc?: File | string; showPreview?: boolean; onViewDocument?: (url: string, name: string) => void }> = ({ label, doc, showPreview = false, onViewDocument }) => {
     if (!doc) return <DetailRow label={label} value="Not Uploaded" />;
     
     // For demo purposes, if it's a File object (not uploaded to cloud), create a local URL.
     // In production with backend, this would be a URL string.
     const url = doc instanceof File ? URL.createObjectURL(doc) : doc;
     
+    const handleView = (e: React.MouseEvent) => {
+        e.preventDefault();
+        if (onViewDocument) {
+            onViewDocument(url, label);
+        }
+    };
+    
     if (showPreview) {
         return (
             <div className="py-3">
                 <dt className="text-sm font-medium text-gray-700 mb-2">{label}</dt>
                 <dd className="mt-1">
-                    <div className="border border-gray-300 rounded-lg overflow-hidden bg-gray-50">
+                    <div className="border border-gray-300 rounded-lg overflow-hidden bg-gray-50 max-h-[300px] flex items-center justify-center">
                         <img 
                             src={url} 
                             alt={label}
-                            className="w-full h-auto max-h-[400px] object-contain"
+                            className="w-full h-auto max-h-[280px] object-contain cursor-pointer"
+                            onClick={handleView}
                             onError={(e) => {
                                 // Fallback for non-image files
                                 const target = e.target as HTMLImageElement;
                                 target.style.display = 'none';
                                 const parent = target.parentElement;
                                 if (parent) {
-                                    parent.innerHTML = `<div class="p-8 text-center">
-                                        <p class="text-gray-600">Preview not available</p>
-                                        <a href="${url}" target="_blank" rel="noopener noreferrer" class="text-primary hover:underline mt-2 inline-block">Download Document</a>
+                                    parent.innerHTML = `<div class="p-6 text-center">
+                                        <p class="text-gray-600 text-sm">Preview not available</p>
+                                        <button class="text-primary hover:underline mt-2 text-sm font-medium">Click to view document</button>
                                     </div>`;
+                                    parent.addEventListener('click', () => {
+                                        if (onViewDocument) {
+                                            onViewDocument(url, label);
+                                        }
+                                    });
                                 }
                             }}
                         />
                     </div>
-                    <a 
-                        href={url} 
-                        target="_blank" 
-                        rel="noopener noreferrer" 
-                        className="inline-flex items-center gap-1 text-sm text-primary hover:underline mt-2"
+                    <button
+                        onClick={handleView}
+                        className="inline-flex items-center gap-1 text-sm text-primary hover:underline mt-2 font-medium"
                     >
                         <EyeIcon className="w-4 h-4" />
-                        Open in new tab
-                    </a>
+                        View Full Document
+                    </button>
                 </dd>
             </div>
         );
@@ -75,16 +87,20 @@ const DocumentRow: React.FC<{ label: string; doc?: File | string; showPreview?: 
         <div className="grid grid-cols-3 gap-4 py-2 items-center">
             <dt className="text-sm font-medium text-gray-500 col-span-1">{label}</dt>
             <dd className="text-sm text-primary col-span-2">
-                <a href={url} target="_blank" rel="noopener noreferrer" className="flex items-center gap-1 hover:underline">
+                <button 
+                    onClick={handleView}
+                    className="flex items-center gap-1 hover:underline font-medium"
+                >
                     <EyeIcon className="w-4 h-4" />
                     View Document
-                </a>
+                </button>
             </dd>
         </div>
     );
 };
 
 export const UserDetailsModal: React.FC<UserDetailsModalProps> = ({ user, onClose, isAdmin = false, onApproveVerification, onRejectVerification }) => {
+    const [documentToView, setDocumentToView] = useState<{ url: string; name: string } | null>(null);
     const isCleaner = user.role === 'cleaner';
     const locationString = user.city === 'Other' && user.otherCity ? user.otherCity : user.city;
 
@@ -102,8 +118,13 @@ export const UserDetailsModal: React.FC<UserDetailsModalProps> = ({ user, onClos
         }
     };
 
+    const handleViewDocument = (url: string, name: string) => {
+        setDocumentToView({ url, name });
+    };
+
     return (
-        <div className="fixed inset-0 bg-black bg-opacity-60 flex items-center justify-center z-50 p-4" aria-modal="true" role="dialog">
+        <>
+            <div className="fixed inset-0 bg-black bg-opacity-60 flex items-center justify-center z-50 p-4" aria-modal="true" role="dialog">
             <div className="bg-white rounded-2xl shadow-xl w-full max-w-3xl max-h-[95vh] overflow-y-auto transform transition-all">
                 <div className="p-6 sticky top-0 bg-white border-b z-10">
                     <button onClick={onClose} className="absolute top-4 right-4 text-gray-400 hover:text-gray-600">
@@ -170,12 +191,27 @@ export const UserDetailsModal: React.FC<UserDetailsModalProps> = ({ user, onClos
                         <h4 className="font-semibold text-dark mb-2">Verification Documents</h4>
                         {user.verificationDocuments ? (
                             <div className="space-y-4">
-                                <DocumentRow label="Government ID" doc={user.verificationDocuments.governmentId} showPreview={isAdmin} />
+                                <DocumentRow 
+                                    label="Government ID" 
+                                    doc={user.verificationDocuments.governmentId} 
+                                    showPreview={isAdmin} 
+                                    onViewDocument={handleViewDocument}
+                                />
                                 {(user.clientType === 'Company' || user.cleanerType === 'Company') && (
-                                    <DocumentRow label="Company Registration Certificate" doc={user.verificationDocuments.companyRegistrationCert} showPreview={isAdmin} />
+                                    <DocumentRow 
+                                        label="Company Registration Certificate" 
+                                        doc={user.verificationDocuments.companyRegistrationCert} 
+                                        showPreview={isAdmin} 
+                                        onViewDocument={handleViewDocument}
+                                    />
                                 )}
                                 {isCleaner && (
-                                    <DocumentRow label="Skill Training Certificate" doc={user.verificationDocuments.skillTrainingCert} showPreview={isAdmin} />
+                                    <DocumentRow 
+                                        label="Skill Training Certificate" 
+                                        doc={user.verificationDocuments.skillTrainingCert} 
+                                        showPreview={isAdmin} 
+                                        onViewDocument={handleViewDocument}
+                                    />
                                 )}
                             </div>
                         ) : (
@@ -216,7 +252,7 @@ export const UserDetailsModal: React.FC<UserDetailsModalProps> = ({ user, onClos
                                     </li>
                                 ))}
                             </ul>
-                        ): <p className="text-sm text-gray-500">No bookings yet.</p>}
+                        ) : <p className="text-sm text-gray-500">No bookings yet.</p>}
                     </div>
 
                 </div>
@@ -231,5 +267,14 @@ export const UserDetailsModal: React.FC<UserDetailsModalProps> = ({ user, onClos
                 </div>
             </div>
         </div>
+
+            {documentToView && (
+                <DocumentViewerModal
+                    documentUrl={documentToView.url}
+                    documentName={documentToView.name}
+                    onClose={() => setDocumentToView(null)}
+                />
+            )}
+        </>
     );
 };

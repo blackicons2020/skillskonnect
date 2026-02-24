@@ -579,6 +579,31 @@ app.delete('/api/jobs/:jobId', authenticateToken, async (req, res) => {
   }
 });
 
+app.put('/api/jobs/:jobId/cancel', authenticateToken, async (req, res) => {
+  try {
+    const job = await Job.findById(req.params.jobId);
+    if (!job) {
+      return res.status(404).json({ error: 'Job not found' });
+    }
+
+    const user = await User.findOne({ email: req.user.email });
+    if (job.clientId !== user._id.toString() && req.user.role !== 'admin') {
+      return res.status(403).json({ error: 'Not authorized' });
+    }
+
+    const updatedJob = await Job.findByIdAndUpdate(
+      req.params.jobId,
+      { $set: { status: 'Cancelled' } },
+      { new: true }
+    );
+
+    res.json(updatedJob);
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
+
 app.post('/api/jobs/:jobId/apply', authenticateToken, async (req, res) => {
   try {
     const { proposal, proposedPrice } = req.body;
