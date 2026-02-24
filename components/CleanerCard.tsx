@@ -10,6 +10,8 @@ interface CleanerCardProps {
 
 export const CleanerCard: React.FC<CleanerCardProps> = ({ cleaner, onClick }) => {
   const locationString = cleaner.city === 'Other' && cleaner.otherCity ? cleaner.otherCity : cleaner.city;
+  const locationDisplay = [cleaner.country || 'Nigeria', cleaner.state, locationString].filter(Boolean).join(', ');
+  
   return (
     <div
       onClick={onClick}
@@ -18,9 +20,9 @@ export const CleanerCard: React.FC<CleanerCardProps> = ({ cleaner, onClick }) =>
       <div className="relative">
         <img 
             className="h-56 w-full object-cover" 
-            src={cleaner.photoUrl} 
+            src={cleaner.photoUrl || 'https://ui-avatars.com/api/?name=' + encodeURIComponent(cleaner.name) + '&size=400&background=007A5E&color=fff'} 
             alt={cleaner.name} 
-            onError={(e) => { e.currentTarget.src = 'https://via.placeholder.com/400x300?text=No+Image'; }}
+            onError={(e) => { e.currentTarget.src = 'https://ui-avatars.com/api/?name=' + encodeURIComponent(cleaner.name) + '&size=400&background=007A5E&color=fff'; }}
         />
         <div className="absolute top-2 right-2 bg-black bg-opacity-50 text-white px-2 py-1 rounded-full text-xs font-semibold flex items-center gap-1">
           <StarIcon className="w-4 h-4 text-yellow-400" />
@@ -43,8 +45,8 @@ export const CleanerCard: React.FC<CleanerCardProps> = ({ cleaner, onClick }) =>
             {cleaner.isVerified && <CheckBadgeIcon className="w-5 h-5 text-secondary" />}
         </div>
         <p className="text-sm text-gray-600 font-medium flex items-center">
-            <MapPinIcon className="w-4 h-4 mr-1 text-gray-400" />
-            {locationString}, {cleaner.state}
+            <MapPinIcon className="w-4 h-4 mr-1 text-gray-400 flex-shrink-0" />
+            <span className="truncate">{locationDisplay}</span>
         </p>
         {cleaner.experience > 0 && (
             <p className="text-xs text-gray-500 mt-1">
@@ -98,13 +100,6 @@ export const CleanerCard: React.FC<CleanerCardProps> = ({ cleaner, onClick }) =>
             ) : (
                 <span className="text-lg font-semibold text-gray-700">Contact for price</span>
             )}
-        </div>
-        <div className="mt-3">
-          {cleaner.serviceTypes.slice(0, 2).map((service) => (
-            <span key={service} className="inline-block bg-green-100 text-primary text-xs font-semibold mr-2 px-2.5 py-0.5 rounded-full mb-1">
-              {service}
-            </span>
-          ))}
         </div>
         <div className="mt-auto pt-4">
               <button

@@ -859,10 +859,42 @@ app.post('/api/auth/register', async (req, res) => {
 });
 
 // Alias: GET /api/cleaners -> GET /api/users (workers only)
+// Maps MongoDB User documents to frontend Cleaner interface format
 app.get('/api/cleaners', async (req, res) => {
   try {
     const workers = await User.find({ userType: 'worker', isProfileComplete: true }).select('-password');
-    res.json(workers);
+    
+    // Map to Cleaner interface expected by frontend
+    const cleaners = workers.map(w => {
+      const worker = w.toObject();
+      return {
+        id: worker._id.toString(),
+        name: worker.fullName || worker.email?.split('@')[0] || 'Unknown',
+        photoUrl: worker.profilePhoto || worker.profilePicture || '',
+        rating: worker.ratings?.average || 0,
+        reviews: worker.ratings?.count || (worker.reviewsData?.length || 0),
+        serviceTypes: worker.services || worker.skillType || [],
+        state: worker.state || '',
+        city: worker.city || '',
+        otherCity: worker.otherCity || '',
+        country: worker.country || 'Nigeria',
+        experience: worker.experience || worker.yearsOfExperience || 0,
+        bio: worker.bio || worker.professionalExperience || '',
+        isVerified: worker.isVerified || false,
+        chargeHourly: worker.chargeHourly || worker.pricing?.hourly || null,
+        chargeDaily: worker.chargeDaily || worker.pricing?.daily || null,
+        chargePerContract: worker.chargePerContract || worker.pricing?.contract || null,
+        chargePerContractNegotiable: worker.chargePerContractNegotiable || false,
+        subscriptionTier: worker.subscriptionTier || 'Free',
+        accountNumber: worker.accountNumber || worker.bankAccount?.accountNumber || '',
+        bankName: worker.bankName || worker.bankAccount?.bankName || '',
+        phoneNumber: worker.phoneNumber || worker.phone || '',
+        cleanerType: worker.cleanerType || 'Individual',
+        reviewsData: worker.reviewsData || worker.ratings?.reviews || [],
+      };
+    });
+    
+    res.json(cleaners);
   } catch (error) {
     res.status(500).json({ error: error.message });
   }

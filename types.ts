@@ -10,12 +10,13 @@ export interface Review {
 }
 
 export interface Cleaner {
-  id: string; // FIX: Changed from number to string to match UUID
+  id: string;
   name: string;
   photoUrl: string;
   rating: number;
   reviews: number;
   serviceTypes: string[];
+  country?: string;
   state: string;
   city: string;
   otherCity?: string;

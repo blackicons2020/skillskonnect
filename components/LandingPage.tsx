@@ -45,9 +45,9 @@ const getFeaturedCleaners = (allCleaners: Cleaner[]): Cleaner[] => {
 const FeaturedCleanersSection: React.FC<FeaturedCleanersSectionProps> = ({ loading, cleaners, onSelectCleaner, appError }) => (
     <div className="py-16 md:py-24 bg-white">
         <div className="container mx-auto px-4 sm:px-6 lg:px-8">
-            <h2 className="text-3xl md:text-4xl font-bold text-center text-dark">Meet Our Top-Rated Cleaners</h2>
+            <h2 className="text-3xl md:text-4xl font-bold text-center text-dark">Meet Our Top-Rated Professionals</h2>
             <p className="mt-4 text-lg text-gray-600 text-center max-w-2xl mx-auto">
-                Handpicked professionals who are consistently rated the best by our customers for their reliability and attention to detail.
+                Handpicked skilled professionals who are consistently rated the best by our customers for their reliability and expertise.
             </p>
              {appError && (
                 <div className="mt-8 bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded-lg relative text-center" role="alert">
@@ -70,7 +70,7 @@ const FeaturedCleanersSection: React.FC<FeaturedCleanersSectionProps> = ({ loadi
                    ))
                ) : !appError ? (
                  <div className="col-span-full text-center text-gray-500 py-8">
-                    No top-rated cleaners available at the moment.
+                    No top-rated professionals available at the moment.
                 </div>
                ) : null}
             </div>
