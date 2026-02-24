@@ -218,7 +218,7 @@ const App: React.FC = () => {
         if (cleanerToRememberForBooking) {
             // User had intended to book a cleaner. 
             // Redirect them to the dashboard and open the booking modal immediately.
-            if (userData.role === 'client') {
+            if (userData.userType === 'client') {
                 handleNavigate('clientDashboard');
                 // Use a small timeout to allow the dashboard to mount before setting modal state
                 setTimeout(() => {
@@ -235,10 +235,10 @@ const App: React.FC = () => {
         }
 
         if (shouldNavigate) {
-            if (userData.isAdmin) {
+            if (userData.role === 'admin' || userData.role === 'super-admin') {
                 handleNavigate('adminDashboard');
             } else {
-                handleNavigate(userData.role === 'client' ? 'clientDashboard' : 'cleanerDashboard');
+                handleNavigate(userData.userType === 'client' ? 'clientDashboard' : 'cleanerDashboard');
             }
         }
     };
