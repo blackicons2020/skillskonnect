@@ -736,6 +736,116 @@ app.get('/api/admin/stats', authenticateToken, async (req, res) => {
   }
 });
 
+// ==================== FRONTEND COMPATIBILITY ALIASES ====================
+
+// Alias: /api/auth/register -> /api/auth/signup
+app.post('/api/auth/register', async (req, res) => {
+  try {
+    const { email, password, userType } = req.body;
+
+    if (!email || !password || !userType) {
+      return res.status(400).json({ error: 'Email, password, and userType are required' });
+    }
+
+    const existingUser = await User.findOne({ email });
+    if (existingUser) {
+      return res.status(409).json({ error: 'User already exists' });
+    }
+
+    const hashedPassword = await bcrypt.hash(password, 10);
+    const role = userType === 'admin' ? 'admin' : 'user';
+
+    const newUser = await User.create({
+      email,
+      password: hashedPassword,
+      userType,
+      role,
+      isProfileComplete: false
+    });
+
+    const token = jwt.sign(
+      { email: newUser.email, userType: newUser.userType },
+      JWT_SECRET,
+      { expiresIn: '7d' }
+    );
+
+    res.status(201).json({
+      message: 'User created successfully',
+      token,
+      user: {
+        email: newUser.email,
+        userType: newUser.userType,
+        role: newUser.role,
+        isProfileComplete: newUser.isProfileComplete
+      }
+    });
+  } catch (error) {
+    console.error('Register error:', error);
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// Alias: GET /api/cleaners -> GET /api/users (workers only)
+app.get('/api/cleaners', async (req, res) => {
+  try {
+    const workers = await User.find({ userType: 'worker', isProfileComplete: true }).select('-password');
+    res.json(workers);
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// Alias: GET /api/cleaners/:id -> GET /api/users/:id
+app.get('/api/cleaners/:id', async (req, res) => {
+  try {
+    const user = await User.findById(req.params.id).select('-password');
+    if (!user) {
+      return res.status(404).json({ error: 'User not found' });
+    }
+    res.json(user);
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// Contact form endpoint
+app.post('/api/contact', async (req, res) => {
+  try {
+    // Just log and return success - can be enhanced later
+    console.log('Contact form submission:', req.body);
+    res.json({ message: 'Thank you for contacting us. We will get back to you soon.' });
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// Bookings endpoint (maps to jobs)
+app.post('/api/bookings', authenticateToken, async (req, res) => {
+  try {
+    const newJob = await Job.create({
+      ...req.body,
+      clientId: req.user.userId,
+      status: 'open'
+    });
+    res.status(201).json(newJob);
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// Admin get all users
+app.get('/api/admin/users', authenticateToken, async (req, res) => {
+  try {
+    if (req.user.role !== 'admin' && req.user.role !== 'super-admin') {
+      return res.status(403).json({ error: 'Admin access required' });
+    }
+    const users = await User.find().select('-password');
+    res.json(users);
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
 // ==================== HEALTH CHECK ====================
 
 app.get('/api/health', (req, res) => {
