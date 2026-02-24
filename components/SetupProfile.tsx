@@ -116,10 +116,9 @@ export const SetupProfile: React.FC<SetupProfileProps> = ({ user, onSave, onNavi
             return;
         }
 
-        // Validate phone number (Nigerian format: 11 digits starting with 0)
-        const phoneRegex = /^0\d{10}$/;
-        if (!formData.phoneNumber || !phoneRegex.test(formData.phoneNumber)) {
-            alert('Please enter a valid Nigerian phone number (11 digits starting with 0, e.g., 08012345678).');
+        // Validate phone number (basic validation for international numbers)
+        if (!formData.phoneNumber || formData.phoneNumber.trim().length < 5) {
+            alert('Please enter a valid phone number.');
             return;
         }
 
