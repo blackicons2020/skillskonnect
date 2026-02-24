@@ -824,6 +824,42 @@ app.get('/api/admin/stats', authenticateToken, async (req, res) => {
   }
 });
 
+app.get('/api/admin/users', authenticateToken, async (req, res) => {
+  try {
+    if (req.user.role !== 'admin' && req.user.role !== 'super-admin') {
+      return res.status(403).json({ error: 'Admin access required' });
+    }
+
+    const users = await User.find({}).select('-password');
+    res.json(users.map(u => normalizeUser(u)));
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
+app.delete('/api/admin/users/:userId', authenticateToken, async (req, res) => {
+  try {
+    if (req.user.role !== 'admin' && req.user.role !== 'super-admin') {
+      return res.status(403).json({ error: 'Admin access required' });
+    }
+
+    const user = await User.findById(req.params.userId);
+    if (!user) {
+      return res.status(404).json({ error: 'User not found' });
+    }
+
+    // Prevent deletion of super-admin
+    if (user.role === 'super-admin') {
+      return res.status(403).json({ error: 'Cannot delete super admin account' });
+    }
+
+    await User.findByIdAndDelete(req.params.userId);
+    res.json({ message: 'User deleted successfully' });
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
 // ==================== FRONTEND COMPATIBILITY ALIASES ====================
 
 // Alias: /api/auth/register -> /api/auth/signup
