@@ -370,13 +370,28 @@ app.put('/api/users/me', authenticateToken, async (req, res) => {
     delete updateData.email;
     delete updateData.password;
 
-    const user = await User.findOneAndUpdate(
+    // Auto-set isProfileComplete to true when required fields are present
+    const user = await User.findOne({ email: req.user.email });
+    if (user && updateData.fullName && updateData.phoneNumber && updateData.country) {
+      if (user.userType === 'worker') {
+        // Worker needs: services, experience/pricing
+        if (updateData.services && updateData.services.length > 0 && 
+           (updateData.chargeHourly || updateData.chargeDaily || updateData.chargePerContract)) {
+          updateData.isProfileComplete = true;
+        }
+      } else if (user.userType === 'client') {
+        // Client just needs basic info
+        updateData.isProfileComplete = true;
+      }
+    }
+
+    const updatedUser = await User.findOneAndUpdate(
       { email: req.user.email },
       { $set: updateData },
       { new: true }
     );
 
-    res.json(normalizeUser(user));
+    res.json(normalizeUser(updatedUser));
   } catch (error) {
     res.status(500).json({ error: error.message });
   }
