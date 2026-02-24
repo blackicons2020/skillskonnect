@@ -107,12 +107,14 @@ export const Dashboard: React.FC<DashboardProps> = ({ user, onUpdateUser, onNavi
     // Update selected country and phone code when country changes
     useEffect(() => {
         const country = countries.find(c => c.name === formData.country);
-        if (country) {
+        if (country && country.name !== selectedCountry.name) {
             setSelectedCountry(country);
-            setFormData((prev: any) => ({
-                ...prev,
-                phoneCountryCode: country.phoneCode
-            }));
+            if (country.phoneCode !== formData.phoneCountryCode) {
+                setFormData((prev: any) => ({
+                    ...prev,
+                    phoneCountryCode: country.phoneCode
+                }));
+            }
         }
     }, [formData.country]);
 

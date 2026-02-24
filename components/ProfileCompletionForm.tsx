@@ -42,15 +42,12 @@ export default function ProfileCompletionForm({ user, onSave, onCancel }: Profil
   // Update selected country when country changes
   useEffect(() => {
     const country = countries.find(c => c.name === formData.country);
-    if (country) {
+    if (country && country.name !== selectedCountry.name) {
       setSelectedCountry(country);
-      // Auto-populate phone code
-      setFormData(prev => ({
-        ...prev,
-        phoneCountryCode: country.phoneCode,
-        state: '', // Reset state when country changes
-        city: '' // Reset city when country changes
-      }));
+      // Auto-populate phone code only if it's different
+      if (country.phoneCode !== formData.phoneCountryCode) {
+        handleChange('phoneCountryCode', country.phoneCode);
+      }
     }
   }, [formData.country]);
 

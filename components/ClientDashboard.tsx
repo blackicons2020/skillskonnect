@@ -251,12 +251,14 @@ export const ClientDashboard: React.FC<ClientDashboardProps> = ({ user, allClean
     // Update selected country when country changes
     useEffect(() => {
         const country = countries.find(c => c.name === profileFormData.country);
-        if (country) {
+        if (country && country.name !== selectedCountry.name) {
             setSelectedCountry(country);
-            setProfileFormData((prev: any) => ({
-                ...prev,
-                phoneCountryCode: country.phoneCode
-            }));
+            if (country.phoneCode !== profileFormData.phoneCountryCode) {
+                setProfileFormData((prev: any) => ({
+                    ...prev,
+                    phoneCountryCode: country.phoneCode
+                }));
+            }
         }
     }, [profileFormData.country]);
 
