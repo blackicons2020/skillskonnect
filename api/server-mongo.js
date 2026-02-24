@@ -307,12 +307,7 @@ app.post('/api/auth/signup', async (req, res) => {
     res.status(201).json({
       message: 'User created successfully',
       token,
-      user: {
-        email: newUser.email,
-        userType: newUser.userType,
-        role: newUser.role,
-        isProfileComplete: newUser.isProfileComplete
-      }
+      user: normalizeUser(newUser)
     });
   } catch (error) {
     console.error('Signup error:', error);

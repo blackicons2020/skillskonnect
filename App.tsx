@@ -230,10 +230,13 @@ const App: React.FC = () => {
         }
 
         if (shouldNavigate) {
-            if (userData.role === 'admin' || userData.role === 'super-admin') {
+            if (userData.role === 'admin' || userData.role === 'super-admin' || userData.isAdmin) {
                 handleNavigate('adminDashboard');
+            } else if (userData.userType === 'worker' || userData.role === 'cleaner') {
+                handleNavigate('cleanerDashboard');
             } else {
-                handleNavigate(userData.userType === 'client' ? 'clientDashboard' : 'cleanerDashboard');
+                // Default to client dashboard for clients
+                handleNavigate('clientDashboard');
             }
         }
     };
@@ -288,8 +291,13 @@ const App: React.FC = () => {
     const handleSearchFromHero = (filters: SearchFilters) => {
         setInitialFilters(filters);
         if (user) {
-            // Already registered & logged in -> Direct to Dashboard
-            handleNavigate('clientDashboard');
+            // Only clients can search for workers
+            if (user.userType === 'client' || user.role === 'client') {
+                handleNavigate('clientDashboard');
+            } else {
+                // Workers shouldn't be searching for workers - redirect to their dashboard
+                handleNavigate('cleanerDashboard');
+            }
         } else {
             // Unregistered or Logged out -> Search Results
             handleNavigate('searchResults');
@@ -409,7 +417,12 @@ const App: React.FC = () => {
         try {
             await apiService.createChat(user.id, cleaner.id, user.fullName, cleaner.name);
             setDashboardInitialTab('messages');
-            handleNavigate('clientDashboard');
+            // Route to appropriate dashboard based on user type
+            if (user.userType === 'client' || user.role === 'client') {
+                handleNavigate('clientDashboard');
+            } else {
+                handleNavigate('cleanerDashboard');
+            }
         } catch (error) {
             alert('Could not start chat. Please try again.');
         }
@@ -513,7 +526,8 @@ const App: React.FC = () => {
                     onAuthMessageDismiss={() => setAuthMessage(null)}
                 />;
             case 'clientDashboard':
-                if (user && (user.role === 'client' || (user as any).userType === 'client')) {
+                // Only clients can access client dashboard
+                if (user && ((user as any).userType === 'client' || user.role === 'client')) {
                     return <ClientDashboard
                         user={user}
                         allCleaners={allCleaners}
@@ -534,7 +548,8 @@ const App: React.FC = () => {
                 handleNavigate('auth');
                 return null;
             case 'cleanerDashboard':
-                if (user && (user.role === 'cleaner' || (user as any).userType === 'worker' || (user as any).userType === 'cleaner')) {
+                // Only workers can access worker dashboard
+                if (user && ((user as any).userType === 'worker' || user.role === 'cleaner')) {
                     return <Dashboard
                         user={user}
                         onUpdateUser={handleUpdateUser}
