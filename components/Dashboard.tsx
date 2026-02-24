@@ -8,6 +8,7 @@ import { ChatInterface } from './ChatInterface';
 import { apiService } from '../services/apiService'; 
 import { SupportTicketSection } from './SupportTicketSection';
 import { NIGERIA_LOCATIONS } from '../constants/locations';
+import { countries } from '../constants/countries';
 import ProfileCompletionForm from './ProfileCompletionForm';
 import VerificationSection from './VerificationSection';
 
@@ -66,6 +67,9 @@ export const Dashboard: React.FC<DashboardProps> = ({ user, onUpdateUser, onNavi
     const subReceiptInputRef = useRef<HTMLInputElement>(null);
     const [daysRemaining, setDaysRemaining] = useState<number | null>(null);
     const [cities, setCities] = useState<string[]>([]);
+    const [selectedCountry, setSelectedCountry] = useState(
+        countries.find(c => c.name === (user.country || 'Nigeria')) || countries[0]
+    );
 
     const limit = user.subscriptionTier ? CLIENT_LIMITS[user.subscriptionTier] : 0;
     const currentClientsCount = user.monthlyNewClientsIds?.length || 0;
@@ -100,15 +104,27 @@ export const Dashboard: React.FC<DashboardProps> = ({ user, onUpdateUser, onNavi
         }
     }, [user]);
 
-    // Update cities when state changes
+    // Update selected country and phone code when country changes
     useEffect(() => {
-        if (formData.state) {
+        const country = countries.find(c => c.name === formData.country);
+        if (country) {
+            setSelectedCountry(country);
+            setFormData((prev: any) => ({
+                ...prev,
+                phoneCountryCode: country.phoneCode
+            }));
+        }
+    }, [formData.country]);
+
+    // Update cities when state changes (for Nigeria compatibility)
+    useEffect(() => {
+        if (formData.country === 'Nigeria' && formData.state) {
             const selectedState = NIGERIA_LOCATIONS.find(s => s.name === formData.state);
             setCities(selectedState ? [...selectedState.towns, 'Other'] : ['Other']);
         } else {
             setCities([]);
         }
-    }, [formData.state]);
+    }, [formData.state, formData.country]);
 
     useEffect(() => {
         if (initialTab) setActiveTab(initialTab);
@@ -586,36 +602,39 @@ export const Dashboard: React.FC<DashboardProps> = ({ user, onUpdateUser, onNavi
                                 <ProfileField label="Phone Number" value={formData.phoneNumber} isEditing={isEditing}>{renderValueOrInput('phoneNumber', 'tel', { pattern: "[0-9]{10,11}", title: "Please enter a valid 10 or 11-digit phone number.", minLength: 10, maxLength: 11 })}</ProfileField>
                                 <ProfileField label="Address" value={formData.address} isEditing={isEditing}>{isEditing ? <textarea name="address" value={formData.address || ''} onChange={handleInputChange} className="block w-full rounded-md border-gray-300 shadow-sm focus:border-primary focus:ring-primary sm:text-sm" rows={3} maxLength={250} /> : formData.address}</ProfileField>
                                 
-                                <ProfileField label="State" value={formData.state} isEditing={isEditing}>
-                                    <select name="state" value={formData.state} onChange={handleInputChange} className="block w-full rounded-md border-gray-300 shadow-sm focus:border-primary focus:ring-primary sm:text-sm">
-                                        <option value="">Select State</option>
-                                        {NIGERIA_LOCATIONS.map(s => <option key={s.name} value={s.name}>{s.name}</option>)}
+                                <ProfileField label="Country" value={formData.country || 'Nigeria'} isEditing={isEditing}>
+                                    <select name="country" value={formData.country || 'Nigeria'} onChange={handleInputChange} className="block w-full rounded-md border-gray-300 shadow-sm focus:border-primary focus:ring-primary sm:text-sm">
+                                        {countries.map(c => <option key={c.code} value={c.name}>{c.name}</option>)}
                                     </select>
                                 </ProfileField>
 
-                                <ProfileField label="City" value={locationString} isEditing={isEditing}>
-                                    <div className="w-full space-y-2">
-                                        <select 
-                                            name="city" 
-                                            value={formData.city} 
-                                            onChange={handleInputChange} 
-                                            className="block w-full rounded-md border-gray-300 shadow-sm focus:border-primary focus:ring-primary sm:text-sm"
-                                            disabled={!formData.state}
-                                        >
-                                            <option value="">Select City</option>
-                                            {cities.map(c => <option key={c} value={c}>{c}</option>)}
+                                <ProfileField label="State/Province/Region" value={formData.state} isEditing={isEditing}>
+                                    {selectedCountry.states.length > 0 ? (
+                                        <select name="state" value={formData.state} onChange={handleInputChange} className="block w-full rounded-md border-gray-300 shadow-sm focus:border-primary focus:ring-primary sm:text-sm">
+                                            <option value="">Select State/Province/Region</option>
+                                            {selectedCountry.states.map(s => <option key={s} value={s}>{s}</option>)}
                                         </select>
-                                        {formData.city === 'Other' && (
-                                            <input
-                                                type="text"
-                                                name="otherCity"
-                                                value={formData.otherCity || ''}
-                                                onChange={handleInputChange}
-                                                placeholder="Specify city"
-                                                className="block w-full rounded-md border-gray-300 shadow-sm focus:border-primary focus:ring-primary sm:text-sm"
-                                            />
-                                        )}
-                                    </div>
+                                    ) : (
+                                        <input
+                                            type="text"
+                                            name="state"
+                                            value={formData.state || ''}
+                                            onChange={handleInputChange}
+                                            placeholder="Enter your state/province/region"
+                                            className="block w-full rounded-md border-gray-300 shadow-sm focus:border-primary focus:ring-primary sm:text-sm"
+                                        />
+                                    )}
+                                </ProfileField>
+
+                                <ProfileField label="City/Town" value={formData.city} isEditing={isEditing}>
+                                    <input
+                                        type="text"
+                                        name="city"
+                                        value={formData.city || ''}
+                                        onChange={handleInputChange}
+                                        placeholder="Enter your city/town"
+                                        className="block w-full rounded-md border-gray-300 shadow-sm focus:border-primary focus:ring-primary sm:text-sm"
+                                    />
                                 </ProfileField>
 
                                 <ProfileField label="Gender" value={formData.gender} isEditing={isEditing}>
