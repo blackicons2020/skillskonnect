@@ -335,37 +335,6 @@ export default function ProfileCompletionForm({ user, onSave, onCancel }: Profil
             <div className="space-y-4">
               <h3 className="text-lg font-semibold text-gray-800">Professional Details</h3>
               
-              {/* Profile Picture Upload Section - Prominently placed at top */}
-              <div className="bg-blue-50 border-2 border-blue-200 rounded-lg p-4">
-                <label className="block text-sm font-medium text-gray-800 mb-2">
-                  Profile Picture <span className="text-red-500">*</span>
-                </label>
-                <p className="text-xs text-gray-600 mb-3">
-                  This photo will be displayed on your professional card in search results and on the homepage. Choose a clear, professional photo.
-                </p>
-                <input
-                  type="file"
-                  accept="image/*"
-                  onChange={(e) => {
-                    const file = e.target.files?.[0];
-                    if (file) handleFileUpload('profilePicture', file);
-                  }}
-                  className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 bg-white"
-                />
-                {formData.profilePicture && (
-                  <div className="mt-3 flex items-center gap-3">
-                    <img
-                      src={formData.profilePicture}
-                      alt="Profile Preview"
-                      className="w-24 h-24 object-cover rounded-lg border-2 border-blue-300 shadow-md"
-                    />
-                    <div className="text-xs text-green-600 font-medium">
-                      ✓ Profile photo uploaded successfully
-                    </div>
-                  </div>
-                )}
-              </div>
-              
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-2">
                   Skills <span className="text-red-500">*</span>
@@ -456,6 +425,59 @@ export default function ProfileCompletionForm({ user, onSave, onCancel }: Profil
                     required
                   />
                 </div>
+              </div>
+
+              {/* Profile Picture Upload - For Display */}
+              <div className="bg-gradient-to-r from-blue-50 to-indigo-50 border-2 border-blue-300 rounded-lg p-6 mt-6">
+                <label className="block text-lg font-semibold text-gray-900 mb-2">
+                  Profile Picture for Display <span className="text-red-500">*</span>
+                </label>
+                <p className="text-sm text-gray-700 mb-4 leading-relaxed">
+                  Upload a clear, professional photo of yourself. This picture will be displayed:
+                </p>
+                <ul className="text-sm text-gray-700 mb-4 space-y-2 ml-4">
+                  <li className="flex items-start">
+                    <span className="text-blue-600 mr-2">•</span>
+                    <span>On your professional card in client search results</span>
+                  </li>
+                  <li className="flex items-start">
+                    <span className="text-blue-600 mr-2">•</span>
+                    <span>On the homepage alongside other professionals</span>
+                  </li>
+                  <li className="flex items-start">
+                    <span className="text-blue-600 mr-2">•</span>
+                    <span>At the top of your dashboard near your name and email</span>
+                  </li>
+                </ul>
+                <input
+                  type="file"
+                  accept="image/*"
+                  onChange={(e) => {
+                    const file = e.target.files?.[0];
+                    if (file) handleFileUpload('profilePicture', file);
+                  }}
+                  className="w-full p-3 border-2 border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 bg-white text-gray-700 file:mr-4 file:py-2 file:px-4 file:rounded-lg file:border-0 file:text-sm file:font-semibold file:bg-blue-600 file:text-white hover:file:bg-blue-700"
+                  required
+                />
+                {formData.profilePicture && (
+                  <div className="mt-4 p-4 bg-white rounded-lg border-2 border-green-300">
+                    <div className="flex items-center gap-4">
+                      <img
+                        src={formData.profilePicture}
+                        alt="Profile Preview"
+                        className="w-28 h-28 object-cover rounded-full border-4 border-blue-500 shadow-lg"
+                      />
+                      <div>
+                        <p className="text-sm font-semibold text-green-700 mb-1">
+                          ✓ Profile photo uploaded successfully!
+                        </p>
+                        <p className="text-xs text-gray-600">
+                          This is how your photo will appear to clients
+                        </p>
+                      </div>
+                    </div>
+                  </div>
+                )}
               </div>
             </div>
           )}
