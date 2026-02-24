@@ -44,8 +44,10 @@ export default function ProfileCompletionForm({ user, onSave, onCancel }: Profil
     const country = countries.find(c => c.name === formData.country);
     if (country) {
       setSelectedCountry(country);
+      // Auto-populate phone code
       setFormData(prev => ({
         ...prev,
+        phoneCountryCode: country.phoneCode,
         state: '', // Reset state when country changes
         city: '' // Reset city when country changes
       }));
@@ -195,7 +197,7 @@ export default function ProfileCompletionForm({ user, onSave, onCancel }: Profil
                 <select
                   value={formData.phoneCountryCode || ''}
                   onChange={(e) => handleChange('phoneCountryCode', e.target.value)}
-                  className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
+                  className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 bg-gray-50"
                   required
                 >
                   <option value="">Select...</option>
@@ -205,6 +207,7 @@ export default function ProfileCompletionForm({ user, onSave, onCancel }: Profil
                     </option>
                   ))}
                 </select>
+                <p className="text-xs text-gray-500 mt-1">Auto-filled based on country</p>
               </div>
               <div className="col-span-2">
                 <label className="block text-sm font-medium text-gray-700 mb-2">
@@ -248,20 +251,22 @@ export default function ProfileCompletionForm({ user, onSave, onCancel }: Profil
               <label className="block text-sm font-medium text-gray-700 mb-2">
                 State/Province/Region <span className="text-red-500">*</span>
               </label>
-              <select
+              <input
+                type="text"
                 value={formData.state || ''}
                 onChange={(e) => handleChange('state', e.target.value)}
                 className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
+                placeholder={selectedCountry.states.length > 0 
+                  ? `e.g., ${selectedCountry.states.slice(0, 3).join(', ')}` 
+                  : 'Enter your state/province/region'}
                 required
-                disabled={!selectedCountry.states.length}
-              >
-                <option value="">Select state...</option>
-                {selectedCountry.states.map(state => (
-                  <option key={state} value={state}>
-                    {state}
-                  </option>
-                ))}
-              </select>
+              />
+              {selectedCountry.states.length > 0 && (
+                <p className="text-xs text-gray-500 mt-1">
+                  Common states: {selectedCountry.states.slice(0, 5).join(', ')}
+                  {selectedCountry.states.length > 5 && ', etc.'}
+                </p>
+              )}
             </div>
 
             <div>
