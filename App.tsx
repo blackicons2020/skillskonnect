@@ -250,7 +250,7 @@ const App: React.FC = () => {
             const response: any = await apiService.register({ 
                 email, 
                 password, 
-                role: 'client' // Default to client, can be changed in profile
+                userType: 'client' // Default to client, can be changed in profile
             });
             
             if (response.token) {
