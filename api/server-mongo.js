@@ -34,19 +34,87 @@ const UserSchema = new mongoose.Schema({
   role: { type: String, default: 'user' },
   isProfileComplete: { type: Boolean, default: false },
   fullName: String,
+  gender: String,
+  phoneCountryCode: String,
+  phoneNumber: String,
   phone: String,
+  country: String,
   state: String,
   city: String,
+  otherCity: String,
   address: String,
+  streetAddress: String,
+  officeAddress: String,
+  workplaceAddress: String,
   profilePhoto: String,
+  profilePicture: String,
+  
+  // Company fields
+  companyName: String,
+  companyRegistrationNumber: String,
+  companyAddress: String,
+  cleanerType: String,
+  clientType: String,
   businessName: String,
   businessRegistrationNumber: String,
   businessEmail: String,
   businessPhone: String,
   businessAddress: String,
+  
+  // Worker fields
   services: [String],
+  skillType: [String],
   experience: Number,
+  yearsOfExperience: Number,
   bio: String,
+  professionalExperience: String,
+  chargeHourly: Number,
+  chargeDaily: Number,
+  chargePerContract: Number,
+  chargePerContractNegotiable: Boolean,
+  chargeRate: Number,
+  chargeRateType: String,
+  
+  // Bank details
+  bankName: String,
+  accountNumber: String,
+  accountName: String,
+  
+  // Verification
+  isVerified: { type: Boolean, default: false },
+  verificationDocuments: {
+    governmentId: String,
+    companyRegistrationCert: String,
+    skillTrainingCert: String
+  },
+  
+  // Admin
+  isAdmin: { type: Boolean, default: false },
+  adminRole: String,
+  isSuspended: { type: Boolean, default: false },
+  
+  // Subscription
+  subscriptionTier: String,
+  pendingSubscription: String,
+  subscriptionReceipt: mongoose.Schema.Types.Mixed,
+  subscriptionEndDate: String,
+  trialStartDate: String,
+  trialEndDate: String,
+  
+  // Bookings & Jobs
+  bookingHistory: [mongoose.Schema.Types.Mixed],
+  postedJobs: [mongoose.Schema.Types.Mixed],
+  appliedJobs: [String],
+  
+  // Reviews
+  reviewsData: [mongoose.Schema.Types.Mixed],
+  
+  // Usage tracking
+  monthlyNewClientsIds: [String],
+  monthlyUsageResetDate: String,
+  monthlyJobPostsCount: Number,
+  
+  // Legacy nested fields
   pricing: {
     hourly: Number,
     daily: Number,
@@ -71,9 +139,8 @@ const UserSchema = new mongoose.Schema({
   subscriptionPlan: {
     type: String,
     default: 'free'
-  },
-  subscriptionEndDate: Date
-}, { timestamps: true });
+  }
+}, { timestamps: true, strict: false });
 
 const JobSchema = new mongoose.Schema({
   title: { type: String, required: true },

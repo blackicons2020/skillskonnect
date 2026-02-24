@@ -39,7 +39,7 @@ const getHeaders = () => {
 const handleResponse = async (response: Response) => {
     if (!response.ok) {
         const errorData = await response.json().catch(() => ({}));
-        throw new Error(errorData.message || `Request failed with status ${response.status}`);
+        throw new Error(errorData.message || errorData.error || `Request failed with status ${response.status}`);
     }
     if (response.status === 204) return null;
     return response.json();
