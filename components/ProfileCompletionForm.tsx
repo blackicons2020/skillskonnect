@@ -335,6 +335,37 @@ export default function ProfileCompletionForm({ user, onSave, onCancel }: Profil
             <div className="space-y-4">
               <h3 className="text-lg font-semibold text-gray-800">Professional Details</h3>
               
+              {/* Profile Picture Upload Section - Prominently placed at top */}
+              <div className="bg-blue-50 border-2 border-blue-200 rounded-lg p-4">
+                <label className="block text-sm font-medium text-gray-800 mb-2">
+                  Profile Picture <span className="text-red-500">*</span>
+                </label>
+                <p className="text-xs text-gray-600 mb-3">
+                  This photo will be displayed on your professional card in search results and on the homepage. Choose a clear, professional photo.
+                </p>
+                <input
+                  type="file"
+                  accept="image/*"
+                  onChange={(e) => {
+                    const file = e.target.files?.[0];
+                    if (file) handleFileUpload('profilePicture', file);
+                  }}
+                  className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 bg-white"
+                />
+                {formData.profilePicture && (
+                  <div className="mt-3 flex items-center gap-3">
+                    <img
+                      src={formData.profilePicture}
+                      alt="Profile Preview"
+                      className="w-24 h-24 object-cover rounded-lg border-2 border-blue-300 shadow-md"
+                    />
+                    <div className="text-xs text-green-600 font-medium">
+                      ✓ Profile photo uploaded successfully
+                    </div>
+                  </div>
+                )}
+              </div>
+              
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-2">
                   Skills <span className="text-red-500">*</span>
@@ -425,28 +456,6 @@ export default function ProfileCompletionForm({ user, onSave, onCancel }: Profil
                     required
                   />
                 </div>
-              </div>
-
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
-                  Upload Profile Picture <span className="text-red-500">*</span>
-                </label>
-                <input
-                  type="file"
-                  accept="image/*"
-                  onChange={(e) => {
-                    const file = e.target.files?.[0];
-                    if (file) handleFileUpload('profilePicture', file);
-                  }}
-                  className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
-                />
-                {formData.profilePicture && (
-                  <img
-                    src={formData.profilePicture}
-                    alt="Profile Preview"
-                    className="mt-2 w-32 h-32 object-cover rounded-lg"
-                  />
-                )}
               </div>
             </div>
           )}
