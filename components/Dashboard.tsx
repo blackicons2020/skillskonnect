@@ -8,7 +8,7 @@ import { ChatInterface } from './ChatInterface';
 import { apiService } from '../services/apiService'; 
 import { SupportTicketSection } from './SupportTicketSection';
 import { NIGERIA_LOCATIONS } from '../constants/locations';
-import { countries } from '../constants/countries';
+import { countries, phoneCodes } from '../constants/countries';
 import ProfileCompletionForm from './ProfileCompletionForm';
 import VerificationSection from './VerificationSection';
 
@@ -599,6 +599,13 @@ export const Dashboard: React.FC<DashboardProps> = ({ user, onUpdateUser, onNavi
                             </div>
                              <div className="px-4 sm:px-6">
                                 <ProfileField label="Full Name" value={formData.fullName} isEditing={isEditing}>{renderValueOrInput('fullName', 'text', { maxLength: 100 })}</ProfileField>
+                                
+                                <ProfileField label="Phone Country Code" value={formData.phoneCountryCode || '+234'} isEditing={isEditing}>
+                                    <select name="phoneCountryCode" value={formData.phoneCountryCode || '+234'} onChange={handleInputChange} className="block w-full rounded-md border-gray-300 shadow-sm focus:border-primary focus:ring-primary sm:text-sm bg-gray-50">
+                                        {phoneCodes.map(phone => <option key={phone.code} value={phone.code}>{phone.label}</option>)}
+                                    </select>
+                                </ProfileField>
+                                
                                 <ProfileField label="Phone Number" value={formData.phoneNumber} isEditing={isEditing}>{renderValueOrInput('phoneNumber', 'tel', { pattern: "[0-9]{10,11}", title: "Please enter a valid 10 or 11-digit phone number.", minLength: 10, maxLength: 11 })}</ProfileField>
                                 <ProfileField label="Address" value={formData.address} isEditing={isEditing}>{isEditing ? <textarea name="address" value={formData.address || ''} onChange={handleInputChange} className="block w-full rounded-md border-gray-300 shadow-sm focus:border-primary focus:ring-primary sm:text-sm" rows={3} maxLength={250} /> : formData.address}</ProfileField>
                                 

@@ -13,7 +13,7 @@ import { apiService } from '../services/apiService';
 import { ChatInterface } from './ChatInterface';
 import { SupportTicketSection } from './SupportTicketSection';
 import { NIGERIA_LOCATIONS } from '../constants/locations';
-import { countries } from '../constants/countries';
+import { countries, phoneCodes } from '../constants/countries';
 import ProfileCompletionForm from './ProfileCompletionForm';
 import VerificationSection from './VerificationSection';
 
@@ -1064,6 +1064,13 @@ export const ClientDashboard: React.FC<ClientDashboardProps> = ({ user, allClean
                             <div className="px-4 sm:px-6">
                                 <h3 className="text-lg font-medium text-gray-900 mt-4">Personal Information</h3>
                                 <ProfileField label="Full Name" value={profileFormData.fullName} isEditing={isEditingProfile}>{renderValueOrInput('fullName', 'text', { maxLength: 100 })}</ProfileField>
+                                
+                                <ProfileField label="Phone Country Code" value={profileFormData.phoneCountryCode || '+234'} isEditing={isEditingProfile}>
+                                    <select name="phoneCountryCode" value={profileFormData.phoneCountryCode || '+234'} onChange={handleProfileInputChange} className="block w-full rounded-md border-gray-300 shadow-sm focus:border-primary focus:ring-primary sm:text-sm bg-gray-50">
+                                        {phoneCodes.map(phone => <option key={phone.code} value={phone.code}>{phone.label}</option>)}
+                                    </select>
+                                </ProfileField>
+                                
                                 <ProfileField label="Phone Number" value={profileFormData.phoneNumber} isEditing={isEditingProfile}>{renderValueOrInput('phoneNumber', 'tel', { pattern: "[0-9]{10,11}", title: "Please enter a valid 10 or 11-digit phone number.", minLength: 10, maxLength: 11 })}</ProfileField>
                                 <ProfileField label="Address" value={profileFormData.address} isEditing={isEditingProfile}>{isEditingProfile ? <textarea name="address" value={profileFormData.address} onChange={handleProfileInputChange} className="block w-full rounded-md border-gray-300 shadow-sm focus:border-primary focus:ring-primary sm:text-sm" rows={3} maxLength={250} /> : profileFormData.address}</ProfileField>
                                 
