@@ -13,6 +13,7 @@ import { apiService } from '../services/apiService';
 import { ChatInterface } from './ChatInterface';
 import { SupportTicketSection } from './SupportTicketSection';
 import { NIGERIA_LOCATIONS } from '../constants/locations';
+import { countries } from '../constants/countries';
 import ProfileCompletionForm from './ProfileCompletionForm';
 import VerificationSection from './VerificationSection';
 
@@ -202,6 +203,9 @@ export const ClientDashboard: React.FC<ClientDashboardProps> = ({ user, allClean
     const [profileFormData, setProfileFormData] = useState<any>(user);
     const [profilePhotoPreview, setProfilePhotoPreview] = useState<string | null>(null);
     const [cities, setCities] = useState<string[]>([]);
+    const [selectedCountry, setSelectedCountry] = useState(
+        countries.find(c => c.name === (user.country || 'Nigeria')) || countries[0]
+    );
 
     const fileInputRef = useRef<HTMLInputElement>(null);
     const [bookingIdForUpload, setBookingIdForUpload] = useState<string | null>(null);
@@ -244,15 +248,27 @@ export const ClientDashboard: React.FC<ClientDashboardProps> = ({ user, allClean
         }
     }, [user]);
 
-    // Update cities when state changes in profile form
+    // Update selected country when country changes
     useEffect(() => {
-        if (profileFormData.state) {
+        const country = countries.find(c => c.name === profileFormData.country);
+        if (country) {
+            setSelectedCountry(country);
+            setProfileFormData((prev: any) => ({
+                ...prev,
+                phoneCountryCode: country.phoneCode
+            }));
+        }
+    }, [profileFormData.country]);
+
+    // Update cities when state changes in profile form (for Nigeria compatibility)
+    useEffect(() => {
+        if (profileFormData.country === 'Nigeria' && profileFormData.state) {
             const selectedState = NIGERIA_LOCATIONS.find(s => s.name === profileFormData.state);
             setCities(selectedState ? [...selectedState.towns, 'Other'] : ['Other']);
         } else {
             setCities([]);
         }
-    }, [profileFormData.state]);
+    }, [profileFormData.state, profileFormData.country]);
 
     const displayedCleaners = useMemo(() => {
         if (appError) return [];
@@ -1051,36 +1067,39 @@ export const ClientDashboard: React.FC<ClientDashboardProps> = ({ user, allClean
                                 <ProfileField label="Phone Number" value={profileFormData.phoneNumber} isEditing={isEditingProfile}>{renderValueOrInput('phoneNumber', 'tel', { pattern: "[0-9]{10,11}", title: "Please enter a valid 10 or 11-digit phone number.", minLength: 10, maxLength: 11 })}</ProfileField>
                                 <ProfileField label="Address" value={profileFormData.address} isEditing={isEditingProfile}>{isEditingProfile ? <textarea name="address" value={profileFormData.address} onChange={handleProfileInputChange} className="block w-full rounded-md border-gray-300 shadow-sm focus:border-primary focus:ring-primary sm:text-sm" rows={3} maxLength={250} /> : profileFormData.address}</ProfileField>
                                 
-                                <ProfileField label="State" value={profileFormData.state} isEditing={isEditingProfile}>
-                                    <select name="state" value={profileFormData.state} onChange={handleProfileInputChange} className="block w-full rounded-md border-gray-300 shadow-sm focus:border-primary focus:ring-primary sm:text-sm">
-                                        <option value="">Select State</option>
-                                        {NIGERIA_LOCATIONS.map(s => <option key={s.name} value={s.name}>{s.name}</option>)}
+                                <ProfileField label="Country" value={profileFormData.country || 'Nigeria'} isEditing={isEditingProfile}>
+                                    <select name="country" value={profileFormData.country || 'Nigeria'} onChange={handleProfileInputChange} className="block w-full rounded-md border-gray-300 shadow-sm focus:border-primary focus:ring-primary sm:text-sm">
+                                        {countries.map(c => <option key={c.code} value={c.name}>{c.name}</option>)}
                                     </select>
                                 </ProfileField>
 
-                                <ProfileField label="City" value={profileFormData.city === 'Other' && profileFormData.otherCity ? profileFormData.otherCity : profileFormData.city} isEditing={isEditingProfile}>
-                                    <div className="w-full space-y-2">
-                                        <select 
-                                            name="city" 
-                                            value={profileFormData.city} 
-                                            onChange={handleProfileInputChange} 
-                                            className="block w-full rounded-md border-gray-300 shadow-sm focus:border-primary focus:ring-primary sm:text-sm"
-                                            disabled={!profileFormData.state}
-                                        >
-                                            <option value="">Select City</option>
-                                            {cities.map(c => <option key={c} value={c}>{c}</option>)}
+                                <ProfileField label="State/Province/Region" value={profileFormData.state} isEditing={isEditingProfile}>
+                                    {selectedCountry.states.length > 0 ? (
+                                        <select name="state" value={profileFormData.state} onChange={handleProfileInputChange} className="block w-full rounded-md border-gray-300 shadow-sm focus:border-primary focus:ring-primary sm:text-sm">
+                                            <option value="">Select State/Province/Region</option>
+                                            {selectedCountry.states.map(s => <option key={s} value={s}>{s}</option>)}
                                         </select>
-                                        {profileFormData.city === 'Other' && (
-                                            <input
-                                                type="text"
-                                                name="otherCity"
-                                                value={profileFormData.otherCity || ''}
-                                                onChange={handleProfileInputChange}
-                                                placeholder="Specify city"
-                                                className="block w-full rounded-md border-gray-300 shadow-sm focus:border-primary focus:ring-primary sm:text-sm"
-                                            />
-                                        )}
-                                    </div>
+                                    ) : (
+                                        <input
+                                            type="text"
+                                            name="state"
+                                            value={profileFormData.state || ''}
+                                            onChange={handleProfileInputChange}
+                                            placeholder="Enter your state/province/region"
+                                            className="block w-full rounded-md border-gray-300 shadow-sm focus:border-primary focus:ring-primary sm:text-sm"
+                                        />
+                                    )}
+                                </ProfileField>
+
+                                <ProfileField label="City/Town" value={profileFormData.city} isEditing={isEditingProfile}>
+                                    <input
+                                        type="text"
+                                        name="city"
+                                        value={profileFormData.city || ''}
+                                        onChange={handleProfileInputChange}
+                                        placeholder="Enter your city/town"
+                                        className="block w-full rounded-md border-gray-300 shadow-sm focus:border-primary focus:ring-primary sm:text-sm"
+                                    />
                                 </ProfileField>
 
                                 <ProfileField label="Gender" value={profileFormData.gender} isEditing={isEditingProfile}>
