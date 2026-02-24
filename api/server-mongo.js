@@ -155,6 +155,26 @@ mongoose.connect(MONGO_URL)
 
 // ==================== AUTH MIDDLEWARE ====================
 
+// Helper to normalize user data for frontend compatibility
+function normalizeUser(user) {
+  const userObj = user.toObject ? user.toObject() : { ...user };
+  // Map _id to id
+  if (userObj._id) {
+    userObj.id = userObj._id.toString();
+  }
+  // Map userType to role for frontend compatibility
+  if (userObj.role === 'user' || !userObj.role) {
+    if (userObj.userType === 'client') userObj.role = 'client';
+    else if (userObj.userType === 'worker') userObj.role = 'cleaner';
+  }
+  // Add isAdmin flag
+  userObj.isAdmin = ['admin', 'super-admin'].includes(userObj.role);
+  // Remove sensitive fields
+  delete userObj.password;
+  delete userObj.__v;
+  return userObj;
+}
+
 const authenticateToken = async (req, res, next) => {
   try {
     const authHeader = req.headers['authorization'];
@@ -259,14 +279,7 @@ app.post('/api/auth/login', async (req, res) => {
     res.json({
       message: 'Login successful',
       token,
-      user: {
-        email: user.email,
-        userType: user.userType,
-        role: user.role,
-        isProfileComplete: user.isProfileComplete,
-        fullName: user.fullName,
-        profilePhoto: user.profilePhoto
-      }
+      user: normalizeUser(user)
     });
   } catch (error) {
     console.error('Login error:', error);
@@ -278,11 +291,11 @@ app.post('/api/auth/login', async (req, res) => {
 
 app.get('/api/users/me', authenticateToken, async (req, res) => {
   try {
-    const user = await User.findOne({ email: req.user.email }).select('-password');
+    const user = await User.findOne({ email: req.user.email });
     if (!user) {
       return res.status(404).json({ error: 'User not found' });
     }
-    res.json(user);
+    res.json(normalizeUser(user));
   } catch (error) {
     res.status(500).json({ error: error.message });
   }
@@ -298,12 +311,9 @@ app.put('/api/users/me', authenticateToken, async (req, res) => {
       { email: req.user.email },
       { $set: updateData },
       { new: true }
-    ).select('-password');
+    );
 
-    res.json({
-      message: 'Profile updated successfully',
-      user
-    });
+    res.json(normalizeUser(user));
   } catch (error) {
     res.status(500).json({ error: error.message });
   }
@@ -772,12 +782,7 @@ app.post('/api/auth/register', async (req, res) => {
     res.status(201).json({
       message: 'User created successfully',
       token,
-      user: {
-        email: newUser.email,
-        userType: newUser.userType,
-        role: newUser.role,
-        isProfileComplete: newUser.isProfileComplete
-      }
+      user: normalizeUser(newUser)
     });
   } catch (error) {
     console.error('Register error:', error);

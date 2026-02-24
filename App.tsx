@@ -309,7 +309,7 @@ const App: React.FC = () => {
             
             if (updatedUser.isAdmin) {
                 await refetchAllData(updatedUser);
-            } else if (jobsChanged && updatedUser.role === 'client') {
+            } else if (jobsChanged && (updatedUser.role === 'client' || (updatedUser as any).userType === 'client')) {
                 // Refetch jobs so workers can see the new/updated jobs
                 try {
                     const jobs = await apiService.getAllJobs();
@@ -516,7 +516,7 @@ const App: React.FC = () => {
                     onAuthMessageDismiss={() => setAuthMessage(null)}
                 />;
             case 'clientDashboard':
-                if (user && user.role === 'client') {
+                if (user && (user.role === 'client' || (user as any).userType === 'client')) {
                     return <ClientDashboard
                         user={user}
                         allCleaners={allCleaners}
@@ -537,7 +537,7 @@ const App: React.FC = () => {
                 handleNavigate('auth');
                 return null;
             case 'cleanerDashboard':
-                if (user && user.role === 'cleaner') {
+                if (user && (user.role === 'cleaner' || (user as any).userType === 'worker' || (user as any).userType === 'cleaner')) {
                     return <Dashboard
                         user={user}
                         onUpdateUser={handleUpdateUser}
@@ -550,7 +550,7 @@ const App: React.FC = () => {
                 handleNavigate('auth');
                 return null;
             case 'adminDashboard':
-                if (user && user.isAdmin) {
+                if (user && (user.isAdmin || (user as any).role === 'admin' || (user as any).role === 'super-admin')) {
                     return <AdminDashboard
                         user={user}
                         allUsers={allUsers}
