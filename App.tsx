@@ -133,19 +133,14 @@ const App: React.FC = () => {
 
             // Always fetch cleaners and jobs first so landing page and worker dashboard works
             try {
-                const [cleaners, jobs] = await Promise.all([
+                const [cleaners, jobs] = await Promise.allSettled([
                     apiService.getAllCleaners(),
                     apiService.getAllJobs()
                 ]);
-                setAllCleaners(cleaners);
-                setAllJobs(jobs);
+                if (cleaners.status === 'fulfilled') setAllCleaners(cleaners.value);
+                if (jobs.status === 'fulfilled') setAllJobs(jobs.value);
             } catch (error: any) {
                 console.error("Failed to fetch initial data:", error);
-                if (error.message.includes('Failed to fetch')) {
-                    setAppError("Could not connect to the backend server. Please ensure the server is running and accessible.");
-                } else {
-                    setAppError("An error occurred while fetching initial data.");
-                }
             }
 
             const token = localStorage.getItem('skillskonnect_token');

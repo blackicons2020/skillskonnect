@@ -132,7 +132,7 @@ export const apiService = {
     getAllJobs: async (): Promise<Job[]> => {
         const response = await fetch(`${API_URL}/jobs`, {
             method: 'GET',
-            headers: { 'Content-Type': 'application/json' },
+            headers: getHeaders(),
         });
         return handleResponse(response);
     },

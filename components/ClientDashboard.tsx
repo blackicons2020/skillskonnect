@@ -393,7 +393,7 @@ export const ClientDashboard: React.FC<ClientDashboardProps> = ({ user, allClean
     // Determine the display name (Company Name if applicable, else First Name)
     const displayName = user.clientType === 'Company' && user.companyName 
         ? user.companyName 
-        : user.fullName.split(' ')[0] || 'User';
+        : (user.fullName ? user.fullName.split(' ')[0] : (user.email?.split('@')[0] || 'User'));
 
     // Determine the name to display in profile header
     const profileDisplayName = profileFormData.clientType === 'Company' && profileFormData.companyName 

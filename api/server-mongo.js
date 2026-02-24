@@ -409,7 +409,7 @@ app.post('/api/jobs', authenticateToken, async (req, res) => {
   }
 });
 
-app.get('/api/jobs', authenticateToken, async (req, res) => {
+app.get('/api/jobs', async (req, res) => {
   try {
     const { status, category, clientId } = req.query;
     const query = {};
