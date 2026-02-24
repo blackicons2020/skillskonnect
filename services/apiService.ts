@@ -137,6 +137,15 @@ export const apiService = {
         return handleResponse(response);
     },
 
+    postJob: async (jobData: Partial<Job>): Promise<Job> => {
+        const response = await fetch(`${API_URL}/jobs`, {
+            method: 'POST',
+            headers: getHeaders(),
+            body: JSON.stringify(jobData),
+        });
+        return handleResponse(response);
+    },
+
     updateJob: async (jobId: string, updates: Partial<Job>): Promise<Job> => {
         const response = await fetch(`${API_URL}/jobs/${jobId}`, {
             method: 'PUT',

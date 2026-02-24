@@ -145,13 +145,23 @@ const UserSchema = new mongoose.Schema({
 const JobSchema = new mongoose.Schema({
   title: { type: String, required: true },
   description: { type: String, required: true },
-  category: { type: String, required: true },
-  budget: Number,
+  service: { type: String, required: true },
+  category: String, // Legacy field
   location: String,
+  state: String,
+  city: String,
+  budget: Number,
+  budgetType: { type: String, default: 'Fixed', enum: ['Hourly', 'Daily', 'Monthly', 'Fixed'] },
+  startDate: String,
+  endDate: String,
+  postedDate: { type: String, default: () => new Date().toISOString() },
   clientId: { type: String, required: true },
   clientName: String,
   clientEmail: String,
-  status: { type: String, default: 'open' },
+  status: { type: String, default: 'Open', enum: ['Open', 'In Progress', 'Completed', 'Cancelled', 'open', 'assigned', 'closed'] },
+  visibility: { type: String, default: 'Subscribers Only', enum: ['Public', 'Subscribers Only'] },
+  requirements: [String],
+  selectedWorkerId: String,
   applicants: [{
     workerId: String,
     workerName: String,
@@ -167,6 +177,29 @@ const JobSchema = new mongoose.Schema({
     workerEmail: String
   }
 }, { timestamps: true });
+
+// Add toJSON transforms to map _id to id
+JobSchema.set('toJSON', {
+  virtuals: true,
+  transform: (doc, ret) => {
+    ret.id = ret._id.toString();
+    delete ret._id;
+    delete ret.__v;
+    // Map category to service for backward compatibility
+    if (!ret.service && ret.category) ret.service = ret.category;
+    return ret;
+  }
+});
+
+BookingSchema.set('toJSON', {
+  virtuals: true,
+  transform: (doc, ret) => {
+    ret.id = ret._id.toString();
+    delete ret._id;
+    delete ret.__v;
+    return ret;
+  }
+});
 
 const BookingSchema = new mongoose.Schema({
   service: { type: String, required: true },
@@ -494,14 +527,35 @@ app.post('/api/jobs', authenticateToken, async (req, res) => {
     const client = await User.findOne({ email: req.user.email });
     
     const jobData = {
-      ...req.body,
+      title: req.body.title,
+      description: req.body.description,
+      service: req.body.service || req.body.category,
+      category: req.body.category || req.body.service,
+      location: req.body.location,
+      state: req.body.state,
+      city: req.body.city,
+      budget: req.body.budget,
+      budgetType: req.body.budgetType || 'Fixed',
+      startDate: req.body.startDate,
+      endDate: req.body.endDate,
+      postedDate: req.body.postedDate || new Date().toISOString(),
+      visibility: req.body.visibility || 'Subscribers Only',
+      requirements: req.body.requirements || [],
       clientId: client._id.toString(),
       clientName: client.fullName || client.email,
       clientEmail: client.email,
-      status: 'open'
+      status: 'Open',
+      applicants: []
     };
 
     const newJob = await Job.create(jobData);
+    
+    // Also add to user's postedJobs array
+    await User.findByIdAndUpdate(client._id, {
+      $push: { postedJobs: newJob.toJSON() },
+      $inc: { monthlyJobPostsCount: 1 }
+    });
+    
     res.status(201).json(newJob);
   } catch (error) {
     res.status(500).json({ error: error.message });

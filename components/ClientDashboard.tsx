@@ -819,11 +819,11 @@ export const ClientDashboard: React.FC<ClientDashboardProps> = ({ user, allClean
                         return (
                             <div className="bg-white p-6 rounded-lg shadow-md">
                                 <h2 className="text-2xl font-bold text-dark mb-4">Post a New Job</h2>
-                                <form className="space-y-4" onSubmit={(e) => {
+                                <form className="space-y-4" onSubmit={async (e) => {
                                     e.preventDefault();
                                     const formData = new FormData(e.currentTarget);
-                                    const newJob: Job = {
-                                        id: Date.now().toString(),
+                                    const formEl = e.currentTarget;
+                                    const jobPayload = {
                                         title: formData.get('title') as string,
                                         description: formData.get('description') as string,
                                         service: formData.get('service') as string,
@@ -833,22 +833,26 @@ export const ClientDashboard: React.FC<ClientDashboardProps> = ({ user, allClean
                                         budget: Number(formData.get('budget')),
                                         budgetType: formData.get('budgetType') as 'Hourly' | 'Daily' | 'Monthly' | 'Fixed',
                                         startDate: formData.get('startDate') as string,
-                                        status: 'Open',
-                                        clientId: user.id,
-                                        clientName: user.fullName || 'Unknown',
                                         postedDate: new Date().toISOString(),
-                                        applicants: [],
-                                        visibility: 'Subscribers Only'
+                                        visibility: 'Subscribers Only' as const
                                     };
                                     
-                                    // Add to user's posted jobs
-                                    const updatedUser = {
-                                        ...user,
-                                        postedJobs: [...(user.postedJobs || []), newJob]
-                                    };
-                                    onUpdateUser(updatedUser);
-                                    e.currentTarget.reset();
-                                    alert('Job posted successfully! Workers will be able to apply.');
+                                    try {
+                                        // Create job via API
+                                        const createdJob = await apiService.postJob(jobPayload);
+                                        
+                                        // Update local user state
+                                        const updatedUser = {
+                                            ...user,
+                                            postedJobs: [...(user.postedJobs || []), createdJob],
+                                            monthlyJobPostsCount: (user.monthlyJobPostsCount || 0) + 1
+                                        };
+                                        onUpdateUser(updatedUser);
+                                        formEl.reset();
+                                        alert('Job posted successfully! Workers will be able to apply.');
+                                    } catch (error: any) {
+                                        alert(error.message || 'Failed to post job. Please try again.');
+                                    }
                                 }}>
                                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                                     <div className="md:col-span-2">
