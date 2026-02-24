@@ -462,10 +462,10 @@ export const ClientDashboard: React.FC<ClientDashboardProps> = ({ user, allClean
 
             <div className="border-b border-gray-200 mb-6 overflow-x-auto">
                 <nav className="-mb-px flex space-x-8" aria-label="Tabs">
-                    {/* Only show Find a Cleaner tab if profile is complete */}
+                    {/* Only show Find a Worker tab if profile is complete */}
                     {!isProfileIncomplete && (
                         <button onClick={() => setActiveTab('find')} className={`${activeTab === 'find' ? 'border-primary text-primary' : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'} whitespace-nowrap py-4 px-1 border-b-2 font-medium text-sm`}>
-                            Find a Cleaner
+                            Find a Worker
                         </button>
                     )}
                     <button onClick={() => setActiveTab('bookings')} className={`${activeTab === 'bookings' ? 'border-primary text-primary' : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'} whitespace-nowrap py-4 px-1 border-b-2 font-medium text-sm`}>
@@ -521,7 +521,7 @@ export const ClientDashboard: React.FC<ClientDashboardProps> = ({ user, allClean
             {activeTab === 'find' && !isProfileIncomplete && (
                 <div>
                      <div className="bg-white p-6 rounded-lg shadow-md">
-                        <h2 className="text-lg font-bold mb-4">Search Cleaners</h2>
+                        <h2 className="text-lg font-bold mb-4">Search Workers</h2>
                         <form className="space-y-4" onSubmit={(e) => e.preventDefault()}>
                             <div className="grid grid-cols-1 md:grid-cols-2 gap-4 items-center">
                                 <div className="md:col-span-1">
@@ -643,7 +643,7 @@ export const ClientDashboard: React.FC<ClientDashboardProps> = ({ user, allClean
                                 {displayedCleaners.map(cleaner => (<CleanerCard key={cleaner.id} cleaner={cleaner} onClick={() => onSelectCleaner(cleaner)} />))}
                             </div>
                         ) : !appError ? (
-                            <p className="mt-4 text-gray-500 bg-white p-6 rounded-lg shadow-sm">No cleaners found matching your criteria.</p>
+                            <p className="mt-4 text-gray-500 bg-white p-6 rounded-lg shadow-sm">No workers found matching your criteria.</p>
                         ) : null }
                     </div>
                 </div>
@@ -705,7 +705,7 @@ export const ClientDashboard: React.FC<ClientDashboardProps> = ({ user, allClean
                                 )})}
                         </ul>
                     ) : (
-                        <p className="text-sm text-gray-500 py-2">No bookings yet. Time to find a cleaner!</p>
+                        <p className="text-sm text-gray-500 py-2">No bookings yet. Time to find a worker!</p>
                     )}
                 </div>
             )}
