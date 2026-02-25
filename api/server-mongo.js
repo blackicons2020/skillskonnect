@@ -262,9 +262,17 @@ mongoose.connect(MONGO_URL)
           userType: 'admin',
           role: 'super-admin',
           fullName: 'Super Admin',
+          isAdmin: true,
           isProfileComplete: true
         });
         console.log('✅ Super admin account created');
+      } else if (!existingAdmin.isAdmin) {
+        // Fix existing admin if isAdmin flag is missing
+        existingAdmin.isAdmin = true;
+        existingAdmin.role = 'super-admin';
+        existingAdmin.userType = 'admin';
+        await existingAdmin.save();
+        console.log('✅ Fixed super admin account');
       }
     } catch (error) {
       console.error('Error creating super admin:', error.message);
@@ -301,13 +309,13 @@ function normalizeUser(user) {
     userObj.id = userObj._id.toString();
     delete userObj._id;  // Remove _id after mapping to id
   }
-  // Map userType to role for frontend compatibility
-  if (userObj.role === 'user' || !userObj.role) {
+  // Map userType to role for frontend compatibility (but don't override admin roles)
+  if ((userObj.role === 'user' || !userObj.role) && !['admin', 'super-admin'].includes(userObj.role)) {
     if (userObj.userType === 'client') userObj.role = 'client';
     else if (userObj.userType === 'worker') userObj.role = 'cleaner';
   }
-  // Add isAdmin flag
-  userObj.isAdmin = ['admin', 'super-admin'].includes(userObj.role);
+  // Add isAdmin flag - check both role and userType for admin status
+  userObj.isAdmin = ['admin', 'super-admin'].includes(userObj.role) || userObj.userType === 'admin';
   // Remove sensitive fields
   delete userObj.password;
   delete userObj.__v;
