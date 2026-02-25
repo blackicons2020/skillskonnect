@@ -240,13 +240,21 @@ const App: React.FC = () => {
         }
 
         if (shouldNavigate) {
-            if (userData.role === 'admin' || userData.role === 'super-admin' || userData.isAdmin) {
+            // Check isAdmin first (most reliable field set by backend)
+            if (userData.isAdmin) {
                 handleNavigate('adminDashboard');
-            } else if (userData.userType === 'worker' || userData.role === 'cleaner') {
+            } else if ((userData as any).userType === 'worker' || userData.role === 'cleaner') {
                 handleNavigate('cleanerDashboard');
-            } else {
+            } else if ((userData as any).userType === 'client' || userData.role === 'client') {
                 // Default to client dashboard for clients
                 handleNavigate('clientDashboard');
+            } else {
+                // Fallback - check if they have any user type set
+                if (userData.role === 'cleaner') {
+                    handleNavigate('cleanerDashboard');
+                } else {
+                    handleNavigate('clientDashboard');
+                }
             }
         }
     };

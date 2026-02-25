@@ -849,6 +849,44 @@ app.post('/api/jobs/:jobId/assign', authenticateToken, async (req, res) => {
 
 // ==================== CHAT ROUTES ====================
 
+app.post('/api/chats', authenticateToken, async (req, res) => {
+  try {
+    const user = await User.findOne({ email: req.user.email });
+    const userId = user._id.toString();
+    const { participantId } = req.body;
+
+    if (!participantId) {
+      return res.status(400).json({ error: 'Participant ID is required' });
+    }
+
+    // Check if chat already exists
+    let chat = await Chat.findOne({
+      participants: { $all: [userId, participantId] }
+    });
+
+    // Create new chat if it doesn't exist
+    if (!chat) {
+      const otherUser = await User.findById(participantId);
+      if (!otherUser) {
+        return res.status(404).json({ error: 'User not found' });
+      }
+
+      chat = await Chat.create({
+        participants: [userId, participantId],
+        participantNames: {
+          [userId]: user.fullName || user.email,
+          [participantId]: otherUser.fullName || otherUser.email
+        },
+        messages: []
+      });
+    }
+
+    res.json(chat.toJSON ? chat.toJSON() : chat);
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
 app.get('/api/chats', authenticateToken, async (req, res) => {
   try {
     const user = await User.findOne({ email: req.user.email });
@@ -1234,6 +1272,25 @@ app.post('/api/contact', async (req, res) => {
 
 // ==================== BOOKING ROUTES ====================
 
+app.get('/api/bookings', authenticateToken, async (req, res) => {
+  try {
+    const user = await User.findOne({ email: req.user.email });
+    if (!user) {
+      return res.status(404).json({ error: 'User not found' });
+    }
+
+    // Fetch bookings from Bookings collection where user is client
+    const bookings = await Booking.find({ clientId: user._id.toString() }).sort({ createdAt: -1 });
+    
+    // Return bookings with id field mapped
+    const normalizedBookings = bookings.map(b => b.toJSON());
+    
+    res.json(normalizedBookings);
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
 app.post('/api/bookings', authenticateToken, async (req, res) => {
   try {
     const user = await User.findOne({ email: req.user.email });
@@ -1267,6 +1324,11 @@ app.post('/api/bookings', authenticateToken, async (req, res) => {
     bookingObj.id = bookingObj._id.toString();
     delete bookingObj._id;
     delete bookingObj.__v;
+
+    // Add booking to user's bookingHistory
+    await User.findByIdAndUpdate(user._id, {
+      $push: { bookingHistory: bookingObj }
+    });
 
     res.status(201).json(bookingObj);
   } catch (error) {
@@ -1350,6 +1412,67 @@ app.post('/api/bookings/:bookingId/complete', authenticateToken, async (req, res
     });
 
     res.json(updatedBooking);
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
+app.post('/api/bookings/:bookingId/review', authenticateToken, async (req, res) => {
+  try {
+    const booking = await Booking.findById(req.params.bookingId);
+    if (!booking) {
+      return res.status(404).json({ error: 'Booking not found' });
+    }
+
+    // Verify that the user is the client who made the booking
+    const user = await User.findOne({ email: req.user.email });
+    if (booking.clientId !== user._id.toString()) {
+      return res.status(403).json({ error: 'You can only review your own bookings' });
+    }
+
+    const { rating, comment, cleanerId } = req.body;
+
+    // Add review to the worker
+    const worker = await User.findById(cleanerId || booking.cleanerId);
+    if (!worker) {
+      return res.status(404).json({ error: 'Worker not found' });
+    }
+
+    const review = {
+      clientId: user._id.toString(),
+      clientName: user.fullName || user.email,
+      rating: Number(rating),
+      comment,
+      date: new Date()
+    };
+
+    // Add review to worker's ratings
+    if (!worker.ratings) {
+      worker.ratings = { average: 0, count: 0, reviews: [] };
+    }
+    worker.ratings.reviews.push(review);
+    worker.ratings.count = worker.ratings.reviews.length;
+    worker.ratings.average = 
+      worker.ratings.reviews.reduce((sum, r) => sum + r.rating, 0) / worker.ratings.count;
+
+    await worker.save();
+
+    // Mark booking as reviewed
+    booking.reviewSubmitted = true;
+    await booking.save();
+
+    // Update user's bookingHistory
+    await User.findByIdAndUpdate(user._id, {
+      $set: {
+        bookingHistory: user.bookingHistory?.map(b => 
+          (b.id === req.params.bookingId || b._id?.toString() === req.params.bookingId) 
+            ? { ...b, reviewSubmitted: true } 
+            : b
+        )
+      }
+    });
+
+    res.json({ message: 'Review submitted successfully', rating: worker.ratings });
   } catch (error) {
     res.status(500).json({ error: error.message });
   }
