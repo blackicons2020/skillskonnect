@@ -899,15 +899,35 @@ app.post('/api/chats', authenticateToken, async (req, res) => {
 
       chat = await Chat.create({
         participants: [userId, participantId],
-        participantNames: {
-          [userId]: user.fullName || user.email,
-          [participantId]: otherUser.fullName || otherUser.email
-        },
+        participantNames: new Map([
+          [userId, user.fullName || user.email],
+          [participantId, otherUser.fullName || otherUser.email]
+        ]),
         messages: []
       });
+    } else {
+      // Backfill participantNames if missing on existing chat
+      const names = chat.participantNames;
+      if (!names || names.size === 0) {
+        const otherUser = await User.findById(participantId);
+        chat.participantNames = new Map([
+          [userId, user.fullName || user.email],
+          [participantId, otherUser ? (otherUser.fullName || otherUser.email) : 'Unknown User']
+        ]);
+        await chat.save();
+      }
     }
 
-    res.json(chat.toJSON ? chat.toJSON() : chat);
+    // Serialize to plain object
+    const chatObj = chat.toObject();
+    chatObj.id = chatObj._id.toString();
+    delete chatObj._id;
+    delete chatObj.__v;
+    if (chatObj.participantNames instanceof Map) {
+      chatObj.participantNames = Object.fromEntries(chatObj.participantNames);
+    }
+
+    res.json(chatObj);
   } catch (error) {
     res.status(500).json({ error: error.message });
   }
@@ -922,7 +942,37 @@ app.get('/api/chats', authenticateToken, async (req, res) => {
       participants: userId
     }).sort({ 'lastMessage.timestamp': -1 });
 
-    res.json(chats);
+    // Serialize chats properly, ensuring participantNames is a plain object
+    const serializedChats = await Promise.all(chats.map(async (chat) => {
+      // Backfill participantNames if missing
+      if (!chat.participantNames || chat.participantNames.size === 0) {
+        const otherParticipantId = chat.participants.find(p => p !== userId);
+        if (otherParticipantId) {
+          const otherUser = await User.findById(otherParticipantId);
+          chat.participantNames = new Map([
+            [userId, user.fullName || user.email],
+            [otherParticipantId, otherUser ? (otherUser.fullName || otherUser.email) : 'Unknown User']
+          ]);
+          await chat.save();
+        }
+      }
+
+      const chatObj = chat.toObject();
+      chatObj.id = chatObj._id.toString();
+      delete chatObj._id;
+      delete chatObj.__v;
+      // Convert Map to plain object
+      if (chatObj.participantNames instanceof Map) {
+        chatObj.participantNames = Object.fromEntries(chatObj.participantNames);
+      }
+      // Ensure participantNames is always a plain object
+      if (!chatObj.participantNames || typeof chatObj.participantNames !== 'object') {
+        chatObj.participantNames = {};
+      }
+      return chatObj;
+    }));
+
+    res.json(serializedChats);
   } catch (error) {
     res.status(500).json({ error: error.message });
   }
@@ -939,14 +989,35 @@ app.get('/api/chats/:otherUserId', authenticateToken, async (req, res) => {
     });
 
     if (!chat) {
+      const otherUser = await User.findById(otherUserId);
       chat = await Chat.create({
         participants: [userId, otherUserId],
+        participantNames: new Map([
+          [userId, user.fullName || user.email],
+          [otherUserId, otherUser ? (otherUser.fullName || otherUser.email) : 'Unknown User']
+        ]),
         messages: [],
         lastMessage: null
       });
+    } else if (!chat.participantNames || chat.participantNames.size === 0) {
+      // Backfill participantNames if missing
+      const otherUser = await User.findById(otherUserId);
+      chat.participantNames = new Map([
+        [userId, user.fullName || user.email],
+        [otherUserId, otherUser ? (otherUser.fullName || otherUser.email) : 'Unknown User']
+      ]);
+      await chat.save();
     }
 
-    res.json(chat);
+    const chatObj = chat.toObject();
+    chatObj.id = chatObj._id.toString();
+    delete chatObj._id;
+    delete chatObj.__v;
+    if (chatObj.participantNames instanceof Map) {
+      chatObj.participantNames = Object.fromEntries(chatObj.participantNames);
+    }
+
+    res.json(chatObj);
   } catch (error) {
     res.status(500).json({ error: error.message });
   }
@@ -1029,52 +1100,6 @@ app.post('/api/chats/:chatId/messages', authenticateToken, async (req, res) => {
       text: newMessage.text,
       timestamp: newMessage.timestamp,
       read: newMessage.read
-    });
-  } catch (error) {
-    res.status(500).json({ error: error.message });
-  }
-});
-
-// Legacy endpoint - kept for backward compatibility
-app.post('/api/chats/:otherUserId/messages', authenticateToken, async (req, res) => {
-  try {
-    const { text } = req.body;
-    const user = await User.findOne({ email: req.user.email });
-    const userId = user._id.toString();
-    const otherUserId = req.params.otherUserId;
-
-    let chat = await Chat.findOne({
-      participants: { $all: [userId, otherUserId] }
-    });
-
-    if (!chat) {
-      chat = await Chat.create({
-        participants: [userId, otherUserId],
-        messages: [],
-        lastMessage: null
-      });
-    }
-
-    const message = {
-      senderId: userId,
-      senderName: user.fullName || user.email,
-      text,
-      timestamp: new Date(),
-      read: false
-    };
-
-    chat.messages.push(message);
-    chat.lastMessage = {
-      text,
-      timestamp: message.timestamp,
-      senderId: userId
-    };
-
-    await chat.save();
-
-    res.json({
-      message: 'Message sent',
-      chat
     });
   } catch (error) {
     res.status(500).json({ error: error.message });

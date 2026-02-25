@@ -48,14 +48,23 @@ export const ChatInterface: React.FC<ChatInterfaceProps> = ({ currentUser, initi
     }, [messages]);
 
     const loadChats = async () => {
-        const userChats = await apiService.getChats(currentUser.id);
-        setChats(userChats);
-        setLoading(false);
+        try {
+            const userChats = await apiService.getChats(currentUser.id);
+            setChats(Array.isArray(userChats) ? userChats : []);
+        } catch (error) {
+            console.error('Failed to load chats:', error);
+        } finally {
+            setLoading(false);
+        }
     };
 
     const loadMessages = async (chatId: string) => {
-        const msgs = await apiService.getChatMessages(chatId);
-        setMessages(msgs);
+        try {
+            const msgs = await apiService.getChatMessages(chatId);
+            setMessages(Array.isArray(msgs) ? msgs : []);
+        } catch (error) {
+            console.error('Failed to load messages:', error);
+        }
     };
 
     const handleSendMessage = async (e: React.FormEvent) => {
@@ -80,8 +89,12 @@ export const ChatInterface: React.FC<ChatInterfaceProps> = ({ currentUser, initi
     };
 
     const getOtherParticipantName = (chat: Chat) => {
-        const otherId = chat.participants.find(p => p !== currentUser.id);
-        return otherId ? chat.participantNames[otherId] : 'Unknown User';
+        const otherId = chat.participants?.find(p => p !== currentUser.id);
+        if (!otherId) return 'Unknown User';
+        if (chat.participantNames && typeof chat.participantNames === 'object') {
+            return chat.participantNames[otherId] || 'Unknown User';
+        }
+        return 'Unknown User';
     };
 
     const formatTime = (isoString: string) => {
