@@ -364,6 +364,15 @@ function normalizeUser(user) {
   return userObj;
 }
 
+// Helper: verify admin — checks JWT first, falls back to DB for old tokens without role in payload
+const verifyAdmin = async (req) => {
+  if (req.user.isAdmin) return true;
+  if (req.user.role === 'admin' || req.user.role === 'super-admin') return true;
+  // Fallback DB lookup for old JWTs that pre-date the role field in token
+  const dbUser = await User.findOne({ email: req.user.email }).select('isAdmin role');
+  return dbUser && (dbUser.isAdmin || dbUser.role === 'admin' || dbUser.role === 'super-admin');
+};
+
 const authenticateToken = (req, res, next) => {
   try {
     const authHeader = req.headers['authorization'];
@@ -750,7 +759,7 @@ app.delete('/api/jobs/:jobId', authenticateToken, async (req, res) => {
     }
 
     const user = await User.findOne({ email: req.user.email });
-    if (job.clientId !== user._id.toString() && req.user.role !== 'admin') {
+    if (job.clientId !== user._id.toString() && !user.isAdmin) {
       return res.status(403).json({ error: 'Not authorized' });
     }
 
@@ -769,7 +778,7 @@ app.put('/api/jobs/:jobId/cancel', authenticateToken, async (req, res) => {
     }
 
     const user = await User.findOne({ email: req.user.email });
-    if (job.clientId !== user._id.toString() && req.user.role !== 'admin') {
+    if (job.clientId !== user._id.toString() && !user.isAdmin) {
       return res.status(403).json({ error: 'Not authorized' });
     }
 
@@ -843,7 +852,7 @@ app.get('/api/jobs/:jobId/applicants', authenticateToken, async (req, res) => {
     }
 
     const user = await User.findOne({ email: req.user.email });
-    if (job.clientId !== user._id.toString() && req.user.role !== 'admin') {
+    if (job.clientId !== user._id.toString() && !user.isAdmin) {
       return res.status(403).json({ error: 'Not authorized' });
     }
 
@@ -863,7 +872,7 @@ app.post('/api/jobs/:jobId/assign', authenticateToken, async (req, res) => {
     }
 
     const user = await User.findOne({ email: req.user.email });
-    if (job.clientId !== user._id.toString() && req.user.role !== 'admin') {
+    if (job.clientId !== user._id.toString() && !user.isAdmin) {
       return res.status(403).json({ error: 'Not authorized' });
     }
 
@@ -1228,7 +1237,7 @@ app.post('/api/users/subscription/receipt', authenticateToken, async (req, res) 
 
 app.get('/api/admin/stats', authenticateToken, async (req, res) => {
   try {
-    if (req.user.role !== 'admin' && req.user.role !== 'super-admin') {
+    if (!await verifyAdmin(req)) {
       return res.status(403).json({ error: 'Admin access required' });
     }
 
@@ -1252,7 +1261,7 @@ app.get('/api/admin/stats', authenticateToken, async (req, res) => {
 
 app.get('/api/admin/users', authenticateToken, async (req, res) => {
   try {
-    if (req.user.role !== 'admin' && req.user.role !== 'super-admin') {
+    if (!await verifyAdmin(req)) {
       return res.status(403).json({ error: 'Admin access required' });
     }
 
@@ -1265,7 +1274,7 @@ app.get('/api/admin/users', authenticateToken, async (req, res) => {
 
 app.delete('/api/admin/users/:userId', authenticateToken, async (req, res) => {
   try {
-    if (req.user.role !== 'admin' && req.user.role !== 'super-admin') {
+    if (!await verifyAdmin(req)) {
       return res.status(403).json({ error: 'Admin access required' });
     }
 
@@ -1289,7 +1298,7 @@ app.delete('/api/admin/users/:userId', authenticateToken, async (req, res) => {
 app.post('/api/admin/users/:userId/approve-subscription', authenticateToken, async (req, res) => {
   try {
     // Check admin permission
-    if (req.user.role !== 'admin' && req.user.role !== 'super-admin') {
+    if (!await verifyAdmin(req)) {
       return res.status(403).json({ error: 'Admin access required' });
     }
 
@@ -1461,8 +1470,7 @@ app.get('/api/support/my', authenticateToken, async (req, res) => {
 // GET /api/admin/support - get all tickets (admin only)
 app.get('/api/admin/support', authenticateToken, async (req, res) => {
   try {
-    const adminUser = await User.findOne({ email: req.user.email });
-    if (!adminUser || !adminUser.isAdmin) return res.status(403).json({ error: 'Forbidden' });
+    if (!await verifyAdmin(req)) return res.status(403).json({ error: 'Forbidden' });
 
     const tickets = await SupportTicket.find().sort({ createdAt: -1 });
     res.json(tickets.map(t => t.toJSON()));
@@ -1474,8 +1482,7 @@ app.get('/api/admin/support', authenticateToken, async (req, res) => {
 // POST /api/admin/support/:id/resolve - resolve a ticket (admin only)
 app.post('/api/admin/support/:id/resolve', authenticateToken, async (req, res) => {
   try {
-    const adminUser = await User.findOne({ email: req.user.email });
-    if (!adminUser || !adminUser.isAdmin) return res.status(403).json({ error: 'Forbidden' });
+    if (!await verifyAdmin(req)) return res.status(403).json({ error: 'Forbidden' });
 
     const { adminResponse } = req.body;
     const ticket = await SupportTicket.findByIdAndUpdate(
@@ -1725,14 +1732,14 @@ app.post('/api/bookings/:bookingId/review', authenticateToken, async (req, res) 
   }
 });
 
-// Admin get all users
+// Admin get all users (duplicate alias - kept for compatibility)
 app.get('/api/admin/users', authenticateToken, async (req, res) => {
   try {
-    if (req.user.role !== 'admin' && req.user.role !== 'super-admin') {
+    if (!await verifyAdmin(req)) {
       return res.status(403).json({ error: 'Admin access required' });
     }
     const users = await User.find().select('-password');
-    res.json(users);
+    res.json(users.map(u => normalizeUser(u)));
   } catch (error) {
     res.status(500).json({ error: error.message });
   }

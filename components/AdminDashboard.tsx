@@ -762,7 +762,7 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ user: currentUse
                                                     {job.city && job.state ? `${job.city}, ${job.state}` : job.location}
                                                 </td>
                                                 <td className="px-4 py-4 text-sm text-gray-700">
-                                                    ₦{job.budget.toLocaleString()}
+                                                    ₦{(job.budget || 0).toLocaleString()}
                                                     <span className="text-xs text-gray-500 block">{job.budgetType}</span>
                                                 </td>
                                                 <td className="px-4 py-4">

@@ -110,18 +110,17 @@ const App: React.FC = () => {
 
     // Refetches all app data. Used after state-changing actions.
     const refetchAllData = async (currentUser: User) => {
-        try {
-            const [cleaners, users, jobs] = await Promise.all([
-                apiService.getAllCleaners(),
-                currentUser.isAdmin ? apiService.adminGetAllUsers() : Promise.resolve([]),
-                apiService.getAllJobs()
-            ]);
-            setAllCleaners(cleaners);
-            setAllUsers(users);
-            setAllJobs(jobs);
-        } catch (error: any) {
-            setAppError("Failed to refresh application data: " + error.message);
-        }
+        const [cleaners, users, jobs] = await Promise.allSettled([
+            apiService.getAllCleaners(),
+            currentUser.isAdmin ? apiService.adminGetAllUsers() : Promise.resolve([]),
+            apiService.getAllJobs()
+        ]);
+        if (cleaners.status === 'fulfilled') setAllCleaners(cleaners.value);
+        else console.error('Failed to fetch cleaners:', (cleaners as any).reason);
+        if (users.status === 'fulfilled') setAllUsers(users.value);
+        else console.error('Failed to fetch users:', (users as any).reason);
+        if (jobs.status === 'fulfilled') setAllJobs(jobs.value);
+        else console.error('Failed to fetch jobs:', (jobs as any).reason);
     };
 
     // Refetch jobs only (used after job posting)
@@ -141,9 +140,9 @@ const App: React.FC = () => {
             setIsLoading(true);
             setAppError(null);
 
-            const token = localStorage.getItem('skillskonnect_token');
+            const tokenAtStart = localStorage.getItem('skillskonnect_token');
 
-            if (token) {
+            if (tokenAtStart) {
                 // Fetch everything needed in one parallel batch
                 const [cleaners, jobs, meResult, bookingsResult] = await Promise.allSettled([
                     apiService.getAllCleaners(),
@@ -154,6 +153,14 @@ const App: React.FC = () => {
 
                 if (cleaners.status === 'fulfilled') setAllCleaners(cleaners.value);
                 if (jobs.status === 'fulfilled') setAllJobs(jobs.value as any);
+
+                // Guard against race condition: if a new login happened while we were
+                // fetching, the token will have changed — skip applying old session data
+                const currentToken = localStorage.getItem('skillskonnect_token');
+                if (currentToken !== tokenAtStart) {
+                    setIsLoading(false);
+                    return;
+                }
 
                 if (meResult.status === 'fulfilled') {
                     const currentUser = meResult.value;
@@ -195,6 +202,7 @@ const App: React.FC = () => {
 
     const handleLoginAttempt = async (email: string, password?: string) => {
         setAuthMessage(null);
+        setUser(null); // Clear any previous user immediately to prevent cross-session leakage
         try {
             const { token, user: loggedInUser } = await apiService.login(email, password);
             localStorage.setItem('skillskonnect_token', token);
