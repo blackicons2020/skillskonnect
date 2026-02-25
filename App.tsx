@@ -1,6 +1,6 @@
 
 // ... (imports)
-import React, { useState, useEffect, Suspense } from 'react';
+import React, { useState, useEffect, Suspense, useRef } from 'react';
 import { Header } from './components/Header';
 import { Footer } from './components/Footer';
 import { BookingModal } from './components/BookingModal';
@@ -106,6 +106,10 @@ const App: React.FC = () => {
     // State to pass initial active tab to dashboards
     const [dashboardInitialTab, setDashboardInitialTab] = useState<'find' | 'bookings' | 'messages' | 'profile' | 'jobs' | 'reviews'>('find');
 
+    // Ref that is set to true while a fresh login/signup is in progress.
+    // checkSession reads this to abort early so it never overwrites a concurrent login.
+    const loginInProgressRef = useRef(false);
+
     // Fetch all available jobs from the API
 
     // Refetches all app data. Used after state-changing actions.
@@ -154,8 +158,14 @@ const App: React.FC = () => {
                 if (cleaners.status === 'fulfilled') setAllCleaners(cleaners.value);
                 if (jobs.status === 'fulfilled') setAllJobs(jobs.value as any);
 
-                // Guard against race condition: if a new login happened while we were
-                // fetching, the token will have changed — skip applying old session data
+                // Guard 1: abort if a fresh login started while we were fetching
+                // (the login stores a new token before calling handleAuthSuccess)
+                if (loginInProgressRef.current) {
+                    setIsLoading(false);
+                    return;
+                }
+
+                // Guard 2: abort if the token changed while we were fetching
                 const currentToken = localStorage.getItem('skillskonnect_token');
                 if (currentToken !== tokenAtStart) {
                     setIsLoading(false);
@@ -167,7 +177,8 @@ const App: React.FC = () => {
                     if (bookingsResult.status === 'fulfilled') {
                         currentUser.bookingHistory = bookingsResult.value as any;
                     }
-                    await handleAuthSuccess(currentUser, false, true);
+                    // shouldNavigate=true: restore the user to their correct dashboard
+                    await handleAuthSuccess(currentUser, true, true);
                 } else {
                     console.error('Session expired or invalid.', (meResult as any).reason);
                     handleLogout();
@@ -202,13 +213,16 @@ const App: React.FC = () => {
 
     const handleLoginAttempt = async (email: string, password?: string) => {
         setAuthMessage(null);
-        setUser(null); // Clear any previous user immediately to prevent cross-session leakage
+        setUser(null); // Clear any previous user immediately
+        loginInProgressRef.current = true; // Signal checkSession to abort
         try {
             const { token, user: loggedInUser } = await apiService.login(email, password);
             localStorage.setItem('skillskonnect_token', token);
             await handleAuthSuccess(loggedInUser);
         } catch (error: any) {
             setAuthMessage({ type: 'error', text: error.message || 'Login failed. Please try again.' });
+        } finally {
+            loginInProgressRef.current = false;
         }
     };
 
@@ -229,9 +243,12 @@ const App: React.FC = () => {
         try {
             const { token, user: loggedInUser } = await apiService.socialLogin(provider, email, name);
             localStorage.setItem('skillskonnect_token', token);
+            loginInProgressRef.current = true;
             await handleAuthSuccess(loggedInUser);
         } catch (error: any) {
             setAuthMessage({ type: 'error', text: error.message || 'Social login failed.' });
+        } finally {
+            loginInProgressRef.current = false;
         }
     };
 
@@ -290,6 +307,7 @@ const App: React.FC = () => {
 
     const handleDirectSignup = async (email: string, password: string, userType: 'client' | 'worker' = 'client') => {
         setAuthMessage(null);
+        loginInProgressRef.current = true;
         try {
             // Register with minimal data - email, password, and userType
             const response: any = await apiService.register({ 
@@ -317,6 +335,8 @@ const App: React.FC = () => {
             }
         } catch (error: any) {
             setAuthMessage({ type: 'error', text: error.message || 'Signup failed. A user with this email may already exist.' });
+        } finally {
+            loginInProgressRef.current = false;
         }
     };
 
