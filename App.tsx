@@ -233,10 +233,13 @@ const App: React.FC = () => {
         setUser(null); // Clear any previous user immediately
         loginInProgressRef.current = true; // Signal checkSession to abort
         try {
+            console.log('Login attempt for:', email);
             const { token, user: loggedInUser } = await apiService.login(email, password);
+            console.log('Login successful, token received');
             storeToken(token, rememberMe ?? false);
             await handleAuthSuccess(loggedInUser);
         } catch (error: any) {
+            console.error('Login error:', error);
             setAuthMessage({ type: 'error', text: error.message || 'Login failed. Please try again.' });
         } finally {
             loginInProgressRef.current = false;
