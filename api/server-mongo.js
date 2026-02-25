@@ -223,6 +223,10 @@ BookingSchema.set('toJSON', {
 
 const ChatSchema = new mongoose.Schema({
   participants: [String],
+  participantNames: {
+    type: Map,
+    of: String
+  },
   messages: [{
     senderId: String,
     senderName: String,
