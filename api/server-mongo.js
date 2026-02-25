@@ -436,8 +436,11 @@ app.post('/api/auth/signup', async (req, res) => {
     const verifyUrl = `${frontendUrl}/?token=${rawToken}&action=verifyEmail`;
     await sendVerificationEmail(email, verifyUrl);
 
+    // In mock mode (no SMTP), include the URL in the response so testers can verify manually
+    const mockMode = isMockEmail();
     res.status(201).json({
       message: 'Account created! Please check your email to verify your account before signing in.',
+      ...(mockMode ? { verifyUrl, _mockMode: true } : {}),
     });
   } catch (error) {
     console.error('Signup error:', error);
@@ -1600,8 +1603,10 @@ app.post('/api/auth/register', async (req, res) => {
     const verifyUrl = `${frontendUrl}/?token=${rawToken}&action=verifyEmail`;
     await sendVerificationEmail(email, verifyUrl);
 
+    const mockMode = isMockEmail();
     res.status(201).json({
       message: 'Account created! Please check your email to verify your account before signing in.',
+      ...(mockMode ? { verifyUrl, _mockMode: true } : {}),
     });
   } catch (error) {
     console.error('Register error:', error);

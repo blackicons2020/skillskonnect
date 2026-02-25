@@ -129,6 +129,7 @@ const SignupTab: React.FC<SignupTabProps> = ({ onSignup }) => {
     const [isLoading, setIsLoading] = useState(false);
     const [signupError, setSignupError] = useState<string | null>(null);
     const [pendingVerification, setPendingVerification] = useState(false);
+    const [mockVerifyUrl, setMockVerifyUrl] = useState<string | null>(null);
 
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
@@ -143,7 +144,11 @@ const SignupTab: React.FC<SignupTabProps> = ({ onSignup }) => {
         }
         setIsLoading(true);
         try {
-            await onSignup(email.trim(), password, userType);
+            const response: any = await apiService.register({ email: email.trim(), password, userType });
+            // If server is in mock mode (no SMTP), it returns the verifyUrl for testing
+            if (response?.verifyUrl) {
+                setMockVerifyUrl(response.verifyUrl);
+            }
             setPendingVerification(true);
         } catch (err: any) {
             setSignupError(err.message || 'Signup failed. Please try again.');
@@ -169,6 +174,18 @@ const SignupTab: React.FC<SignupTabProps> = ({ onSignup }) => {
                 <p className="mt-3 text-xs text-gray-500">
                     Can't find it? Check your spam folder. The link is valid for 24 hours.
                 </p>
+                {mockVerifyUrl && (
+                    <div className="mt-4 p-3 bg-yellow-50 border border-yellow-200 rounded-lg text-left">
+                        <p className="text-xs font-semibold text-yellow-800 mb-1">⚠️ SMTP not configured (Test Mode)</p>
+                        <p className="text-xs text-yellow-700 mb-2">Click the link below to verify manually:</p>
+                        <a
+                            href={mockVerifyUrl}
+                            className="text-xs text-blue-600 hover:underline break-all"
+                        >
+                            {mockVerifyUrl}
+                        </a>
+                    </div>
+                )}
             </div>
         );
     }
