@@ -1232,7 +1232,8 @@ app.post('/api/contact', async (req, res) => {
   }
 });
 
-// Bookings endpoint
+// ==================== BOOKING ROUTES ====================
+
 app.post('/api/bookings', authenticateToken, async (req, res) => {
   try {
     const user = await User.findOne({ email: req.user.email });
@@ -1268,6 +1269,87 @@ app.post('/api/bookings', authenticateToken, async (req, res) => {
     delete bookingObj.__v;
 
     res.status(201).json(bookingObj);
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
+app.post('/api/bookings/:bookingId/cancel', authenticateToken, async (req, res) => {
+  try {
+    const booking = await Booking.findById(req.params.bookingId);
+    if (!booking) {
+      return res.status(404).json({ error: 'Booking not found' });
+    }
+
+    // Verify that the user is the client who made the booking
+    const user = await User.findOne({ email: req.user.email });
+    if (booking.clientId !== user._id.toString()) {
+      return res.status(403).json({ error: 'You can only cancel your own bookings' });
+    }
+
+    // Update booking status
+    booking.status = 'Cancelled';
+    await booking.save();
+
+    // Update user's bookingHistory
+    await User.findByIdAndUpdate(user._id, {
+      $set: {
+        bookingHistory: user.bookingHistory?.map(b => 
+          (b.id === req.params.bookingId || b._id?.toString() === req.params.bookingId) 
+            ? { ...b, status: 'Cancelled' } 
+            : b
+        )
+      }
+    });
+
+    res.json(booking.toJSON());
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
+app.post('/api/bookings/:bookingId/complete', authenticateToken, async (req, res) => {
+  try {
+    const booking = await Booking.findById(req.params.bookingId);
+    if (!booking) {
+      return res.status(404).json({ error: 'Booking not found' });
+    }
+
+    // Verify that the user is the client who made the booking
+    const user = await User.findOne({ email: req.user.email });
+    if (booking.clientId !== user._id.toString()) {
+      return res.status(403).json({ error: 'You can only mark your own bookings as complete' });
+    }
+
+    // Update booking status
+    booking.status = 'Completed';
+    booking.jobApprovedByClient = true;
+    
+    // If payment method is Direct, mark payment as completed
+    if (booking.paymentMethod === 'Direct') {
+      booking.paymentStatus = 'Completed';
+    }
+    
+    await booking.save();
+
+    // Update user's bookingHistory
+    const updatedBooking = booking.toJSON();
+    await User.findByIdAndUpdate(user._id, {
+      $set: {
+        bookingHistory: user.bookingHistory?.map(b => 
+          (b.id === req.params.bookingId || b._id?.toString() === req.params.bookingId) 
+            ? { 
+                ...b, 
+                status: 'Completed', 
+                jobApprovedByClient: true,
+                paymentStatus: booking.paymentMethod === 'Direct' ? 'Completed' : b.paymentStatus
+              } 
+            : b
+        )
+      }
+    });
+
+    res.json(updatedBooking);
   } catch (error) {
     res.status(500).json({ error: error.message });
   }
