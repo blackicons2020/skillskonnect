@@ -19,7 +19,7 @@ export const Header: React.FC<HeaderProps> = ({ user, onNavigate, onLogout, onNa
             className="flex items-center gap-2 text-2xl font-bold text-primary cursor-pointer"
             onClick={() => onNavigate('landing')}
           >
-            <img src="/logo.png" alt="Skills Konnect" className="w-12 h-12 object-contain" />
+            <img src="/logo.png" alt="Skills Konnect" className="w-20 h-20 object-contain" />
             <span>Skills Konnect</span>
           </div>
           <div className="flex items-center space-x-3 sm:space-x-4">
