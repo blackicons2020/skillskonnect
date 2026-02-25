@@ -794,8 +794,8 @@ app.post('/api/jobs/:jobId/apply', authenticateToken, async (req, res) => {
       workerId: worker._id.toString(),
       workerName: worker.fullName || worker.email,
       workerEmail: worker.email,
-      proposal,
-      proposedPrice: Number(proposedPrice),
+      proposal: proposal || '',
+      proposedPrice: proposedPrice ? Number(proposedPrice) : 0,
       appliedAt: new Date(),
       status: 'pending'
     };
