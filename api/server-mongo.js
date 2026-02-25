@@ -255,11 +255,34 @@ ChatSchema.set('toJSON', {
   }
 });
 
+const SupportTicketSchema = new mongoose.Schema({
+  userId: { type: String, required: true },
+  userName: String,
+  userEmail: String,
+  category: { type: String, required: true },
+  subject: { type: String, required: true },
+  message: { type: String, required: true },
+  status: { type: String, enum: ['Open', 'Resolved'], default: 'Open' },
+  adminResponse: { type: String, default: '' }
+}, { timestamps: true });
+
+SupportTicketSchema.set('toJSON', {
+  virtuals: true,
+  transform: (doc, ret) => {
+    ret.id = ret._id.toString();
+    ret.createdAt = ret.createdAt ? ret.createdAt.toISOString() : null;
+    delete ret._id;
+    delete ret.__v;
+    return ret;
+  }
+});
+
 // Create models
 const User = mongoose.model('User', UserSchema);
 const Job = mongoose.model('Job', JobSchema);
 const Booking = mongoose.model('Booking', BookingSchema);
 const Chat = mongoose.model('Chat', ChatSchema);
+const SupportTicket = mongoose.model('SupportTicket', SupportTicketSchema);
 
 // ==================== MONGODB CONNECTION ====================
 
@@ -1394,6 +1417,78 @@ app.get('/api/cleaners/:id', async (req, res) => {
       return res.status(404).json({ error: 'User not found' });
     }
     res.json(user);
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// ==================== SUPPORT TICKET ROUTES ====================
+
+// POST /api/support - create a new support ticket (authenticated users)
+app.post('/api/support', authenticateToken, async (req, res) => {
+  try {
+    const user = await User.findOne({ email: req.user.email });
+    if (!user) return res.status(404).json({ error: 'User not found' });
+
+    const { category, subject, message } = req.body;
+    if (!category || !subject || !message) {
+      return res.status(400).json({ error: 'category, subject, and message are required' });
+    }
+
+    const ticket = await SupportTicket.create({
+      userId: user._id.toString(),
+      userName: user.fullName,
+      userEmail: user.email,
+      category,
+      subject,
+      message
+    });
+    res.status(201).json(ticket.toJSON());
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// GET /api/support/my - get tickets for the logged-in user
+app.get('/api/support/my', authenticateToken, async (req, res) => {
+  try {
+    const user = await User.findOne({ email: req.user.email });
+    if (!user) return res.status(404).json({ error: 'User not found' });
+
+    const tickets = await SupportTicket.find({ userId: user._id.toString() }).sort({ createdAt: -1 });
+    res.json(tickets.map(t => t.toJSON()));
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// GET /api/admin/support - get all tickets (admin only)
+app.get('/api/admin/support', authenticateToken, async (req, res) => {
+  try {
+    const adminUser = await User.findOne({ email: req.user.email });
+    if (!adminUser || !adminUser.isAdmin) return res.status(403).json({ error: 'Forbidden' });
+
+    const tickets = await SupportTicket.find().sort({ createdAt: -1 });
+    res.json(tickets.map(t => t.toJSON()));
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// POST /api/admin/support/:id/resolve - resolve a ticket (admin only)
+app.post('/api/admin/support/:id/resolve', authenticateToken, async (req, res) => {
+  try {
+    const adminUser = await User.findOne({ email: req.user.email });
+    if (!adminUser || !adminUser.isAdmin) return res.status(403).json({ error: 'Forbidden' });
+
+    const { adminResponse } = req.body;
+    const ticket = await SupportTicket.findByIdAndUpdate(
+      req.params.id,
+      { status: 'Resolved', adminResponse: adminResponse || '' },
+      { new: true }
+    );
+    if (!ticket) return res.status(404).json({ error: 'Ticket not found' });
+    res.json(ticket.toJSON());
   } catch (error) {
     res.status(500).json({ error: error.message });
   }
