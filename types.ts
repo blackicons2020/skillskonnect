@@ -241,4 +241,5 @@ export type View =
   | 'contact'
   | 'terms'
   | 'privacy'
-  | 'searchResults';
+  | 'searchResults'
+  | 'resetPassword';

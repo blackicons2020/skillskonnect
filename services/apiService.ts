@@ -25,8 +25,31 @@ const API_URL = getApiUrl();
 // API HELPERS
 // ==========================================
 
+const STORAGE_KEY = 'skillskonnect_token';
+
+/** Read token from whichever store it was saved in. */
+export const getStoredToken = (): string | null =>
+    localStorage.getItem(STORAGE_KEY) || sessionStorage.getItem(STORAGE_KEY);
+
+/** Persist the token. rememberMe=true → localStorage, false → sessionStorage. */
+export const storeToken = (token: string, rememberMe: boolean) => {
+    if (rememberMe) {
+        localStorage.setItem(STORAGE_KEY, token);
+        sessionStorage.removeItem(STORAGE_KEY);
+    } else {
+        sessionStorage.setItem(STORAGE_KEY, token);
+        localStorage.removeItem(STORAGE_KEY);
+    }
+};
+
+/** Remove the token from both stores. */
+export const clearToken = () => {
+    localStorage.removeItem(STORAGE_KEY);
+    sessionStorage.removeItem(STORAGE_KEY);
+};
+
 const getHeaders = () => {
-    const token = localStorage.getItem('skillskonnect_token');
+    const token = getStoredToken();
     const headers: HeadersInit = {
         'Content-Type': 'application/json',
     };
@@ -95,7 +118,25 @@ export const apiService = {
     },
 
     logout: async () => {
-        localStorage.removeItem('skillskonnect_token');
+        clearToken();
+    },
+
+    forgotPassword: async (email: string): Promise<{ message: string }> => {
+        const response = await fetch(`${API_URL}/auth/forgot-password`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ email }),
+        });
+        return handleResponse(response);
+    },
+
+    resetPassword: async (token: string, password: string): Promise<{ message: string }> => {
+        const response = await fetch(`${API_URL}/auth/reset-password`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ token, password }),
+        });
+        return handleResponse(response);
     },
 
     register: async (userData: Partial<User>): Promise<User> => {

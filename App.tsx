@@ -10,11 +10,12 @@ import { StarIcon, ChatBubbleLeftRightIcon } from './components/icons';
 import { ErrorBoundary } from './components/ErrorBoundary';
 
 import { User, Cleaner, View, SubscriptionPlan, Review, Receipt, Job } from './types';
-import { apiService } from './services/apiService';
+import { apiService, getStoredToken, storeToken, clearToken } from './services/apiService';
 
 // Lazy Load Pages to optimize initial bundle size
 const LandingPage = React.lazy(() => import('./components/LandingPage').then(module => ({ default: module.LandingPage })));
 const Auth = React.lazy(() => import('./components/Auth').then(module => ({ default: module.Auth })));
+const ResetPasswordPage = React.lazy(() => import('./components/ResetPasswordPage').then(module => ({ default: module.ResetPasswordPage })));
 const SetupProfile = React.lazy(() => import('./components/SetupProfile').then(module => ({ default: module.SetupProfile })));
 const Dashboard = React.lazy(() => import('./components/Dashboard').then(module => ({ default: module.Dashboard })));
 const AdminDashboard = React.lazy(() => import('./components/AdminDashboard').then(module => ({ default: module.AdminDashboard })));
@@ -92,6 +93,9 @@ const App: React.FC = () => {
     const [isLoading, setIsLoading] = useState(true);
     const [appError, setAppError] = useState<string | null>(null);
 
+    // Reset-password token extracted from the URL on first load
+    const [resetToken, setResetToken] = useState<string | null>(null);
+
     // Modal states
     const [cleanerToBook, setCleanerToBook] = useState<Cleaner | null>(null);
     const [isBookingModalOpen, setIsBookingModalOpen] = useState(false);
@@ -144,7 +148,20 @@ const App: React.FC = () => {
             setIsLoading(true);
             setAppError(null);
 
-            const tokenAtStart = localStorage.getItem('skillskonnect_token');
+            // Detect password-reset link: ?action=resetPassword&token=<raw>
+            const urlParams = new URLSearchParams(window.location.search);
+            const action = urlParams.get('action');
+            const urlToken = urlParams.get('token');
+            if (action === 'resetPassword' && urlToken) {
+                setResetToken(urlToken);
+                setView('resetPassword');
+                // Remove the token from the URL bar without reloading
+                window.history.replaceState({}, document.title, '/');
+                setIsLoading(false);
+                return;
+            }
+
+            const tokenAtStart = getStoredToken();
 
             if (tokenAtStart) {
                 // Fetch everything needed in one parallel batch
@@ -166,7 +183,7 @@ const App: React.FC = () => {
                 }
 
                 // Guard 2: abort if the token changed while we were fetching
-                const currentToken = localStorage.getItem('skillskonnect_token');
+                const currentToken = getStoredToken();
                 if (currentToken !== tokenAtStart) {
                     setIsLoading(false);
                     return;
@@ -211,13 +228,13 @@ const App: React.FC = () => {
         setView('auth');
     };
 
-    const handleLoginAttempt = async (email: string, password?: string) => {
+    const handleLoginAttempt = async (email: string, password?: string, rememberMe?: boolean) => {
         setAuthMessage(null);
         setUser(null); // Clear any previous user immediately
         loginInProgressRef.current = true; // Signal checkSession to abort
         try {
             const { token, user: loggedInUser } = await apiService.login(email, password);
-            localStorage.setItem('skillskonnect_token', token);
+            storeToken(token, rememberMe ?? false);
             await handleAuthSuccess(loggedInUser);
         } catch (error: any) {
             setAuthMessage({ type: 'error', text: error.message || 'Login failed. Please try again.' });
@@ -242,7 +259,7 @@ const App: React.FC = () => {
 
         try {
             const { token, user: loggedInUser } = await apiService.socialLogin(provider, email, name);
-            localStorage.setItem('skillskonnect_token', token);
+            storeToken(token, true); // Social logins are persistent by default
             loginInProgressRef.current = true;
             await handleAuthSuccess(loggedInUser);
         } catch (error: any) {
@@ -317,7 +334,7 @@ const App: React.FC = () => {
             });
             
             if (response.token && response.user) {
-                localStorage.setItem('skillskonnect_token', response.token);
+                storeToken(response.token, false); // New registrations: session only until next explicit login
                 setUser(response.user);
                 await refetchAllData(response.user);
                 
@@ -345,7 +362,7 @@ const App: React.FC = () => {
         apiService.logout();
         setUser(null);
         setAllUsers([]);
-        localStorage.removeItem('skillskonnect_token');
+        clearToken();
         setCleanerToRememberForBooking(null);
         handleNavigate('landing');
     };
@@ -723,6 +740,11 @@ const App: React.FC = () => {
                     initialFilters={initialFilters}
                     clearInitialFilters={() => setInitialFilters(null)}
                     appError={appError}
+                />;
+            case 'resetPassword':
+                return <ResetPasswordPage
+                    token={resetToken || ''}
+                    onNavigate={handleNavigate}
                 />;
             case 'about': return <AboutPage />;
             case 'servicesPage': return <ServicesPage />;

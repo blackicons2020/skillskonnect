@@ -1,12 +1,13 @@
 
 import React, { useState, useEffect } from 'react';
 import { View } from '../types';
+import { apiService } from '../services/apiService';
 import { GoogleIcon, AppleIcon, EyeIcon, EyeSlashIcon } from './icons';
 
 interface AuthProps {
     initialTab: 'login' | 'signup';
     onNavigate: (v: View) => void;
-    onLoginAttempt: (email: string, password?: string) => void;
+    onLoginAttempt: (email: string, password?: string, rememberMe?: boolean) => void;
     onSignup: (email: string, password: string, userType: 'client' | 'worker') => Promise<void>;
     authMessage: { type: 'success' | 'error', text: string } | null;
     onAuthMessageDismiss: () => void;
@@ -17,12 +18,14 @@ interface LoginTabProps {
     setEmail: (email: string) => void;
     password: string;
     setPassword: (password: string) => void;
+    rememberMe: boolean;
+    setRememberMe: (v: boolean) => void;
     handleLogin: () => void;
     onSocialClick: (provider: 'google' | 'apple') => void;
     onForgotPasswordClick: () => void;
 }
 
-const LoginTab: React.FC<LoginTabProps> = ({ email, setEmail, password, setPassword, handleLogin, onSocialClick, onForgotPasswordClick }) => {
+const LoginTab: React.FC<LoginTabProps> = ({ email, setEmail, password, setPassword, rememberMe, setRememberMe, handleLogin, onSocialClick, onForgotPasswordClick }) => {
     const [showPassword, setShowPassword] = useState(false);
     return (
         <div>
@@ -70,7 +73,14 @@ const LoginTab: React.FC<LoginTabProps> = ({ email, setEmail, password, setPassw
                     </div>
                     <div className="flex items-center justify-between">
                         <div className="flex items-center">
-                            <input id="remember-me" name="remember-me" type="checkbox" className="h-4 w-4 text-primary focus:ring-secondary border-gray-300 rounded" />
+                            <input
+                                id="remember-me"
+                                name="remember-me"
+                                type="checkbox"
+                                className="h-4 w-4 text-primary focus:ring-secondary border-gray-300 rounded"
+                                checked={rememberMe}
+                                onChange={(e) => setRememberMe(e.target.checked)}
+                            />
                             <label htmlFor="remember-me" className="ml-2 block text-sm text-gray-900">Remember me</label>
                         </div>
                         <div className="text-sm">
@@ -231,12 +241,21 @@ const SignupTab: React.FC<SignupTabProps> = ({ onSignup }) => {
 const ForgotPasswordTab: React.FC<{ onBack: () => void }> = ({ onBack }) => {
     const [email, setEmail] = useState('');
     const [submitted, setSubmitted] = useState(false);
+    const [isLoading, setIsLoading] = useState(false);
+    const [error, setError] = useState<string | null>(null);
 
-    const handleSubmit = (e: React.FormEvent) => {
+    const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
-        // In a real app, you'd call an API to send the reset email.
-        console.log(`Password reset requested for: ${email}`);
-        setSubmitted(true);
+        setError(null);
+        setIsLoading(true);
+        try {
+            await apiService.forgotPassword(email.trim());
+            setSubmitted(true);
+        } catch (err: any) {
+            setError(err.message || 'Something went wrong. Please try again.');
+        } finally {
+            setIsLoading(false);
+        }
     };
 
     if (submitted) {
@@ -274,9 +293,14 @@ const ForgotPasswordTab: React.FC<{ onBack: () => void }> = ({ onBack }) => {
                         onChange={(e) => setEmail(e.target.value)}
                     />
                 </div>
+                {error && <p className="text-sm text-red-600">{error}</p>}
                 <div>
-                    <button type="submit" className="w-full flex justify-center py-2 px-4 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-primary hover:bg-secondary focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary">
-                        Send Reset Link
+                    <button
+                        type="submit"
+                        disabled={isLoading}
+                        className="w-full flex justify-center py-2 px-4 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-primary hover:bg-secondary focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary disabled:opacity-60 disabled:cursor-not-allowed"
+                    >
+                        {isLoading ? 'Sending…' : 'Send Reset Link'}
                     </button>
                 </div>
             </form>
@@ -294,6 +318,7 @@ export const Auth: React.FC<AuthProps> = ({ initialTab, onNavigate, onLoginAttem
     const [loginView, setLoginView] = useState<'form' | 'forgotPassword'>('form');
     const [email, setEmail] = useState('');
     const [password, setPassword] = useState('');
+    const [rememberMe, setRememberMe] = useState(false);
 
     useEffect(() => {
         setActiveTab(initialTab);
@@ -309,7 +334,7 @@ export const Auth: React.FC<AuthProps> = ({ initialTab, onNavigate, onLoginAttem
     }, [authMessage, onAuthMessageDismiss]);
 
     const handleLogin = () => {
-        onLoginAttempt(email.trim(), password.trim());
+        onLoginAttempt(email.trim(), password.trim(), rememberMe);
     };
 
     const handleTabChange = (tab: 'login' | 'signup') => {
@@ -355,6 +380,8 @@ export const Auth: React.FC<AuthProps> = ({ initialTab, onNavigate, onLoginAttem
                                     setEmail={setEmail}
                                     password={password}
                                     setPassword={setPassword}
+                                    rememberMe={rememberMe}
+                                    setRememberMe={setRememberMe}
                                     handleLogin={handleLogin}
                                     onSocialClick={() => { }} // No-op
                                     onForgotPasswordClick={() => setLoginView('forgotPassword')}
