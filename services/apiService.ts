@@ -294,6 +294,17 @@ export const apiService = {
         return handleResponse(response);
     },
 
+    adminUpdateUser: async (userId: string, userData: Partial<User>) => {
+        const payload = { ...userData };
+        // Don't send the File object; it should already be base64 if needed
+        const response = await fetch(`${API_URL}/admin/users/${userId}`, {
+            method: 'PUT',
+            headers: getHeaders(),
+            body: JSON.stringify(payload),
+        });
+        return handleResponse(response);
+    },
+
     adminGetAllUsers: async (): Promise<User[]> => {
         const response = await fetch(`${API_URL}/admin/users`, {
             method: 'GET',

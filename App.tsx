@@ -373,11 +373,15 @@ const App: React.FC = () => {
 
     const handleUpdateUser = async (updatedData: User) => {
         try {
-            const updatedUser = await apiService.updateUser(updatedData);
-            
             // Check if this is an admin updating another user (not themselves)
             const isAdminUpdatingOtherUser = user && user.isAdmin && updatedData.id !== user.id;
-            
+
+            // Use the correct endpoint: admin-specific route for updating other users,
+            // own-profile route for updating oneself
+            const updatedUser = isAdminUpdatingOtherUser
+                ? await apiService.adminUpdateUser(updatedData.id, updatedData)
+                : await apiService.updateUser(updatedData);
+
             // Only update the current user's state if they're updating themselves
             if (!isAdminUpdatingOtherUser) {
                 setUser(updatedUser);

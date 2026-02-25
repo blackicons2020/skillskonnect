@@ -1343,6 +1343,38 @@ app.delete('/api/admin/users/:userId', authenticateToken, async (req, res) => {
   }
 });
 
+// PUT /api/admin/users/:userId — admin updates any user's profile fields
+app.put('/api/admin/users/:userId', authenticateToken, async (req, res) => {
+  try {
+    if (!await verifyAdmin(req)) {
+      return res.status(403).json({ error: 'Admin access required' });
+    }
+
+    const targetUser = await User.findById(req.params.userId);
+    if (!targetUser) {
+      return res.status(404).json({ error: 'User not found' });
+    }
+
+    // Strip MongoDB system fields and immutable fields
+    const updateData = { ...req.body };
+    delete updateData._id;
+    delete updateData.__v;
+    delete updateData.id;
+    delete updateData.email;   // email is the identity field — don't allow admins to change it
+    delete updateData.password;
+
+    const updatedUser = await User.findByIdAndUpdate(
+      req.params.userId,
+      { $set: updateData },
+      { new: true }
+    ).select('-password');
+
+    res.json(normalizeUser(updatedUser));
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
 app.post('/api/admin/users/:userId/approve-subscription', authenticateToken, async (req, res) => {
   try {
     // Check admin permission
@@ -1423,7 +1455,10 @@ app.post('/api/auth/register', async (req, res) => {
 // Maps MongoDB User documents to frontend Cleaner interface format
 app.get('/api/cleaners', async (req, res) => {
   try {
-    const workers = await User.find({ userType: 'worker', isProfileComplete: true }).select('-password');
+    const workers = await User.find({
+      userType: 'worker',
+      $or: [{ isProfileComplete: true }, { isVerified: true }]
+    }).select('-password');
     
     // Map to Cleaner interface expected by frontend
     const cleaners = workers.map(w => {

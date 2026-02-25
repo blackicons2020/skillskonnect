@@ -149,35 +149,39 @@ export const JobApplicantsModal: React.FC<JobApplicantsModalProps> = ({ job, all
 
                                             {/* Action Buttons */}
                                             <div className="mt-4 flex flex-wrap gap-2">
-                                                <a
-                                                    href={`tel:${applicant.phoneNumber}`}
-                                                    className="inline-flex items-center px-3 py-1.5 border border-gray-300 shadow-sm text-sm font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50"
-                                                >
-                                                    📞 Call
-                                                </a>
-                                                <a
-                                                    href={`mailto:${applicant.email}`}
-                                                    className="inline-flex items-center px-3 py-1.5 border border-gray-300 shadow-sm text-sm font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50"
-                                                >
-                                                    ✉️ Email
-                                                </a>
-                                                {onStartChat && (
+                                                {applicant.phoneNumber && (
+                                                    <a
+                                                        href={`tel:${applicant.phoneNumber}`}
+                                                        className="inline-flex items-center px-3 py-1.5 border border-green-300 shadow-sm text-sm font-medium rounded-md text-green-700 bg-green-50 hover:bg-green-100"
+                                                    >
+                                                        📞 {applicant.phoneNumber}
+                                                    </a>
+                                                )}
+                                                {(applicant.email || (applicant as EnrichedApplicant).workerEmail) && (
+                                                    <a
+                                                        href={`mailto:${applicant.email || (applicant as EnrichedApplicant).workerEmail}`}
+                                                        className="inline-flex items-center px-3 py-1.5 border border-blue-300 shadow-sm text-sm font-medium rounded-md text-blue-700 bg-blue-50 hover:bg-blue-100"
+                                                    >
+                                                        ✉️ {applicant.email || (applicant as EnrichedApplicant).workerEmail}
+                                                    </a>
+                                                )}
+                                                {onStartChat && applicant.id && (
                                                     <button
                                                         onClick={() => {
-                                                            onStartChat(applicant.id, applicant.fullName);
+                                                            onStartChat(applicant.id!, applicant.fullName || (applicant as EnrichedApplicant).workerName || 'Worker');
                                                             onClose();
                                                         }}
-                                                        className="inline-flex items-center px-3 py-1.5 border border-gray-300 shadow-sm text-sm font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50"
+                                                        className="inline-flex items-center px-3 py-1.5 border border-purple-300 shadow-sm text-sm font-medium rounded-md text-purple-700 bg-purple-50 hover:bg-purple-100"
                                                     >
                                                         💬 Message
                                                     </button>
                                                 )}
                                                 {onSelectWorker && job.status === 'Open' && (
                                                     <button
-                                                        onClick={() => onSelectWorker(applicant.id)}
+                                                        onClick={() => onSelectWorker(applicant.id!)}
                                                         className="inline-flex items-center px-3 py-1.5 border border-transparent text-sm font-medium rounded-md text-white bg-primary hover:bg-secondary"
                                                     >
-                                                        Select for Job
+                                                        ✅ Select for Job
                                                     </button>
                                                 )}
                                             </div>
