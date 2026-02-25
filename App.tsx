@@ -317,13 +317,24 @@ const App: React.FC = () => {
     const handleUpdateUser = async (updatedData: User) => {
         try {
             const updatedUser = await apiService.updateUser(updatedData);
-            setUser(updatedUser);
+            
+            // Check if this is an admin updating another user (not themselves)
+            const isAdminUpdatingOtherUser = user && user.isAdmin && updatedData.id !== user.id;
+            
+            // Only update the current user's state if they're updating themselves
+            if (!isAdminUpdatingOtherUser) {
+                setUser(updatedUser);
+            }
             
             // Check if postedJobs changed (client posting/updating jobs)
             const jobsChanged = user && user.postedJobs?.length !== updatedUser.postedJobs?.length;
             
-            if (updatedUser.isAdmin) {
-                await refetchAllData(updatedUser);
+            // Check if verification status changed
+            const isVerificationUpdate = user && updatedData.isVerified !== undefined && 
+                                        user.isVerified !== updatedData.isVerified;
+            
+            if (updatedUser.isAdmin || isAdminUpdatingOtherUser) {
+                await refetchAllData(user || updatedUser);
             } else if (jobsChanged && (updatedUser.role === 'client' || (updatedUser as any).userType === 'client')) {
                 // Refetch jobs so workers can see the new/updated jobs
                 try {
@@ -334,15 +345,23 @@ const App: React.FC = () => {
                 }
             }
             
-            // Check if this was a subscription update
-            const isSubscriptionUpdate = user && user.subscriptionTier !== updatedUser.subscriptionTier;
+            // Check if this was a subscription update for the current user
+            const isSubscriptionUpdate = !isAdminUpdatingOtherUser && user && 
+                                        user.subscriptionTier !== updatedUser.subscriptionTier;
             
-            if (isSubscriptionUpdate) {
+            // Show appropriate success message
+            if (isAdminUpdatingOtherUser && isVerificationUpdate) {
+                alert(updatedData.isVerified 
+                    ? "✓ Verification approved successfully!" 
+                    : "Verification rejected.");
+            } else if (isSubscriptionUpdate) {
                 alert(`✓ Subscription upgraded to ${updatedUser.subscriptionTier} plan!\n\nYou now have access to all ${updatedUser.subscriptionTier} features.`);
             } else if (jobsChanged) {
                 // Don't show alert, the job posting form already shows success
-            } else {
+            } else if (!isAdminUpdatingOtherUser) {
                 alert("Profile updated successfully!");
+            } else {
+                alert("User updated successfully!");
             }
         } catch (error: any) {
             alert(`Failed to update profile: ${error.message}`);
