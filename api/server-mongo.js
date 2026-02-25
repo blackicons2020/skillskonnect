@@ -1577,8 +1577,7 @@ app.post('/api/auth/register', async (req, res) => {
 app.get('/api/cleaners', async (req, res) => {
   try {
     const workers = await User.find({
-      userType: 'worker',
-      $or: [{ isProfileComplete: true }, { isVerified: true }]
+      userType: 'worker'
     }).select('-password');
     
     // Map to Cleaner interface expected by frontend
