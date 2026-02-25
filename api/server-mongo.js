@@ -158,7 +158,7 @@ const JobSchema = new mongoose.Schema({
   clientId: { type: String, required: true },
   clientName: String,
   clientEmail: String,
-  status: { type: String, default: 'Open', enum: ['Open', 'In Progress', 'Completed', 'Cancelled', 'open', 'assigned', 'closed'] },
+  status: { type: String, default: 'Open', enum: ['Open', 'In Progress', 'Completed', 'Cancelled', 'open', 'assigned', 'closed', 'active'] },
   visibility: { type: String, default: 'Subscribers Only', enum: ['Public', 'Subscribers Only'] },
   requirements: [String],
   selectedWorkerId: String,
@@ -800,12 +800,17 @@ app.post('/api/jobs/:jobId/apply', authenticateToken, async (req, res) => {
       status: 'pending'
     };
 
-    job.applicants.push(application);
-    await job.save();
+    // Use $push with runValidators:false to avoid full document validation
+    // This prevents failures on legacy jobs missing required fields
+    const updatedJob = await Job.findByIdAndUpdate(
+      req.params.jobId,
+      { $push: { applicants: application } },
+      { new: true, runValidators: false }
+    );
 
     res.json({
       message: 'Application submitted successfully',
-      job
+      job: updatedJob
     });
   } catch (error) {
     res.status(500).json({ error: error.message });
