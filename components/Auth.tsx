@@ -127,24 +127,51 @@ const SignupTab: React.FC<SignupTabProps> = ({ onSignup }) => {
     const [showPassword, setShowPassword] = useState(false);
     const [showConfirmPassword, setShowConfirmPassword] = useState(false);
     const [isLoading, setIsLoading] = useState(false);
+    const [signupError, setSignupError] = useState<string | null>(null);
+    const [pendingVerification, setPendingVerification] = useState(false);
 
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
+        setSignupError(null);
         if (!userType) {
-            alert('Please select whether you are a Client or a Worker.');
+            setSignupError('Please select whether you are a Client or a Worker.');
             return;
         }
         if (password !== confirmPassword) {
-            alert('Passwords do not match.');
+            setSignupError('Passwords do not match.');
             return;
         }
         setIsLoading(true);
         try {
             await onSignup(email.trim(), password, userType);
+            setPendingVerification(true);
+        } catch (err: any) {
+            setSignupError(err.message || 'Signup failed. Please try again.');
         } finally {
             setIsLoading(false);
         }
     };
+
+    // ── Email pending verification screen ──
+    if (pendingVerification) {
+        return (
+            <div className="text-center py-4">
+                <div className="mx-auto flex items-center justify-center h-16 w-16 rounded-full bg-blue-100 mb-4">
+                    <svg className="h-8 w-8 text-blue-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
+                    </svg>
+                </div>
+                <h3 className="text-xl font-bold text-dark">Check your inbox!</h3>
+                <p className="mt-2 text-sm text-gray-600">
+                    We've sent a verification link to <span className="font-semibold">{email}</span>.
+                    Click the link in that email to confirm you're human and activate your account.
+                </p>
+                <p className="mt-3 text-xs text-gray-500">
+                    Can't find it? Check your spam folder. The link is valid for 24 hours.
+                </p>
+            </div>
+        );
+    }
 
     return (
         <div>
@@ -227,9 +254,12 @@ const SignupTab: React.FC<SignupTabProps> = ({ onSignup }) => {
                             </div>
                         </div>
                     </div>
+                    {signupError && (
+                        <p className="text-sm text-red-600 text-center">{signupError}</p>
+                    )}
                     <div>
-                        <button type="submit" disabled={isLoading} className="w-full flex justify-center py-2 px-4 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-primary hover:bg-secondary focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary disabled:bg-gray-400">
-                            {isLoading ? 'Creating account...' : 'Create Account'}
+                        <button type="submit" disabled={isLoading} className="w-full flex justify-center py-2 px-4 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-primary hover:bg-secondary focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary disabled:bg-gray-400 disabled:cursor-not-allowed">
+                            {isLoading ? 'Creating account…' : 'Create Account'}
                         </button>
                     </div>
                 </div>

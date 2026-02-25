@@ -139,6 +139,15 @@ export const apiService = {
         return handleResponse(response);
     },
 
+    verifyEmail: async (token: string): Promise<{ message: string }> => {
+        const response = await fetch(`${API_URL}/auth/verify-email`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ token }),
+        });
+        return handleResponse(response);
+    },
+
     register: async (userData: Partial<User>): Promise<User> => {
          const payload = { ...userData };
          // Ensure files are base64 encoded

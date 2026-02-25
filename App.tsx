@@ -161,6 +161,21 @@ const App: React.FC = () => {
                 return;
             }
 
+            // Detect email verification link: ?action=verifyEmail&token=<raw>
+            if (action === 'verifyEmail' && urlToken) {
+                window.history.replaceState({}, document.title, '/');
+                try {
+                    await apiService.verifyEmail(urlToken);
+                    setAuthMessage({ type: 'success', text: '✅ Email verified! You can now sign in to your account.' });
+                } catch (err: any) {
+                    setAuthMessage({ type: 'error', text: err.message || 'Email verification failed. Please try registering again.' });
+                }
+                setInitialAuthTab('login');
+                setView('auth');
+                setIsLoading(false);
+                return;
+            }
+
             const tokenAtStart = getStoredToken();
 
             if (tokenAtStart) {
@@ -323,38 +338,10 @@ const App: React.FC = () => {
     };
 
     const handleDirectSignup = async (email: string, password: string, userType: 'client' | 'worker' = 'client') => {
-        setAuthMessage(null);
-        loginInProgressRef.current = true;
-        try {
-            // Register with minimal data - email, password, and userType
-            const response: any = await apiService.register({ 
-                email, 
-                password, 
-                userType
-            });
-            
-            if (response.token && response.user) {
-                storeToken(response.token, false); // New registrations: session only until next explicit login
-                setUser(response.user);
-                await refetchAllData(response.user);
-                
-                // Redirect directly to dashboard based on userType
-                if (response.user.role === 'admin') {
-                    handleNavigate('adminDashboard');
-                } else if (response.user.userType === 'worker' || userType === 'worker') {
-                    handleNavigate('cleanerDashboard');
-                } else {
-                    handleNavigate('clientDashboard');
-                }
-            } else {
-                setAuthMessage({ type: 'success', text: 'Account created! Please log in.' });
-                handleNavigateToAuth('login');
-            }
-        } catch (error: any) {
-            setAuthMessage({ type: 'error', text: error.message || 'Signup failed. A user with this email may already exist.' });
-        } finally {
-            loginInProgressRef.current = false;
-        }
+        // Register the user — backend sends verification email and does NOT return a session token.
+        // The SignupTab component catches any thrown error and displays it inline.
+        await apiService.register({ email, password, userType });
+        // On success: return cleanly; SignupTab will show the "Check your inbox" state.
     };
 
 

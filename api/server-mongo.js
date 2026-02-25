@@ -411,33 +411,64 @@ app.post('/api/auth/signup', async (req, res) => {
 
     const existingUser = await User.findOne({ email });
     if (existingUser) {
-      return res.status(409).json({ error: 'User already exists' });
+      return res.status(409).json({ error: 'An account with this email already exists.' });
     }
 
     const hashedPassword = await bcrypt.hash(password, 8);
     const role = userType === 'admin' ? 'admin' : 'user';
 
-    const newUser = await User.create({
+    // Generate e-mail verification token
+    const rawToken = crypto.randomBytes(32).toString('hex');
+    const hashedToken = crypto.createHash('sha256').update(rawToken).digest('hex');
+
+    await User.create({
       email,
       password: hashedPassword,
       userType,
       role,
-      isProfileComplete: false
+      isProfileComplete: false,
+      isVerified: false,
+      emailVerificationToken: hashedToken,
+      emailVerificationExpires: new Date(Date.now() + 24 * 60 * 60 * 1000), // 24 hours
     });
 
-    const token = jwt.sign(
-      { email: newUser.email, userType: newUser.userType, role: newUser.role, isAdmin: false },
-      JWT_SECRET,
-      { expiresIn: '7d' }
-    );
+    const frontendUrl = process.env.FRONTEND_URL || 'https://skillskonnect.vercel.app';
+    const verifyUrl = `${frontendUrl}/?token=${rawToken}&action=verifyEmail`;
+    await sendVerificationEmail(email, verifyUrl);
 
     res.status(201).json({
-      message: 'User created successfully',
-      token,
-      user: normalizeUser(newUser)
+      message: 'Account created! Please check your email to verify your account before signing in.',
     });
   } catch (error) {
     console.error('Signup error:', error);
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// POST /api/auth/verify-email
+app.post('/api/auth/verify-email', async (req, res) => {
+  try {
+    const { token } = req.body;
+    if (!token) return res.status(400).json({ error: 'Verification token is required' });
+
+    const hashedToken = crypto.createHash('sha256').update(token).digest('hex');
+    const user = await User.findOne({
+      emailVerificationToken: hashedToken,
+      emailVerificationExpires: { $gt: new Date() },
+    });
+
+    if (!user) {
+      return res.status(400).json({ error: 'This verification link is invalid or has expired. Please register again or contact support.' });
+    }
+
+    user.isVerified = true;
+    user.emailVerificationToken = undefined;
+    user.emailVerificationExpires = undefined;
+    await user.save();
+
+    res.json({ message: 'Email verified successfully! You can now sign in.' });
+  } catch (error) {
+    console.error('Email verification error:', error);
     res.status(500).json({ error: error.message });
   }
 });
@@ -460,6 +491,11 @@ app.post('/api/auth/login', async (req, res) => {
       return res.status(401).json({ error: 'Invalid credentials' });
     }
 
+    // Block unverified accounts
+    if (user.isVerified === false) {
+      return res.status(403).json({ error: 'Please verify your email before signing in. Check your inbox for the verification link.' });
+    }
+
     const token = jwt.sign(
       { email: user.email, userType: user.userType, role: user.role, isAdmin: user.isAdmin || false },
       JWT_SECRET,
@@ -477,12 +513,42 @@ app.post('/api/auth/login', async (req, res) => {
   }
 });
 
+// ==================== EMAIL HELPERS ====================
+
+// Shared nodemailer transporter factory
+const createMailTransporter = () => nodemailer.createTransport({
+  host: process.env.SMTP_HOST,
+  port: Number(process.env.SMTP_PORT) || 587,
+  secure: process.env.SMTP_SECURE === 'true',
+  auth: { user: process.env.SMTP_USER, pass: process.env.SMTP_PASS },
+});
+
+const isMockEmail = () => !process.env.SMTP_HOST || process.env.SMTP_HOST === 'smtp.example.com';
+
+// Send account verification email
+const sendVerificationEmail = async (to, verifyUrl) => {
+  if (isMockEmail()) {
+    console.log('==================================================');
+    console.log(' 📧 [MOCK EMAIL] Account Verification Link');
+    console.log(` To:  ${to}`);
+    console.log(` URL: ${verifyUrl}`);
+    console.log('==================================================');
+    return;
+  }
+  await createMailTransporter().sendMail({
+    from: `"${process.env.FROM_NAME || 'Skills Konnect'}" <${process.env.FROM_EMAIL || 'no-reply@skillskonnect.ng'}>`,
+    to,
+    subject: 'Verify your Skills Konnect email address',
+    text: `Welcome to Skills Konnect!\n\nClick the link below to verify your email (valid for 24 hours):\n${verifyUrl}\n\nIf you did not create this account, please ignore this email.`,
+    html: `<h2>Welcome to Skills Konnect!</h2><p>Click the button below to verify your email address. This link is valid for 24 hours.</p><p style="margin:24px 0"><a href="${verifyUrl}" style="background:#2563eb;color:#fff;padding:12px 24px;border-radius:6px;text-decoration:none;font-weight:bold">Verify My Email</a></p><p>Or copy this link: ${verifyUrl}</p><p>If you did not create this account, please ignore this email.</p>`,
+  });
+};
+
 // ==================== PASSWORD RESET ====================
 
 // Helper: send email (uses nodemailer; falls back to console.log when SMTP is not configured)
 const sendResetEmail = async (to, resetUrl) => {
-  const isMock = !process.env.SMTP_HOST || process.env.SMTP_HOST === 'smtp.example.com';
-  if (isMock) {
+  if (isMockEmail()) {
     console.log('==================================================');
     console.log(' 📧 [MOCK EMAIL] Password Reset Link');
     console.log(` To:  ${to}`);
@@ -490,13 +556,7 @@ const sendResetEmail = async (to, resetUrl) => {
     console.log('==================================================');
     return;
   }
-  const transporter = nodemailer.createTransport({
-    host: process.env.SMTP_HOST,
-    port: Number(process.env.SMTP_PORT) || 587,
-    secure: process.env.SMTP_SECURE === 'true',
-    auth: { user: process.env.SMTP_USER, pass: process.env.SMTP_PASS },
-  });
-  await transporter.sendMail({
+  await createMailTransporter().sendMail({
     from: `"${process.env.FROM_NAME || 'Skills Konnect'}" <${process.env.FROM_EMAIL || 'no-reply@skillskonnect.ng'}>`,
     to,
     subject: 'Reset your Skills Konnect password',
@@ -1505,7 +1565,7 @@ app.post('/api/admin/users/:userId/approve-subscription', authenticateToken, asy
 
 // ==================== FRONTEND COMPATIBILITY ALIASES ====================
 
-// Alias: /api/auth/register -> /api/auth/signup
+// Alias: /api/auth/register -> /api/auth/signup (same verification flow)
 app.post('/api/auth/register', async (req, res) => {
   try {
     const { email, password, userType } = req.body;
@@ -1516,30 +1576,32 @@ app.post('/api/auth/register', async (req, res) => {
 
     const existingUser = await User.findOne({ email });
     if (existingUser) {
-      return res.status(409).json({ error: 'User already exists' });
+      return res.status(409).json({ error: 'An account with this email already exists.' });
     }
 
     const hashedPassword = await bcrypt.hash(password, 8);
     const role = userType === 'admin' ? 'admin' : 'user';
 
-    const newUser = await User.create({
+    const rawToken = crypto.randomBytes(32).toString('hex');
+    const hashedToken = crypto.createHash('sha256').update(rawToken).digest('hex');
+
+    await User.create({
       email,
       password: hashedPassword,
       userType,
       role,
-      isProfileComplete: false
+      isProfileComplete: false,
+      isVerified: false,
+      emailVerificationToken: hashedToken,
+      emailVerificationExpires: new Date(Date.now() + 24 * 60 * 60 * 1000),
     });
 
-    const token = jwt.sign(
-      { email: newUser.email, userType: newUser.userType, role: newUser.role, isAdmin: false },
-      JWT_SECRET,
-      { expiresIn: '7d' }
-    );
+    const frontendUrl = process.env.FRONTEND_URL || 'https://skillskonnect.vercel.app';
+    const verifyUrl = `${frontendUrl}/?token=${rawToken}&action=verifyEmail`;
+    await sendVerificationEmail(email, verifyUrl);
 
     res.status(201).json({
-      message: 'User created successfully',
-      token,
-      user: normalizeUser(newUser)
+      message: 'Account created! Please check your email to verify your account before signing in.',
     });
   } catch (error) {
     console.error('Register error:', error);
