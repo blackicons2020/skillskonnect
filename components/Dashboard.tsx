@@ -51,6 +51,9 @@ export const Dashboard: React.FC<DashboardProps> = ({ user, onUpdateUser, onNavi
     );
     const [showProfileCompletion, setShowProfileCompletion] = useState(false);
     
+    // Chat state - for auto-selecting chat when messaging a client
+    const [chatToOpen, setChatToOpen] = useState<string | null>(null);
+    
     // Handler for profile updates
     const handleProfileUpdate = async (updates: Partial<User>) => {
         await onUpdateUser({ ...user, ...updates });
@@ -269,7 +272,8 @@ export const Dashboard: React.FC<DashboardProps> = ({ user, onUpdateUser, onNavi
 
     const handleMessageClient = async (clientId: string, clientName: string) => {
         try {
-            await apiService.createChat(user.id, clientId, user.fullName, clientName);
+            const chat = await apiService.createChat(user.id, clientId, user.fullName, clientName);
+            setChatToOpen(chat.id);
             setActiveTab('messages');
         } catch (error) {
             alert('Could not start chat. Please try again.');
@@ -1066,7 +1070,7 @@ export const Dashboard: React.FC<DashboardProps> = ({ user, onUpdateUser, onNavi
             
             {activeTab === 'messages' && (
                 <div className="bg-white p-6 rounded-lg shadow-md min-h-[600px]">
-                    <ChatInterface currentUser={user} />
+                    <ChatInterface currentUser={user} initialChatId={chatToOpen} onChatOpened={() => setChatToOpen(null)} />
                 </div>
             )}
 

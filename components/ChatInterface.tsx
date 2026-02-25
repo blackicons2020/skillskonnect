@@ -6,9 +6,11 @@ import { PaperAirplaneIcon, UserIcon, ChatBubbleLeftRightIcon } from './icons';
 
 interface ChatInterfaceProps {
     currentUser: User;
+    initialChatId?: string | null;
+    onChatOpened?: () => void;
 }
 
-export const ChatInterface: React.FC<ChatInterfaceProps> = ({ currentUser }) => {
+export const ChatInterface: React.FC<ChatInterfaceProps> = ({ currentUser, initialChatId, onChatOpened }) => {
     const [chats, setChats] = useState<Chat[]>([]);
     const [selectedChat, setSelectedChat] = useState<Chat | null>(null);
     const [messages, setMessages] = useState<Message[]>([]);
@@ -21,6 +23,17 @@ export const ChatInterface: React.FC<ChatInterfaceProps> = ({ currentUser }) => 
         const interval = setInterval(loadChats, 5000); // Poll for new chats/updates every 5s
         return () => clearInterval(interval);
     }, [currentUser.id]);
+
+    // Auto-select chat when initialChatId is provided
+    useEffect(() => {
+        if (initialChatId && chats.length > 0) {
+            const chatToSelect = chats.find(c => c.id === initialChatId);
+            if (chatToSelect) {
+                setSelectedChat(chatToSelect);
+                onChatOpened?.();
+            }
+        }
+    }, [initialChatId, chats]);
 
     useEffect(() => {
         if (selectedChat) {

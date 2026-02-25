@@ -111,6 +111,9 @@ export const ClientDashboard: React.FC<ClientDashboardProps> = ({ user, allClean
     const [jobApplicants, setJobApplicants] = useState<User[]>([]);
     const [isLoadingApplicants, setIsLoadingApplicants] = useState(false);
     
+    // Chat state - for auto-selecting chat when messaging a cleaner
+    const [chatToOpen, setChatToOpen] = useState<string | null>(null);
+    
     // Check if profile is incomplete
     const isProfileIncomplete = !user.userType || !user.phoneNumber || !user.country;
     
@@ -345,7 +348,8 @@ export const ClientDashboard: React.FC<ClientDashboardProps> = ({ user, allClean
 
     const handleMessageCleaner = async (cleanerId: string, cleanerName: string) => {
         try {
-            await apiService.createChat(user.id, cleanerId, user.fullName, cleanerName);
+            const chat = await apiService.createChat(user.id, cleanerId, user.fullName, cleanerName);
+            setChatToOpen(chat.id);
             setActiveTab('messages');
         } catch (error) {
             alert('Could not start chat. Please try again.');
@@ -1019,7 +1023,7 @@ export const ClientDashboard: React.FC<ClientDashboardProps> = ({ user, allClean
             
             {activeTab === 'messages' && (
                 <div className="bg-white p-6 rounded-lg shadow-md min-h-[600px]">
-                    <ChatInterface currentUser={user} />
+                    <ChatInterface currentUser={user} initialChatId={chatToOpen} onChatOpened={() => setChatToOpen(null)} />
                 </div>
             )}
 
