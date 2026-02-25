@@ -1,10 +1,30 @@
 import React from 'react';
 
 export const ServicesPage: React.FC = () => {
-    // Categorize services for better presentation
-    const residentialServices = ["Residential/Domestic Cleaning", "Deep Cleaning", "Move-In / Move-Out Cleaning", "Carpet and Upholstery Cleaning", "Laundry & ironing", "Spring Cleaning", "Green/Eco-Friendly"];
-    const commercialServices = ["Commercial/Office Cleaning", "Post-Construction", "Industrial Cleaning", "Glass Cleaning", "Event Cleaning"];
-    const specializedServices = ["Medical Cleaning", "Sanitization/Disinfection", "Disaster Cleaning & Restoration", "Hazardous Waste Cleaning", "Crisis/Trauma Cleaning", "Vehicle Cleaning", "Outdoor/Environmental Cleaning", "Pest control", "Waste Management"];
+    const homeServices = [
+        "Residential/Domestic Cleaning", "Deep Cleaning", "Move-In / Move-Out Cleaning",
+        "Carpet and Upholstery Cleaning", "Laundry & Ironing", "Spring Cleaning",
+        "Plumbing & Repairs", "Electrical Work", "Painting & Decorating",
+        "Furniture Assembly", "Pest Control", "Landscaping & Gardening"
+    ];
+    const professionalServices = [
+        "Commercial/Office Cleaning", "Catering & Event Staffing", "Security Services",
+        "Driver / Chauffeur", "Administrative Assistant", "Tailoring & Fashion Design",
+        "Photography & Videography", "Graphic Design", "Web & App Development",
+        "Accounting & Bookkeeping", "Legal Consulting", "Translation & Interpretation"
+    ];
+    const personalServices = [
+        "Hair Styling & Barbering", "Makeup & Beauty", "Personal Fitness Training",
+        "Private Tutoring", "Childcare & Babysitting", "Elderly Care",
+        "Health & Wellness Coaching", "Event Planning", "Interior Design",
+        "Music Lessons", "Catering / Personal Chef", "Pet Care & Grooming"
+    ];
+    const specializedServices = [
+        "Medical & Nursing Care", "Sanitization / Disinfection", "Post-Construction Cleaning",
+        "Disaster Cleaning & Restoration", "Hazardous Waste Cleaning", "Vehicle Cleaning",
+        "Industrial Cleaning", "Waste Management", "IT Support & Repairs",
+        "Social Media Management", "Content Writing & Copywriting", "Virtual Assistant"
+    ];
 
     const renderServiceList = (title: string, services: string[]) => (
         <div className="mb-8">
@@ -25,14 +45,16 @@ export const ServicesPage: React.FC = () => {
                 <div className="max-w-4xl mx-auto">
                     <h1 className="text-4xl font-bold text-center text-dark mb-4">Our Services</h1>
                     <p className="text-lg text-gray-600 text-center mb-10">
-                        We offer a comprehensive range of cleaning services to meet every need. Our professionals are equipped to handle any job, big or small.
+                        We connect you with skilled professionals across hundreds of service categories. Whether you need help at home, at work, or beyond — we've got you covered.
                     </p>
                     
-                    {renderServiceList("Residential Cleaning", residentialServices)}
-                    {renderServiceList("Commercial Cleaning", commercialServices)}
-                    {renderServiceList("Specialized Cleaning", specializedServices)}
+                    {renderServiceList("Home & Household Services", homeServices)}
+                    {renderServiceList("Professional & Business Services", professionalServices)}
+                    {renderServiceList("Personal & Lifestyle Services", personalServices)}
+                    {renderServiceList("Specialized & Technical Services", specializedServices)}
                 </div>
             </div>
         </div>
     );
 };
+

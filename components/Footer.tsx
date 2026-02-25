@@ -33,7 +33,7 @@ export const Footer: React.FC<FooterProps> = ({ onNavigate }) => {
                             <span>Skills Konnect</span>
                         </div>
                         <p className="mt-2 text-gray-500 max-w-xs">
-                            Connecting Nigeria with trusted, professional cleaners for a spotless space, every time.
+                            Connecting Nigeria with trusted, skilled professionals for every service need, every time.
                         </p>
                     </div>
                     <div>

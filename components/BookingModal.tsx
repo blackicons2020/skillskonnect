@@ -32,7 +32,7 @@ export const BookingModal: React.FC<BookingModalProps> = ({ cleaner, user, onClo
                     </div>
 
                     <div className="my-6 p-4 bg-light rounded-lg text-center">
-                        <p className="text-sm text-gray-600">Cleaner's Charge</p>
+                        <p className="text-sm text-gray-600">Worker's Charge</p>
                         <p className="text-3xl font-extrabold text-dark">₦{baseAmount.toLocaleString()}</p>
                     </div>
 

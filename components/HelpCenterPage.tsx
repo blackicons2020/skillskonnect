@@ -26,8 +26,8 @@ export const HelpCenterPage: React.FC = () => {
                     
                     <div className="space-y-4">
                         <h2 className="text-2xl font-semibold text-primary mt-6">For Clients</h2>
-                        <FAQItem question="How do I book a cleaner?">
-                            <p>Simply use the search bar on our homepage to find cleaners in your area. You can filter by service type and location. Once you find a cleaner you like, click "Book Now" on their profile to start the process.</p>
+                        <FAQItem question="How do I book a worker?">
+                            <p>Simply use the search bar on our homepage to find workers in your area. You can filter by service type and location. Once you find a worker you like, click "Book Now" on their profile to start the process.</p>
                         </FAQItem>
                         <FAQItem question="What is the Escrow payment system?">
                             <p>Our Escrow system provides a secure way to pay. You pay Skills Konnect, and we hold the funds until you confirm the job has been completed to your satisfaction. This adds a layer of protection for both you and the service provider. A 10% service fee applies to all Escrow payments.</p>
@@ -36,9 +36,9 @@ export const HelpCenterPage: React.FC = () => {
                             <p>After a job is done, go to the "My Bookings" tab on your dashboard. You will see a button to "Approve Job Completion" or "Mark as Completed". Clicking this will notify us (for Escrow) or simply update the job status (for direct payments).</p>
                         </FAQItem>
 
-                        <h2 className="text-2xl font-semibold text-primary mt-6">For Cleaners</h2>
-                        <FAQItem question="How do I sign up as a cleaner?">
-                            <p>Click "Sign Up" on the homepage, then choose "I'm a Cleaner". You'll be guided through a detailed registration process where you'll provide your personal details, professional experience, services offered, and documents for verification.</p>
+                        <h2 className="text-2xl font-semibold text-primary mt-6">For Workers</h2>
+                        <FAQItem question="How do I sign up as a worker?">
+                            <p>Click "Sign Up" on the homepage, then choose "I'm a Worker". You'll be guided through a detailed registration process where you'll provide your personal details, professional experience, services offered, and documents for verification.</p>
                         </FAQItem>
                         <FAQItem question="Why do I need to pay for a subscription?">
                             <p>Our subscription plans help you grow your business by giving you access to more clients, higher visibility in search results, and a professional badge on your profile. We have plans for every stage, including a free option to get you started.</p>

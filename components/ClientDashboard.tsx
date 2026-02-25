@@ -55,7 +55,7 @@ const ServiceRecommendations: React.FC<ServiceRecommendationsProps> = ({ isLoadi
                         className="p-4 bg-white rounded-lg shadow-md text-left hover:shadow-lg hover:-translate-y-1 transition-all duration-300 border border-transparent hover:border-primary"
                     >
                         <p className="font-semibold text-dark">{service}</p>
-                        <span className="text-sm text-primary font-medium mt-2 inline-block">Find Cleaners &rarr;</span>
+                        <span className="text-sm text-primary font-medium mt-2 inline-block">Find Workers &rarr;</span>
                     </button>
                 ))}
             </div>
@@ -307,7 +307,7 @@ export const ClientDashboard: React.FC<ClientDashboardProps> = ({ user, allClean
 
     const resultsTitle = useMemo(() => {
         if (activeFilters.service || activeFilters.location || activeFilters.minPrice || activeFilters.maxPrice || activeFilters.minRating) return 'Filtered Results';
-        return 'All Available Cleaners';
+        return 'All Available Workers';
     }, [activeFilters]);
 
     const handleFilterChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
@@ -691,7 +691,7 @@ export const ClientDashboard: React.FC<ClientDashboardProps> = ({ user, allClean
                                             onClick={() => handleMessageCleaner(item.cleanerId, item.cleanerName)}
                                             className="w-full sm:w-auto text-center bg-gray-100 text-primary px-3 py-1.5 rounded-md text-xs font-semibold hover:bg-gray-200 border border-gray-200"
                                          >
-                                            Message Cleaner
+                                            Message Worker
                                          </button>
 
                                          {item.status === 'Upcoming' && <button onClick={() => setBookingToCancel(item)} className="w-full sm:w-auto text-center bg-red-100 text-red-700 px-3 py-1.5 rounded-md text-xs font-semibold hover:bg-red-200">Cancel Booking</button>}

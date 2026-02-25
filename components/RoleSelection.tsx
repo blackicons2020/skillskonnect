@@ -19,13 +19,13 @@ export const RoleSelection: React.FC<RoleSelectionProps> = ({ onSelect }) => {
                         className="p-6 border-2 border-gray-200 rounded-lg hover:bg-green-50 hover:border-primary cursor-pointer transition-all transform hover:scale-105"
                     >
                         <h3 className="text-lg font-bold text-primary">I'm a Client</h3>
-                        <p className="text-sm text-gray-500 mt-1">I want to find and book trusted, top-rated cleaning professionals.</p>
+                        <p className="text-sm text-gray-500 mt-1">I want to find and book trusted, top-rated professionals.</p>
                     </div>
                     <div 
                         onClick={() => onSelect('cleaner')} 
                         className="p-6 border-2 border-gray-200 rounded-lg hover:bg-green-50 hover:border-primary cursor-pointer transition-all transform hover:scale-105"
                     >
-                        <h3 className="text-lg font-bold text-primary">I'm a Cleaner</h3>
+                        <h3 className="text-lg font-bold text-primary">I'm a Worker</h3>
                         <p className="text-sm text-gray-500 mt-1">I want to offer my services, connect with clients, and grow my business.</p>
                     </div>
                 </div>

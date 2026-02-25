@@ -15,7 +15,7 @@ export const PrivacyPage: React.FC = () => {
                     <p>We use your information to operate, maintain, and provide the features of the Skills Konnect platform. This includes connecting Clients with skilled professionals across various service categories, processing payments, and communicating with you.</p>
 
                     <h2>3. Information Sharing</h2>
-                    <p>We may share necessary information between a Client and a Cleaner to facilitate a booking. We do not sell your personal data to third parties. We may share information with law enforcement if required by law.</p>
+                    <p>We may share necessary information between a Client and a Worker to facilitate a booking. We do not sell your personal data to third parties. We may share information with law enforcement if required by law.</p>
 
                     <h2>4. Data Security</h2>
                     <p>We implement reasonable security measures to protect your information from unauthorized access, alteration, or disclosure.</p>
