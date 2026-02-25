@@ -241,6 +241,20 @@ const ChatSchema = new mongoose.Schema({
   }
 }, { timestamps: true });
 
+ChatSchema.set('toJSON', {
+  virtuals: true,
+  transform: (doc, ret) => {
+    ret.id = ret._id.toString();
+    delete ret._id;
+    delete ret.__v;
+    // Convert Map to plain object for JSON serialization
+    if (ret.participantNames instanceof Map) {
+      ret.participantNames = Object.fromEntries(ret.participantNames);
+    }
+    return ret;
+  }
+});
+
 // Create models
 const User = mongoose.model('User', UserSchema);
 const Job = mongoose.model('Job', JobSchema);
@@ -938,6 +952,90 @@ app.get('/api/chats/:otherUserId', authenticateToken, async (req, res) => {
   }
 });
 
+// Get messages for a specific chat
+app.get('/api/chats/:chatId/messages', authenticateToken, async (req, res) => {
+  try {
+    const user = await User.findOne({ email: req.user.email });
+    const userId = user._id.toString();
+    const chatId = req.params.chatId;
+
+    const chat = await Chat.findById(chatId);
+    if (!chat) {
+      return res.status(404).json({ error: 'Chat not found' });
+    }
+
+    // Verify user is a participant
+    if (!chat.participants.includes(userId)) {
+      return res.status(403).json({ error: 'Access denied' });
+    }
+
+    // Return messages with proper id fields
+    const messages = chat.messages.map((msg, index) => ({
+      id: msg._id ? msg._id.toString() : `${chatId}-msg-${index}`,
+      senderId: msg.senderId,
+      senderName: msg.senderName,
+      text: msg.text,
+      timestamp: msg.timestamp,
+      read: msg.read
+    }));
+
+    res.json(messages);
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// Send a message in a specific chat
+app.post('/api/chats/:chatId/messages', authenticateToken, async (req, res) => {
+  try {
+    const { text } = req.body;
+    const user = await User.findOne({ email: req.user.email });
+    const userId = user._id.toString();
+    const chatId = req.params.chatId;
+
+    const chat = await Chat.findById(chatId);
+    if (!chat) {
+      return res.status(404).json({ error: 'Chat not found' });
+    }
+
+    // Verify user is a participant
+    if (!chat.participants.includes(userId)) {
+      return res.status(403).json({ error: 'Access denied' });
+    }
+
+    const message = {
+      senderId: userId,
+      senderName: user.fullName || user.email,
+      text,
+      timestamp: new Date(),
+      read: false
+    };
+
+    chat.messages.push(message);
+    chat.lastMessage = {
+      text,
+      timestamp: message.timestamp,
+      senderId: userId
+    };
+
+    await chat.save();
+
+    // Return the new message with id
+    const newMessage = chat.messages[chat.messages.length - 1];
+    res.json({
+      id: newMessage._id ? newMessage._id.toString() : `${chatId}-msg-${chat.messages.length - 1}`,
+      senderId: newMessage.senderId,
+      senderName: newMessage.senderName,
+      text: newMessage.text,
+      timestamp: newMessage.timestamp,
+      read: newMessage.read
+    });
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// Legacy endpoint - kept for backward compatibility
 app.post('/api/chats/:otherUserId/messages', authenticateToken, async (req, res) => {
   try {
     const { text } = req.body;
