@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { MailIcon, PhoneIcon, MapPinIcon } from './icons';
+import { MailIcon, MapPinIcon } from './icons';
 import { apiService } from '../services/apiService';
 
 export const ContactPage: React.FC = () => {
@@ -10,7 +10,6 @@ export const ContactPage: React.FC = () => {
         topic: '',
         name: '',
         email: '',
-        phone: '',
         message: ''
     });
 
@@ -76,15 +75,9 @@ export const ContactPage: React.FC = () => {
                                         <label htmlFor="name" className="block text-sm font-medium text-gray-700">Your Name *</label>
                                         <input type="text" name="name" id="name" value={formData.name} onChange={handleInputChange} required maxLength={100} className="mt-1 block w-full shadow-sm sm:text-sm border-gray-600 rounded-md focus:ring-primary focus:border-primary bg-dark text-light placeholder-gray-400"/>
                                     </div>
-                                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                                        <div>
-                                            <label htmlFor="email" className="block text-sm font-medium text-gray-700">Email Address *</label>
-                                            <input type="email" name="email" id="email" value={formData.email} onChange={handleInputChange} required className="mt-1 block w-full shadow-sm sm:text-sm border-gray-600 rounded-md focus:ring-primary focus:border-primary bg-dark text-light placeholder-gray-400"/>
-                                        </div>
-                                        <div>
-                                            <label htmlFor="phone" className="block text-sm font-medium text-gray-700">Phone Number</label>
-                                            <input type="tel" name="phone" id="phone" value={formData.phone} onChange={handleInputChange} pattern="[0-9]{11}" title="Please enter a valid 11-digit Nigerian phone number." maxLength={11} className="mt-1 block w-full shadow-sm sm:text-sm border-gray-600 rounded-md focus:ring-primary focus:border-primary bg-dark text-light placeholder-gray-400"/>
-                                        </div>
+                                    <div>
+                                        <label htmlFor="email" className="block text-sm font-medium text-gray-700">Email Address *</label>
+                                        <input type="email" name="email" id="email" value={formData.email} onChange={handleInputChange} required className="mt-1 block w-full shadow-sm sm:text-sm border-gray-600 rounded-md focus:ring-primary focus:border-primary bg-dark text-light placeholder-gray-400"/>
                                     </div>
                                     <div>
                                         <label htmlFor="message" className="block text-sm font-medium text-gray-700">Message *</label>
