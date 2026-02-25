@@ -1395,9 +1395,9 @@ app.post('/api/bookings/:bookingId/complete', authenticateToken, async (req, res
     booking.status = 'Completed';
     booking.jobApprovedByClient = true;
     
-    // If payment method is Direct, mark payment as completed
+    // If payment method is Direct, mark payment as paid
     if (booking.paymentMethod === 'Direct') {
-      booking.paymentStatus = 'Completed';
+      booking.paymentStatus = 'Paid';
     }
     
     await booking.save();
@@ -1412,7 +1412,7 @@ app.post('/api/bookings/:bookingId/complete', authenticateToken, async (req, res
                 ...b, 
                 status: 'Completed', 
                 jobApprovedByClient: true,
-                paymentStatus: booking.paymentMethod === 'Direct' ? 'Completed' : b.paymentStatus
+                paymentStatus: booking.paymentMethod === 'Direct' ? 'Paid' : b.paymentStatus
               } 
             : b
         )
