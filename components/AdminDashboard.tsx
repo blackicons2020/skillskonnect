@@ -3,7 +3,7 @@
 
 import React, { useState, useMemo, useEffect } from 'react';
 import { User, Booking, Receipt, AdminRole, SupportTicket, Job } from '../types';
-import { UserGroupIcon, StarIcon, XCircleIcon, EyeIcon, LifebuoyIcon } from './icons';
+import { UserGroupIcon, StarIcon, XCircleIcon, EyeIcon, LifebuoyIcon, CheckBadgeIcon } from './icons';
 import { UserDetailsModal } from './UserDetailsModal';
 import { AdminConfirmationModal } from './AdminConfirmationModal';
 import { ReceiptViewerModal } from './ReceiptViewerModal';
@@ -235,7 +235,10 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ user: currentUse
                         {users.map((user) => (
                             <tr key={user.id}>
                                 <td className="px-6 py-4 whitespace-nowrap">
-                                    <div className="text-sm font-medium text-gray-900">{user.fullName}</div>
+                                    <div className="flex items-center gap-1.5">
+                                        <div className="text-sm font-medium text-gray-900">{user.fullName}</div>
+                                        {user.isVerified && <CheckBadgeIcon className="w-5 h-5 text-secondary" />}
+                                    </div>
                                 </td>
                                 <td className="px-6 py-4 whitespace-nowrap">
                                     <div className="text-sm text-gray-900">{user.email}</div>

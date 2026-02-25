@@ -1,7 +1,7 @@
 
 import React, { useState } from 'react';
 import { User } from '../types';
-import { XCircleIcon, EyeIcon } from './icons';
+import { XCircleIcon, EyeIcon, CheckBadgeIcon } from './icons';
 import { DocumentViewerModal } from './DocumentViewerModal';
 
 interface UserDetailsModalProps {
@@ -133,7 +133,10 @@ export const UserDetailsModal: React.FC<UserDetailsModalProps> = ({ user, onClos
                     <div className="flex items-center space-x-4">
                         <img className="h-16 w-16 rounded-full object-cover" src={user.profilePhoto instanceof File ? URL.createObjectURL(user.profilePhoto) : (typeof user.profilePhoto === 'string' ? user.profilePhoto : 'https://avatar.iran.liara.run/public')} alt="Profile"/>
                         <div>
-                            <h3 className="text-xl font-bold text-gray-900">{user.fullName}</h3>
+                            <div className="flex items-center gap-1.5">
+                                <h3 className="text-xl font-bold text-gray-900">{user.fullName}</h3>
+                                {user.isVerified && <CheckBadgeIcon className="w-6 h-6 text-secondary" />}
+                            </div>
                             <p className="text-sm text-gray-500 capitalize">{user.role} - {user.clientType || user.cleanerType}</p>
                         </div>
                     </div>
