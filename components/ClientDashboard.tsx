@@ -86,6 +86,7 @@ interface ClientDashboardProps {
     user: User;
     allCleaners: Cleaner[];
     allUsers?: User[];
+    allJobs?: Job[];
     onSelectCleaner: (cleaner: Cleaner) => void;
     initialFilters?: { service: string, location: string, minPrice: string, maxPrice: string, minRating: string } | null;
     clearInitialFilters: () => void;
@@ -100,7 +101,7 @@ interface ClientDashboardProps {
     initialTab?: 'find' | 'bookings' | 'messages' | 'support' | 'profile' | 'verification' | 'jobs';
 }
 
-export const ClientDashboard: React.FC<ClientDashboardProps> = ({ user, allCleaners, allUsers = [], onSelectCleaner, initialFilters, clearInitialFilters, onNavigate, onCancelBooking, onReviewSubmit, onApproveJobCompletion, onUploadBookingReceipt, onUpdateUser, onRefreshJobs, appError, initialTab }) => {
+export const ClientDashboard: React.FC<ClientDashboardProps> = ({ user, allCleaners, allUsers = [], allJobs = [], onSelectCleaner, initialFilters, clearInitialFilters, onNavigate, onCancelBooking, onReviewSubmit, onApproveJobCompletion, onUploadBookingReceipt, onUpdateUser, onRefreshJobs, appError, initialTab }) => {
     const [recommendations, setRecommendations] = useState<string[]>([]);
     const [isRecsLoading, setIsRecsLoading] = useState(true);
     
@@ -938,9 +939,14 @@ export const ClientDashboard: React.FC<ClientDashboardProps> = ({ user, allClean
                     {/* Posted Jobs List */}
                     <div className="bg-white p-6 rounded-lg shadow-md">
                         <h2 className="text-2xl font-bold text-dark mb-4">My Posted Jobs</h2>
-                        {user.postedJobs && user.postedJobs.length > 0 ? (
+                        {(() => {
+                            // Prefer allJobs (live data with current applicant counts) over
+                            // the stale user.postedJobs embedded in the user document.
+                            const liveJobs = allJobs.filter(j => j.clientId === user.id);
+                            const jobsToShow = liveJobs.length > 0 ? liveJobs : (user.postedJobs || []);
+                            return jobsToShow.length > 0 ? (
                             <div className="space-y-4">
-                                {user.postedJobs.map(job => (
+                                {jobsToShow.map(job => (
                                     <div key={job.id} className="p-4 border border-gray-200 rounded-lg hover:shadow-md transition-shadow">
                                         <div className="flex justify-between items-start mb-3">
                                             <div>
@@ -1016,7 +1022,8 @@ export const ClientDashboard: React.FC<ClientDashboardProps> = ({ user, allClean
                                     <p className="text-sm text-gray-400 mt-2">Post your first job above to connect with skilled workers!</p>
                                 )}
                             </div>
-                        )}
+                        );
+                        })()}
                     </div>
                 </div>
             )}

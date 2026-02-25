@@ -42,6 +42,14 @@ const ProfileField: React.FC<{ label: string; value?: string | number | null | s
 
 
 export const Dashboard: React.FC<DashboardProps> = ({ user, onUpdateUser, onNavigate, onUploadSubscriptionReceipt, initialTab, allJobs = [] }) => {
+    // Local set tracking which jobs this worker has applied to.
+    // Initialised from user.appliedJobs (persisted) so it survives page reloads.
+    // Using local state avoids sending the entire user object to the backend on
+    // every single application, which was causing errors after 3+ applications.
+    const [localAppliedJobIds, setLocalAppliedJobIds] = useState<Set<string>>(
+        () => new Set(user.appliedJobs || [])
+    );
+
     // Check if profile is incomplete
     const isProfileIncomplete = !user.userType || !user.phoneNumber || !user.country;
     
@@ -847,7 +855,10 @@ export const Dashboard: React.FC<DashboardProps> = ({ user, onUpdateUser, onNavi
                             <div className="space-y-4">
                                 {allJobs && allJobs.length > 0 ? (
                                     allJobs.map(job => {
-                                        const hasApplied = user.appliedJobs?.includes(job.id) || false;
+                                        const hasApplied = localAppliedJobIds.has(job.id) ||
+                                            (job.applicants || []).some((a: any) =>
+                                                a.workerId === user.id || a.workerId === (user as any)._id?.toString()
+                                            );
                                         const isOwnJob = job.clientId === user.id;
                                         
                                         if (isOwnJob) return null; // Don't show user's own jobs
@@ -906,12 +917,14 @@ export const Dashboard: React.FC<DashboardProps> = ({ user, onUpdateUser, onNavi
                                                                 onClick={async () => {
                                                                     try {
                                                                         await apiService.applyToJob(job.id);
-                                                                        // Update local user state to reflect the application
-                                                                        const updatedUser = {
-                                                                            ...user,
-                                                                            appliedJobs: [...(user.appliedJobs || []), job.id]
-                                                                        };
-                                                                        onUpdateUser(updatedUser);
+                                                                        // Update local tracking state — no need to send
+                                                                        // the whole user object to the server just for this.
+                                                                        // The backend persists appliedJobs atomically via $addToSet.
+                                                                        setLocalAppliedJobIds(prev => {
+                                                                            const next = new Set(prev);
+                                                                            next.add(job.id);
+                                                                            return next;
+                                                                        });
                                                                         alert('Application submitted! The client will review your profile and contact you if interested.');
                                                                     } catch (error: any) {
                                                                         alert(error.message || 'Failed to submit application. Please try again.');

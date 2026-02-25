@@ -1,9 +1,21 @@
 import React from 'react';
 import { Job, User } from '../types';
 
+// Enriched applicant: application fields + worker profile fields merged
+export interface EnrichedApplicant extends Partial<User> {
+    workerId: string;
+    workerName: string;
+    workerEmail: string;
+    positionApplied?: string;
+    proposal?: string;
+    proposedPrice?: number;
+    appliedAt?: string | Date;
+    status?: string;
+}
+
 interface JobApplicantsModalProps {
     job: Job;
-    allUsers: User[];
+    allUsers: (User | EnrichedApplicant)[];
     onClose: () => void;
     onSelectWorker?: (workerId: string) => void;
     onStartChat?: (workerId: string, workerName: string) => void;
@@ -68,7 +80,10 @@ export const JobApplicantsModal: React.FC<JobApplicantsModalProps> = ({ job, all
                                                     <h3 className="text-lg font-semibold text-gray-900">
                                                         {applicant.fullName}
                                                     </h3>
-                                                    <p className="text-sm text-gray-600">
+                                                    <p className="text-sm font-medium text-primary">
+                                                        📋 Applied for: {(applicant as EnrichedApplicant).positionApplied || (applicant as any).workerName || job.service || 'General'}
+                                                    </p>
+                                                    <p className="text-sm text-gray-500">
                                                         {applicant.userType || 'Worker'}
                                                     </p>
                                                 </div>
@@ -105,6 +120,16 @@ export const JobApplicantsModal: React.FC<JobApplicantsModalProps> = ({ job, all
                                                 <p className="mt-2 text-sm text-gray-600 line-clamp-2">
                                                     {applicant.bio}
                                                 </p>
+                                            )}
+
+                                            {/* Proposal / Cover Letter */}
+                                            {(applicant as EnrichedApplicant).proposal && (
+                                                <div className="mt-2 p-2 bg-blue-50 rounded-md">
+                                                    <p className="text-xs font-semibold text-blue-700 mb-1">Cover Letter / Proposal:</p>
+                                                    <p className="text-sm text-gray-700 line-clamp-3">
+                                                        {(applicant as EnrichedApplicant).proposal}
+                                                    </p>
+                                                </div>
                                             )}
 
                                             {/* Location & Experience */}

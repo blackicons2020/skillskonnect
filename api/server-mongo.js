@@ -166,6 +166,7 @@ const JobSchema = new mongoose.Schema({
     workerId: String,
     workerName: String,
     workerEmail: String,
+    positionApplied: String,
     proposal: String,
     proposedPrice: Number,
     appliedAt: Date,
@@ -821,6 +822,7 @@ app.post('/api/jobs/:jobId/apply', authenticateToken, async (req, res) => {
       workerId: worker._id.toString(),
       workerName: worker.fullName || worker.email,
       workerEmail: worker.email,
+      positionApplied: job.service || job.category || job.title || 'General',
       proposal: proposal || '',
       proposedPrice: proposedPrice ? Number(proposedPrice) : 0,
       appliedAt: new Date(),
@@ -833,6 +835,14 @@ app.post('/api/jobs/:jobId/apply', authenticateToken, async (req, res) => {
       req.params.jobId,
       { $push: { applicants: application } },
       { new: true, runValidators: false }
+    );
+
+    // Persist appliedJobs on the worker using $addToSet to avoid duplicates
+    // This is atomic and doesn't require sending the full user object from the client
+    await User.findByIdAndUpdate(
+      worker._id,
+      { $addToSet: { appliedJobs: req.params.jobId } },
+      { runValidators: false }
     );
 
     res.json({
@@ -856,7 +866,45 @@ app.get('/api/jobs/:jobId/applicants', authenticateToken, async (req, res) => {
       return res.status(403).json({ error: 'Not authorized' });
     }
 
-    res.json(job.applicants);
+    // Enrich applicants with full worker profile data
+    const workerIds = job.applicants.map(a => a.workerId).filter(Boolean);
+    const workerProfiles = await User.find({ _id: { $in: workerIds } }).select('-password');
+    const profileMap = {};
+    workerProfiles.forEach(w => { profileMap[w._id.toString()] = w; });
+
+    const enrichedApplicants = job.applicants.map(applicant => {
+      const profile = profileMap[applicant.workerId];
+      const p = profile ? (profile.toObject ? profile.toObject() : { ...profile }) : {};
+      return {
+        // Application-specific fields
+        workerId: applicant.workerId,
+        workerName: applicant.workerName,
+        workerEmail: applicant.workerEmail,
+        positionApplied: applicant.positionApplied || job.service || job.category || job.title || 'General',
+        proposal: applicant.proposal || '',
+        proposedPrice: applicant.proposedPrice || 0,
+        appliedAt: applicant.appliedAt,
+        status: applicant.status || 'pending',
+        // Worker profile fields mirrored as User-shape fields for the modal
+        id: applicant.workerId,
+        fullName: p.fullName || applicant.workerName || applicant.workerEmail,
+        email: p.email || applicant.workerEmail,
+        profilePicture: p.profilePicture || p.profilePhoto || null,
+        bio: p.bio || null,
+        services: p.services || [],
+        city: p.city || null,
+        state: p.state || null,
+        yearsOfExperience: p.yearsOfExperience || p.experience || null,
+        subscriptionTier: p.subscriptionTier || null,
+        isVerified: p.isVerified || false,
+        phoneNumber: p.phone || p.phoneNumber || null,
+        userType: p.userType || 'worker',
+        chargeHourly: p.chargeHourly || null,
+        chargeDaily: p.chargeDaily || null,
+      };
+    });
+
+    res.json(enrichedApplicants);
   } catch (error) {
     res.status(500).json({ error: error.message });
   }

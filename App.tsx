@@ -631,6 +631,7 @@ const App: React.FC = () => {
                         user={user}
                         allCleaners={allCleaners}
                         allUsers={allUsers}
+                        allJobs={allJobs}
                         onSelectCleaner={handleSelectCleaner}
                         initialFilters={initialFilters}
                         clearInitialFilters={() => setInitialFilters(null)}
