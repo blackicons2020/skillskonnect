@@ -871,20 +871,20 @@ export const Dashboard: React.FC<DashboardProps> = ({ user, onUpdateUser, onNavi
                                                         <div className="grid grid-cols-2 md:grid-cols-4 gap-3 text-sm">
                                                             <div>
                                                                 <span className="text-gray-500 block">Posted by:</span>
-                                                                <p className="font-medium text-dark">{job.clientName}</p>
+                                                                <p className="font-medium text-dark">{job.clientName || 'N/A'}</p>
                                                             </div>
                                                             <div>
                                                                 <span className="text-gray-500 block">Location:</span>
-                                                                <p className="font-medium text-dark">{job.city}, {job.state}</p>
+                                                                <p className="font-medium text-dark">{job.city || 'N/A'}{job.state ? `, ${job.state}` : ''}</p>
                                                             </div>
                                                             <div>
                                                                 <span className="text-gray-500 block">Start Date:</span>
-                                                                <p className="font-medium text-dark">{new Date(job.startDate).toLocaleDateString()}</p>
+                                                                <p className="font-medium text-dark">{job.startDate ? new Date(job.startDate).toLocaleDateString() : 'N/A'}</p>
                                                             </div>
                                                             <div>
                                                                 <span className="text-gray-500 block">Budget:</span>
-                                                                <p className="font-medium text-primary">₦{job.budget.toLocaleString()}</p>
-                                                                <p className="text-xs text-gray-500">({job.budgetType})</p>
+                                                                <p className="font-medium text-primary">₦{(job.budget || 0).toLocaleString()}</p>
+                                                                <p className="text-xs text-gray-500">({job.budgetType || 'N/A'})</p>
                                                             </div>
                                                         </div>
                                                         <div className="mt-3 text-xs text-gray-500">
@@ -974,7 +974,7 @@ export const Dashboard: React.FC<DashboardProps> = ({ user, onUpdateUser, onNavi
                                                 <div className="text-sm text-gray-500">{booking.date}</div>
                                             </td>
                                             <td className="px-6 py-4 whitespace-nowrap">
-                                                <div className="text-sm font-bold text-dark">₦{booking.amount.toLocaleString()}</div>
+                                                <div className="text-sm font-bold text-dark">₦{(booking.amount || 0).toLocaleString()}</div>
                                             </td>
                                             <td className="px-6 py-4 whitespace-nowrap">
                                                  <span className={`px-2 inline-flex text-xs leading-5 font-semibold rounded-full ${
