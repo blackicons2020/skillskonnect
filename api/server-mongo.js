@@ -417,61 +417,27 @@ app.post('/api/auth/signup', async (req, res) => {
     const hashedPassword = await bcrypt.hash(password, 8);
     const role = userType === 'admin' ? 'admin' : 'user';
 
-    // Generate e-mail verification token
-    const rawToken = crypto.randomBytes(32).toString('hex');
-    const hashedToken = crypto.createHash('sha256').update(rawToken).digest('hex');
-
-    await User.create({
+    const newUser = await User.create({
       email,
       password: hashedPassword,
       userType,
       role,
-      isProfileComplete: false,
-      isVerified: false,
-      emailVerificationToken: hashedToken,
-      emailVerificationExpires: new Date(Date.now() + 24 * 60 * 60 * 1000), // 24 hours
+      isProfileComplete: false
     });
 
-    const frontendUrl = process.env.FRONTEND_URL || 'https://skillskonnect.vercel.app';
-    const verifyUrl = `${frontendUrl}/?token=${rawToken}&action=verifyEmail`;
-    await sendVerificationEmail(email, verifyUrl);
+    const token = jwt.sign(
+      { email: newUser.email, userType: newUser.userType, role: newUser.role, isAdmin: false },
+      JWT_SECRET,
+      { expiresIn: '7d' }
+    );
 
-    // In mock mode (no SMTP), include the URL in the response so testers can verify manually
-    const mockMode = isMockEmail();
     res.status(201).json({
-      message: 'Account created! Please check your email to verify your account before signing in.',
-      ...(mockMode ? { verifyUrl, _mockMode: true } : {}),
+      message: 'User created successfully',
+      token,
+      user: normalizeUser(newUser)
     });
   } catch (error) {
     console.error('Signup error:', error);
-    res.status(500).json({ error: error.message });
-  }
-});
-
-// POST /api/auth/verify-email
-app.post('/api/auth/verify-email', async (req, res) => {
-  try {
-    const { token } = req.body;
-    if (!token) return res.status(400).json({ error: 'Verification token is required' });
-
-    const hashedToken = crypto.createHash('sha256').update(token).digest('hex');
-    const user = await User.findOne({
-      emailVerificationToken: hashedToken,
-      emailVerificationExpires: { $gt: new Date() },
-    });
-
-    if (!user) {
-      return res.status(400).json({ error: 'This verification link is invalid or has expired. Please register again or contact support.' });
-    }
-
-    user.isVerified = true;
-    user.emailVerificationToken = undefined;
-    user.emailVerificationExpires = undefined;
-    await user.save();
-
-    res.json({ message: 'Email verified successfully! You can now sign in.' });
-  } catch (error) {
-    console.error('Email verification error:', error);
     res.status(500).json({ error: error.message });
   }
 });
@@ -492,11 +458,6 @@ app.post('/api/auth/login', async (req, res) => {
     const isValidPassword = await bcrypt.compare(password, user.password);
     if (!isValidPassword) {
       return res.status(401).json({ error: 'Invalid credentials' });
-    }
-
-    // Block unverified accounts
-    if (user.isVerified === false) {
-      return res.status(403).json({ error: 'Please verify your email before signing in. Check your inbox for the verification link.' });
     }
 
     const token = jwt.sign(
@@ -1585,28 +1546,24 @@ app.post('/api/auth/register', async (req, res) => {
     const hashedPassword = await bcrypt.hash(password, 8);
     const role = userType === 'admin' ? 'admin' : 'user';
 
-    const rawToken = crypto.randomBytes(32).toString('hex');
-    const hashedToken = crypto.createHash('sha256').update(rawToken).digest('hex');
-
-    await User.create({
+    const newUser = await User.create({
       email,
       password: hashedPassword,
       userType,
       role,
-      isProfileComplete: false,
-      isVerified: false,
-      emailVerificationToken: hashedToken,
-      emailVerificationExpires: new Date(Date.now() + 24 * 60 * 60 * 1000),
+      isProfileComplete: false
     });
 
-    const frontendUrl = process.env.FRONTEND_URL || 'https://skillskonnect.vercel.app';
-    const verifyUrl = `${frontendUrl}/?token=${rawToken}&action=verifyEmail`;
-    await sendVerificationEmail(email, verifyUrl);
+    const token = jwt.sign(
+      { email: newUser.email, userType: newUser.userType, role: newUser.role, isAdmin: false },
+      JWT_SECRET,
+      { expiresIn: '7d' }
+    );
 
-    const mockMode = isMockEmail();
     res.status(201).json({
-      message: 'Account created! Please check your email to verify your account before signing in.',
-      ...(mockMode ? { verifyUrl, _mockMode: true } : {}),
+      message: 'User created successfully',
+      token,
+      user: normalizeUser(newUser)
     });
   } catch (error) {
     console.error('Register error:', error);
