@@ -259,6 +259,7 @@ const SupportTicketSchema = new mongoose.Schema({
   userId: { type: String, required: true },
   userName: String,
   userEmail: String,
+  userRole: { type: String, default: 'user' },
   category: { type: String, required: true },
   subject: { type: String, required: true },
   message: { type: String, required: true },
@@ -1439,6 +1440,7 @@ app.post('/api/support', authenticateToken, async (req, res) => {
       userId: user._id.toString(),
       userName: user.fullName,
       userEmail: user.email,
+      userRole: user.role || 'user',
       category,
       subject,
       message
@@ -1494,11 +1496,27 @@ app.post('/api/admin/support/:id/resolve', authenticateToken, async (req, res) =
   }
 });
 
-// Contact form endpoint
+// Contact form endpoint - saves as a SupportTicket so admins can see it
 app.post('/api/contact', async (req, res) => {
   try {
-    // Just log and return success - can be enhanced later
-    console.log('Contact form submission:', req.body);
+    const { topic, name, email, phone, message } = req.body;
+    if (!name || !email || !message) {
+      return res.status(400).json({ error: 'name, email, and message are required' });
+    }
+
+    const fullMessage = phone ? `${message}\n\n[Phone: ${phone}]` : message;
+
+    await SupportTicket.create({
+      userId: 'guest',
+      userName: name,
+      userEmail: email,
+      userRole: 'Guest',
+      category: topic || 'Other',
+      subject: topic || 'Contact Form Enquiry',
+      message: fullMessage
+    });
+
+    console.log('Contact form submission saved:', { name, email, topic });
     res.json({ message: 'Thank you for contacting us. We will get back to you soon.' });
   } catch (error) {
     res.status(500).json({ error: error.message });
