@@ -217,6 +217,14 @@ export const apiService = {
         return handleResponse(response);
     },
 
+    getBookings: async (): Promise<Booking[]> => {
+        const response = await fetch(`${API_URL}/bookings`, {
+            method: 'GET',
+            headers: getHeaders(),
+        });
+        return handleResponse(response);
+    },
+
     cancelBooking: async (bookingId: string): Promise<Booking> => {
         const response = await fetch(`${API_URL}/bookings/${bookingId}/cancel`, {
             method: 'POST',

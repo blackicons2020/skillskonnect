@@ -157,6 +157,15 @@ const App: React.FC = () => {
             if (token) {
                 try {
                     const currentUser = await apiService.getMe();
+                    
+                    // Fetch bookings separately and merge with user data
+                    try {
+                        const bookings = await apiService.getBookings();
+                        currentUser.bookingHistory = bookings;
+                    } catch (error) {
+                        console.error("Failed to fetch bookings:", error);
+                    }
+                    
                     await handleAuthSuccess(currentUser, false); // Don't navigate on session load, stay on current or default
                 } catch (error) {
                     console.error("Session expired or invalid.", error);
@@ -390,7 +399,14 @@ const App: React.FC = () => {
             };
             const newBooking = await apiService.createBooking(bookingData);
 
-            setUser(prev => prev ? ({ ...prev, bookingHistory: [...(prev.bookingHistory || []), newBooking] }) : null);
+            // Fetch updated bookings from backend to ensure sync
+            try {
+                const updatedBookings = await apiService.getBookings();
+                setUser(prev => prev ? ({ ...prev, bookingHistory: updatedBookings }) : null);
+            } catch (error) {
+                // Fallback to local state update if fetch fails
+                setUser(prev => prev ? ({ ...prev, bookingHistory: [...(prev.bookingHistory || []), newBooking] }) : null);
+            }
 
             handleCloseBookingModals();
             alert(`Booking created! ${paymentMethod === 'Escrow' ? 'Please upload your payment receipt from your dashboard.' : ''}`);
@@ -403,7 +419,16 @@ const App: React.FC = () => {
     const handleCancelBooking = async (bookingId: string) => {
         try {
             const cancelledBooking = await apiService.cancelBooking(bookingId);
-            setUser(prev => prev ? ({ ...prev, bookingHistory: prev.bookingHistory?.map(b => b.id === bookingId ? cancelledBooking : b) }) : null);
+            
+            // Fetch updated bookings from backend to ensure sync
+            try {
+                const updatedBookings = await apiService.getBookings();
+                setUser(prev => prev ? ({ ...prev, bookingHistory: updatedBookings }) : null);
+            } catch (error) {
+                // Fallback to local state update if fetch fails
+                setUser(prev => prev ? ({ ...prev, bookingHistory: prev.bookingHistory?.map(b => b.id === bookingId ? cancelledBooking : b) }) : null);
+            }
+            
             alert("Booking cancelled successfully.");
         } catch (e: any) { alert(`Cancellation failed: ${e.message}`); }
     };
@@ -411,14 +436,31 @@ const App: React.FC = () => {
     const handleApproveJobCompletion = async (bookingId: string) => {
         try {
             const completedBooking = await apiService.markJobComplete(bookingId);
-            setUser(prev => prev ? ({ ...prev, bookingHistory: prev.bookingHistory?.map(b => b.id === bookingId ? completedBooking : b) }) : null);
+            
+            // Fetch updated bookings from backend to ensure sync
+            try {
+                const updatedBookings = await apiService.getBookings();
+                setUser(prev => prev ? ({ ...prev, bookingHistory: updatedBookings }) : null);
+            } catch (error) {
+                // Fallback to local state update if fetch fails
+                setUser(prev => prev ? ({ ...prev, bookingHistory: prev.bookingHistory?.map(b => b.id === bookingId ? completedBooking : b) }) : null);
+            }
         } catch (e: any) { alert(`Failed to mark as complete: ${e.message}`); }
     };
 
     const handleReviewSubmit = async (bookingId: string, cleanerId: string, reviewData: Omit<Review, 'reviewerName'>) => {
         try {
             await apiService.submitReview(bookingId, { ...reviewData, cleanerId });
-            setUser(prev => prev ? ({ ...prev, bookingHistory: prev.bookingHistory?.map(b => b.id === bookingId ? { ...b, reviewSubmitted: true } : b) }) : null);
+            
+            // Fetch updated bookings from backend to ensure sync
+            try {
+                const updatedBookings = await apiService.getBookings();
+                setUser(prev => prev ? ({ ...prev, bookingHistory: updatedBookings }) : null);
+            } catch (error) {
+                // Fallback to local state update if fetch fails
+                setUser(prev => prev ? ({ ...prev, bookingHistory: prev.bookingHistory?.map(b => b.id === bookingId ? { ...b, reviewSubmitted: true } : b) }) : null);
+            }
+            
             alert("Review submitted successfully!");
         } catch (e: any) { alert(`Failed to submit review: ${e.message}`); }
     };
