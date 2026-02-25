@@ -364,7 +364,7 @@ function normalizeUser(user) {
   return userObj;
 }
 
-const authenticateToken = async (req, res, next) => {
+const authenticateToken = (req, res, next) => {
   try {
     const authHeader = req.headers['authorization'];
     const token = authHeader && authHeader.split(' ')[1];
@@ -374,17 +374,11 @@ const authenticateToken = async (req, res, next) => {
     }
 
     const decoded = jwt.verify(token, JWT_SECRET);
-    const user = await User.findOne({ email: decoded.email });
-
-    if (!user) {
-      return res.status(404).json({ error: 'User not found' });
-    }
-
     req.user = {
-      id: user._id.toString(),
-      email: user.email,
-      userType: user.userType,
-      role: user.role
+      email: decoded.email,
+      userType: decoded.userType,
+      role: decoded.role || decoded.userType || 'user',
+      isAdmin: decoded.isAdmin || false
     };
 
     next();
@@ -408,7 +402,7 @@ app.post('/api/auth/signup', async (req, res) => {
       return res.status(409).json({ error: 'User already exists' });
     }
 
-    const hashedPassword = await bcrypt.hash(password, 10);
+    const hashedPassword = await bcrypt.hash(password, 8);
     const role = userType === 'admin' ? 'admin' : 'user';
 
     const newUser = await User.create({
@@ -420,7 +414,7 @@ app.post('/api/auth/signup', async (req, res) => {
     });
 
     const token = jwt.sign(
-      { email: newUser.email, userType: newUser.userType },
+      { email: newUser.email, userType: newUser.userType, role: newUser.role, isAdmin: false },
       JWT_SECRET,
       { expiresIn: '7d' }
     );
@@ -455,7 +449,7 @@ app.post('/api/auth/login', async (req, res) => {
     }
 
     const token = jwt.sign(
-      { email: user.email, userType: user.userType },
+      { email: user.email, userType: user.userType, role: user.role, isAdmin: user.isAdmin || false },
       JWT_SECRET,
       { expiresIn: '7d' }
     );
@@ -1340,7 +1334,7 @@ app.post('/api/auth/register', async (req, res) => {
       return res.status(409).json({ error: 'User already exists' });
     }
 
-    const hashedPassword = await bcrypt.hash(password, 10);
+    const hashedPassword = await bcrypt.hash(password, 8);
     const role = userType === 'admin' ? 'admin' : 'user';
 
     const newUser = await User.create({
@@ -1352,7 +1346,7 @@ app.post('/api/auth/register', async (req, res) => {
     });
 
     const token = jwt.sign(
-      { email: newUser.email, userType: newUser.userType },
+      { email: newUser.email, userType: newUser.userType, role: newUser.role, isAdmin: false },
       JWT_SECRET,
       { expiresIn: '7d' }
     );

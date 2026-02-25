@@ -141,36 +141,38 @@ const App: React.FC = () => {
             setIsLoading(true);
             setAppError(null);
 
-            // Always fetch cleaners and jobs first so landing page and worker dashboard works
-            try {
-                const [cleaners, jobs] = await Promise.allSettled([
-                    apiService.getAllCleaners(),
-                    apiService.getAllJobs()
-                ]);
-                if (cleaners.status === 'fulfilled') setAllCleaners(cleaners.value);
-                if (jobs.status === 'fulfilled') setAllJobs(jobs.value);
-            } catch (error: any) {
-                console.error("Failed to fetch initial data:", error);
-            }
-
             const token = localStorage.getItem('skillskonnect_token');
+
             if (token) {
-                try {
-                    const currentUser = await apiService.getMe();
-                    
-                    // Fetch bookings separately and merge with user data
-                    try {
-                        const bookings = await apiService.getBookings();
-                        currentUser.bookingHistory = bookings;
-                    } catch (error) {
-                        console.error("Failed to fetch bookings:", error);
+                // Fetch everything needed in one parallel batch
+                const [cleaners, jobs, meResult, bookingsResult] = await Promise.allSettled([
+                    apiService.getAllCleaners(),
+                    apiService.getAllJobs(),
+                    apiService.getMe(),
+                    apiService.getBookings(),
+                ]);
+
+                if (cleaners.status === 'fulfilled') setAllCleaners(cleaners.value);
+                if (jobs.status === 'fulfilled') setAllJobs(jobs.value as any);
+
+                if (meResult.status === 'fulfilled') {
+                    const currentUser = meResult.value;
+                    if (bookingsResult.status === 'fulfilled') {
+                        currentUser.bookingHistory = bookingsResult.value as any;
                     }
-                    
-                    await handleAuthSuccess(currentUser, false); // Don't navigate on session load, stay on current or default
-                } catch (error) {
-                    console.error("Session expired or invalid.", error);
+                    await handleAuthSuccess(currentUser, false, true);
+                } else {
+                    console.error('Session expired or invalid.', (meResult as any).reason);
                     handleLogout();
                 }
+            } else {
+                // Not logged in — only load public data
+                const [cleaners, jobs] = await Promise.allSettled([
+                    apiService.getAllCleaners(),
+                    apiService.getAllJobs(),
+                ]);
+                if (cleaners.status === 'fulfilled') setAllCleaners(cleaners.value);
+                if (jobs.status === 'fulfilled') setAllJobs(jobs.value as any);
             }
 
             setIsLoading(false);
@@ -225,9 +227,19 @@ const App: React.FC = () => {
         }
     };
 
-    const handleAuthSuccess = async (userData: User, shouldNavigate = true) => {
+    const handleAuthSuccess = async (userData: User, shouldNavigate = true, skipRefetch = false) => {
         setUser(userData);
-        await refetchAllData(userData);
+        if (skipRefetch) {
+            // Data was pre-fetched in parallel — only fetch allUsers for admins (not needed for regular users)
+            if (userData.isAdmin) {
+                try {
+                    const users = await apiService.adminGetAllUsers();
+                    setAllUsers(users);
+                } catch (e) { console.error('Failed to fetch all users:', e); }
+            }
+        } else {
+            await refetchAllData(userData);
+        }
 
         if (cleanerToRememberForBooking) {
             // User had intended to book a cleaner. 
