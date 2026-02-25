@@ -133,5 +133,5 @@ export const chargeRateTypes = [
   "Per Hour",
   "Per Day",
   "Contract",
-  "Negotiable"
+  "Not Fixed"
 ];

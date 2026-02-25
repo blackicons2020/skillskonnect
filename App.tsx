@@ -737,6 +737,7 @@ const App: React.FC = () => {
             case 'searchResults':
                 return <SearchResultsPage
                     allCleaners={allCleaners}
+                    user={user}
                     onSelectCleaner={handleSelectCleaner}
                     initialFilters={initialFilters}
                     clearInitialFilters={() => setInitialFilters(null)}
@@ -757,6 +758,7 @@ const App: React.FC = () => {
             default:
                 return <LandingPage
                     cleaners={allCleaners}
+                    user={user}
                     onNavigate={handleNavigate}
                     onSelectCleaner={handleSelectCleaner}
                     onSearch={handleSearchFromHero}

@@ -748,7 +748,7 @@ export const Dashboard: React.FC<DashboardProps> = ({ user, onUpdateUser, onNavi
                                             {renderValueOrInput('chargeDaily', 'number', { min: 0, placeholder: 'e.g. 15000' })}
                                         </ProfileField>
 
-                                        <ProfileField label="Charge per Contract (₦)" value={formData.chargePerContractNegotiable ? 'Negotiable' : (formData.chargePerContract ? `₦${formData.chargePerContract.toLocaleString()}` : '')} isEditing={isEditing}>
+                                        <ProfileField label="Charge per Contract (₦)" value={formData.chargePerContractNegotiable ? 'Not Fixed' : (formData.chargePerContract ? `₦${formData.chargePerContract.toLocaleString()}` : '')} isEditing={isEditing}>
                                             <div className="flex flex-col gap-2 w-full">
                                                 <div className="flex items-center">
                                                     <input
@@ -766,7 +766,7 @@ export const Dashboard: React.FC<DashboardProps> = ({ user, onUpdateUser, onNavi
                                                         }}
                                                         className="h-4 w-4 text-primary focus:ring-secondary border-gray-300 rounded"
                                                     />
-                                                    <label htmlFor="negotiable" className="ml-2 block text-sm text-gray-700">Negotiable</label>
+                                                    <label htmlFor="negotiable" className="ml-2 block text-sm text-gray-700">Not Fixed</label>
                                                 </div>
                                                 {!formData.chargePerContractNegotiable && (
                                                     <input

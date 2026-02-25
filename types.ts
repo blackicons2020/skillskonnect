@@ -108,7 +108,7 @@ export type UserType =
   | 'Worker (Individual)' 
   | 'Worker (Registered Company)';
 
-export type ChargeRateType = 'Per Hour' | 'Per Day' | 'Contract' | 'Negotiable';
+export type ChargeRateType = 'Per Hour' | 'Per Day' | 'Contract' | 'Not Fixed';
 
 export interface VerificationDocuments {
   governmentId?: string; // For individual clients

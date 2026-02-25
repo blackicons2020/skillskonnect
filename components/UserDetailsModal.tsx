@@ -181,7 +181,7 @@ export const UserDetailsModal: React.FC<UserDetailsModalProps> = ({ user, onClos
                                 <dl className="divide-y divide-gray-200">
                                     <DetailRow label="Hourly Rate" value={user.chargeHourly ? `₦${user.chargeHourly.toLocaleString()}` : 'N/A'} />
                                     <DetailRow label="Daily Rate" value={user.chargeDaily ? `₦${user.chargeDaily.toLocaleString()}` : 'N/A'} />
-                                    <DetailRow label="Contract Rate" value={user.chargePerContractNegotiable ? 'Negotiable' : user.chargePerContract ? `₦${user.chargePerContract.toLocaleString()}`: 'N/A' } />
+                                    <DetailRow label="Contract Rate" value={user.chargePerContractNegotiable ? 'Not Fixed' : user.chargePerContract ? `₦${user.chargePerContract.toLocaleString()}`: 'N/A' } />
                                     <DetailRow label="Bank Name" value={user.bankName} />
                                     <DetailRow label="Account Number" value={user.accountNumber} />
                                     <DetailRow label="Subscription Tier" value={user.subscriptionTier} />

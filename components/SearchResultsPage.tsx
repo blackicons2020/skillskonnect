@@ -1,26 +1,46 @@
 
 import React, { useState, useEffect, useMemo } from 'react';
-import { Cleaner } from '../types';
+import { Cleaner, User } from '../types';
 import { MapPinIcon, BriefcaseIcon, ChevronDownIcon, CreditCardIcon, StarIcon, UserGroupIcon } from './icons';
 import { CleanerCard } from './CleanerCard';
 import { CLEANING_SERVICES } from '../constants/services';
 
+// Subscription tier scores for sorting priority
+const TIER_SCORES: Record<string, number> = { Elite: 5, Premium: 4, Pro: 3, Standard: 2, Basic: 1, Free: 0 };
+
+const getProximityScore = (
+    viewerCountry?: string, viewerState?: string, viewerCity?: string,
+    workerCountry?: string, workerState?: string, workerCity?: string
+): number => {
+    if (!viewerCountry) return 0;
+    const vc = (viewerCountry || '').toLowerCase();
+    const vs = (viewerState || '').toLowerCase();
+    const vci = (viewerCity || '').toLowerCase();
+    const wc = (workerCountry || '').toLowerCase();
+    const ws = (workerState || '').toLowerCase();
+    const wci = (workerCity || '').toLowerCase();
+    if (vci && wci && vci === wci && vs === ws && vc === wc) return 40;
+    if (vs && ws && vs === ws && vc === wc) return 30;
+    if (vc && wc && vc === wc) return 20;
+    return 0;
+};
+
 interface SearchResultsPageProps {
     allCleaners: Cleaner[];
+    user?: User | null;
     onSelectCleaner: (cleaner: Cleaner) => void;
     initialFilters?: { service: string, location: string, minPrice: string, maxPrice: string, minRating: string } | null;
     clearInitialFilters: () => void;
     appError: string | null;
 }
 
-export const SearchResultsPage: React.FC<SearchResultsPageProps> = ({ allCleaners, onSelectCleaner, initialFilters, clearInitialFilters, appError }) => {
+export const SearchResultsPage: React.FC<SearchResultsPageProps> = ({ allCleaners, user, onSelectCleaner, initialFilters, clearInitialFilters, appError }) => {
     const [activeFilters, setActiveFilters] = useState({ service: '', location: '', minPrice: '', maxPrice: '', minRating: '' });
     const [isAdvancedOpen, setIsAdvancedOpen] = useState(false);
 
     useEffect(() => {
         if (initialFilters) {
             setActiveFilters(initialFilters);
-            // If any advanced filter is set, open the advanced section
             if (initialFilters.minPrice || initialFilters.maxPrice || initialFilters.minRating) {
                 setIsAdvancedOpen(true);
             }
@@ -33,7 +53,7 @@ export const SearchResultsPage: React.FC<SearchResultsPageProps> = ({ allCleaner
 
         const { service, location, minPrice, maxPrice, minRating } = activeFilters;
 
-        return allCleaners.filter(cleaner => {
+        const filtered = allCleaners.filter(cleaner => {
             const serviceMatch = service ? cleaner.serviceTypes.includes(service) : true;
             const locationMatch = location 
                 ? cleaner.city.toLowerCase().includes(location.toLowerCase()) || 
@@ -61,7 +81,19 @@ export const SearchResultsPage: React.FC<SearchResultsPageProps> = ({ allCleaner
 
             return serviceMatch && locationMatch && priceMatch && ratingMatch;
         });
-    }, [activeFilters, allCleaners, appError]);
+
+        // Sort: subscription tier → proximity → rating → verified → reviews
+        return [...filtered].sort((a, b) => {
+            const tierDiff = (TIER_SCORES[b.subscriptionTier] ?? 0) - (TIER_SCORES[a.subscriptionTier] ?? 0);
+            if (tierDiff !== 0) return tierDiff;
+            const proxA = getProximityScore(user?.country, user?.state, user?.city, a.country, a.state, a.city);
+            const proxB = getProximityScore(user?.country, user?.state, user?.city, b.country, b.state, b.city);
+            if (proxB !== proxA) return proxB - proxA;
+            if (b.rating !== a.rating) return b.rating - a.rating;
+            if (b.isVerified !== a.isVerified) return (b.isVerified ? 1 : 0) - (a.isVerified ? 1 : 0);
+            return b.reviews - a.reviews;
+        });
+    }, [activeFilters, allCleaners, appError, user]);
 
     const resultsTitle = useMemo(() => {
         if (activeFilters.service || activeFilters.location || activeFilters.minPrice || activeFilters.maxPrice || activeFilters.minRating) return 'Filtered Results';

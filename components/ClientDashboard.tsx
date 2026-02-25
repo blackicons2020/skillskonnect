@@ -5,6 +5,26 @@ import { SparklesIcon, MapPinIcon, BriefcaseIcon, ChevronDownIcon, StarIcon, Cre
 import { CleanerCard } from './CleanerCard';
 import { getAiRecommendedServices } from '../services/geminiService';
 import { CLEANING_SERVICES } from '../constants/services';
+
+// Subscription tier scores for sorting priority
+const TIER_SCORES: Record<string, number> = { Elite: 5, Premium: 4, Pro: 3, Standard: 2, Basic: 1, Free: 0 };
+
+const getProximityScore = (
+    viewerCountry?: string, viewerState?: string, viewerCity?: string,
+    workerCountry?: string, workerState?: string, workerCity?: string
+): number => {
+    if (!viewerCountry) return 0;
+    const vc = (viewerCountry || '').toLowerCase();
+    const vs = (viewerState || '').toLowerCase();
+    const vci = (viewerCity || '').toLowerCase();
+    const wc = (workerCountry || '').toLowerCase();
+    const ws = (workerState || '').toLowerCase();
+    const wci = (workerCity || '').toLowerCase();
+    if (vci && wci && vci === wci && vs === ws && vc === wc) return 40;
+    if (vs && ws && vs === ws && vc === wc) return 30;
+    if (vc && wc && vc === wc) return 20;
+    return 0;
+};
 import { CancellationConfirmationModal } from './CancellationConfirmationModal';
 import { ReviewModal } from './ReviewModal';
 import { JobApplicantsModal } from './JobApplicantsModal';
@@ -280,7 +300,7 @@ export const ClientDashboard: React.FC<ClientDashboardProps> = ({ user, allClean
     const displayedCleaners = useMemo(() => {
         if (appError) return [];
         const { service, location, minPrice, maxPrice, minRating } = activeFilters;
-        return allCleaners.filter(cleaner => {
+        const filtered = allCleaners.filter(cleaner => {
             const serviceMatch = service ? cleaner.serviceTypes.includes(service) : true;
             const locationMatch = location 
                 ? cleaner.city.toLowerCase().includes(location.toLowerCase()) || 
@@ -304,7 +324,19 @@ export const ClientDashboard: React.FC<ClientDashboardProps> = ({ user, allClean
             }
             return serviceMatch && locationMatch && priceMatch && ratingMatch;
         });
-    }, [activeFilters, allCleaners, appError]);
+
+        // Sort: subscription tier → proximity → rating → verified → reviews
+        return [...filtered].sort((a, b) => {
+            const tierDiff = (TIER_SCORES[b.subscriptionTier] ?? 0) - (TIER_SCORES[a.subscriptionTier] ?? 0);
+            if (tierDiff !== 0) return tierDiff;
+            const proxA = getProximityScore(user?.country, user?.state, user?.city, a.country, a.state, a.city);
+            const proxB = getProximityScore(user?.country, user?.state, user?.city, b.country, b.state, b.city);
+            if (proxB !== proxA) return proxB - proxA;
+            if (b.rating !== a.rating) return b.rating - a.rating;
+            if (b.isVerified !== a.isVerified) return (b.isVerified ? 1 : 0) - (a.isVerified ? 1 : 0);
+            return b.reviews - a.reviews;
+        });
+    }, [activeFilters, allCleaners, appError, user]);
 
     const resultsTitle = useMemo(() => {
         if (activeFilters.service || activeFilters.location || activeFilters.minPrice || activeFilters.maxPrice || activeFilters.minRating) return 'Filtered Results';

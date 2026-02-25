@@ -395,7 +395,7 @@ export const SetupProfile: React.FC<SetupProfileProps> = ({ user, onSave, onNavi
                                         <input type="number" name="chargePerContract" id="chargePerContract" placeholder="e.g., 150000" value={formData.chargePerContract} onChange={handleInputChange} disabled={chargePerContractNegotiable} min="0" className="mt-1 block w-full shadow-sm sm:text-sm border-gray-600 rounded-md focus:ring-primary focus:border-primary bg-dark text-light placeholder-gray-400 disabled:bg-gray-800" />
                                         <div className="mt-2 flex items-center">
                                             <input id="negotiable" name="negotiable" type="checkbox" checked={chargePerContractNegotiable} onChange={(e) => { setChargePerContractNegotiable(e.target.checked); if (e.target.checked) setFormData(prev => ({ ...prev, chargePerContract: '' })); }} className="h-4 w-4 text-primary focus:ring-secondary border-gray-300 rounded" />
-                                            <label htmlFor="negotiable" className="ml-2 block text-sm text-gray-700">Negotiable</label>
+                                            <label htmlFor="negotiable" className="ml-2 block text-sm text-gray-700">Not Fixed</label>
                                         </div>
                                     </div>
                                 </FormSection>

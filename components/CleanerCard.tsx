@@ -96,7 +96,7 @@ export const CleanerCard: React.FC<CleanerCardProps> = ({ cleaner, onClick }) =>
                     </span>
                 </>
             ) : cleaner.chargePerContractNegotiable ? (
-                <span className="text-xl font-bold text-primary">Negotiable</span>
+                <span className="text-xl font-bold text-primary">Not Fixed</span>
             ) : (
                 <span className="text-lg font-semibold text-gray-700">Contact for price</span>
             )}

@@ -29,7 +29,7 @@ export default function ProfileCompletionForm({ user, onSave, onCancel }: Profil
     chargeHourly: user.chargeHourly || 0,
     chargeDaily: user.chargeDaily || 0,
     chargeRate: user.chargeRate || 0,
-    chargeRateType: user.chargeRateType || 'Negotiable',
+    chargeRateType: user.chargeRateType || 'Not Fixed',
     profilePicture: user.profilePicture || '',
   });
 

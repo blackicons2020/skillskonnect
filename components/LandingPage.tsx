@@ -2,10 +2,11 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import { Hero } from './Hero';
 import { CleanerCard } from './CleanerCard';
-import { Cleaner, View } from '../types';
+import { Cleaner, View, User } from '../types';
 
 interface LandingPageProps {
     cleaners: Cleaner[]; // Receives all cleaners from App.tsx
+    user?: User | null; // Logged-in user for location-based sorting
     onNavigate: (view: View) => void;
     onSelectCleaner: (cleaner: Cleaner) => void;
     onSearch: (filters: { service: string, location: string, minPrice: string, maxPrice: string, minRating: string }) => void;
@@ -19,26 +20,48 @@ interface FeaturedCleanersSectionProps {
     appError: string | null;
 }
 
-// A local sorting function to determine "featured" cleaners from the full list.
-// The backend should ideally provide a dedicated endpoint for this.
-const getFeaturedCleaners = (allCleaners: Cleaner[]): Cleaner[] => {
-  const tierScores = { Premium: 4, Pro: 3, Standard: 2, Free: 1 };
+// Subscription tier scores for sorting priority (higher = better)
+const TIER_SCORES: Record<string, number> = { Elite: 5, Premium: 4, Pro: 3, Standard: 2, Basic: 1, Free: 0 };
 
-  const sortedCleaners = [...allCleaners].sort((a, b) => {
-    const scoreA =
-      (tierScores[a.subscriptionTier] || 0) * 20 +
-      a.rating * 10 +
-      (a.reviews / 5) +
-      (a.isVerified ? 10 : 0);
-    const scoreB =
-      (tierScores[b.subscriptionTier] || 0) * 20 +
-      b.rating * 10 +
-      (b.reviews / 5) +
-      (b.isVerified ? 10 : 0);
-    return scoreB - scoreA;
+// Calculate location proximity score between a viewer and a worker
+const getProximityScore = (
+    viewerCountry?: string, viewerState?: string, viewerCity?: string,
+    workerCountry?: string, workerState?: string, workerCity?: string
+): number => {
+    if (!viewerCountry) return 0; // No user location — no proximity boost
+    const vc = (viewerCountry || '').toLowerCase();
+    const vs = (viewerState || '').toLowerCase();
+    const vci = (viewerCity || '').toLowerCase();
+    const wc = (workerCountry || '').toLowerCase();
+    const ws = (workerState || '').toLowerCase();
+    const wci = (workerCity || '').toLowerCase();
+    if (vci && wci && vci === wci && vs === ws && vc === wc) return 40; // Same city
+    if (vs && ws && vs === ws && vc === wc) return 30; // Same state
+    if (vc && wc && vc === wc) return 20; // Same country
+    return 0; // Different country
+};
+
+// Sort cleaners by: subscription tier → proximity → rating → verified → reviews
+const getSortedCleaners = (allCleaners: Cleaner[], user?: User | null): Cleaner[] => {
+  return [...allCleaners].sort((a, b) => {
+    // 1. Subscription tier (highest paid first)
+    const tierDiff = (TIER_SCORES[b.subscriptionTier] ?? 0) - (TIER_SCORES[a.subscriptionTier] ?? 0);
+    if (tierDiff !== 0) return tierDiff;
+
+    // 2. Proximity to user (same city > same state > same country)
+    const proxA = getProximityScore(user?.country, user?.state, user?.city, a.country, a.state, a.city);
+    const proxB = getProximityScore(user?.country, user?.state, user?.city, b.country, b.state, b.city);
+    if (proxB !== proxA) return proxB - proxA;
+
+    // 3. Rating
+    if (b.rating !== a.rating) return b.rating - a.rating;
+
+    // 4. Verified first
+    if (b.isVerified !== a.isVerified) return (b.isVerified ? 1 : 0) - (a.isVerified ? 1 : 0);
+
+    // 5. Review count
+    return b.reviews - a.reviews;
   });
-
-  return sortedCleaners.slice(0, 4); // Return top 4 cleaners
 };
 
 
@@ -55,9 +78,9 @@ const FeaturedCleanersSection: React.FC<FeaturedCleanersSectionProps> = ({ loadi
                     <span className="block sm:inline">{appError}</span>
                 </div>
             )}
-            <div className="mt-12 grid gap-8 sm:grid-cols-2 lg:grid-cols-4">
+            <div className="mt-12 grid gap-8 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
                {loading && !appError ? (
-                   Array.from({ length: 4 }).map((_, index) => (
+                   Array.from({ length: 8 }).map((_, index) => (
                        <div key={index} className="bg-gray-200 rounded-xl w-full h-96 animate-pulse"></div>
                    ))
                ) : !appError && cleaners.length > 0 ? (
@@ -78,19 +101,19 @@ const FeaturedCleanersSection: React.FC<FeaturedCleanersSectionProps> = ({ loadi
     </div>
 );
 
-export const LandingPage: React.FC<LandingPageProps> = ({ cleaners, onNavigate, onSelectCleaner, onSearch, appError }) => {
+export const LandingPage: React.FC<LandingPageProps> = ({ cleaners, user, onNavigate, onSelectCleaner, onSearch, appError }) => {
     // The loading state is now determined by whether the cleaners prop has been populated and there's no error
     const loading = cleaners.length === 0 && !appError;
 
-    // Use useMemo to calculate featured cleaners only when the main cleaners list changes
-    const featuredCleaners = useMemo(() => getFeaturedCleaners(cleaners), [cleaners]);
+    // Sort all cleaners by subscription, proximity to user, rating — show ALL (no limit)
+    const sortedCleaners = useMemo(() => getSortedCleaners(cleaners, user), [cleaners, user]);
 
     return (
         <>
             <Hero onSearch={onSearch} />
             <FeaturedCleanersSection
                 loading={loading}
-                cleaners={featuredCleaners}
+                cleaners={sortedCleaners}
                 onSelectCleaner={onSelectCleaner}
                 appError={appError}
             />
