@@ -101,6 +101,18 @@ export interface SupportTicket {
     updatedAt?: string;
 }
 
+export type NotificationType = 'subscription' | 'booking' | 'verification' | 'system' | 'review' | 'job';
+
+export interface AppNotification {
+  id: string;
+  userId: string;
+  type: NotificationType;
+  title: string;
+  message: string;
+  isRead: boolean;
+  createdAt: string;
+}
+
 // User Type - determines which fields are required
 export type UserType = 
   | 'Client (Individual)' 

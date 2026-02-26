@@ -7,7 +7,7 @@ export const AboutPage: React.FC = () => {
                 <div className="max-w-3xl mx-auto">
                     <h1 className="text-4xl font-bold text-center text-dark mb-4">About Skills Konnect</h1>
                     <p className="text-lg text-gray-600 text-center mb-8">
-                        Connecting Nigeria with trusted, skilled professionals across 100+ categories for every need.
+                        Connecting with trusted, skilled professionals for every service need, every time.
                     </p>
                     
                     <div className="space-y-6 text-gray-700">

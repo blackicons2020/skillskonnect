@@ -1,5 +1,5 @@
 
-import { User, Cleaner, Booking, AdminRole, Chat, Message, SupportTicket, Review, Job } from '../types';
+import { User, Cleaner, Booking, AdminRole, Chat, Message, SupportTicket, Review, Job, AppNotification } from '../types';
 
 // ==========================================
 // CONFIGURATION
@@ -484,6 +484,41 @@ export const apiService = {
             method: 'POST',
             headers: getHeaders(),
             body: JSON.stringify({ text }),
+        });
+        return handleResponse(response);
+    },
+
+    // ==================== NOTIFICATION API ====================
+
+    getNotifications: async (): Promise<AppNotification[]> => {
+        const response = await fetch(`${API_URL}/notifications`, {
+            method: 'GET',
+            headers: getHeaders(),
+        });
+        return handleResponse(response);
+    },
+
+    markNotificationRead: async (notificationId: string): Promise<AppNotification> => {
+        const response = await fetch(`${API_URL}/notifications/${notificationId}/read`, {
+            method: 'PUT',
+            headers: getHeaders(),
+        });
+        return handleResponse(response);
+    },
+
+    markAllNotificationsRead: async (): Promise<void> => {
+        const response = await fetch(`${API_URL}/notifications/read-all`, {
+            method: 'PUT',
+            headers: getHeaders(),
+        });
+        return handleResponse(response);
+    },
+
+    adminSendNotification: async (data: { userId?: string; type?: string; title: string; message: string; sendToAll?: boolean }): Promise<void> => {
+        const response = await fetch(`${API_URL}/admin/notifications/send`, {
+            method: 'POST',
+            headers: getHeaders(),
+            body: JSON.stringify(data),
         });
         return handleResponse(response);
     }

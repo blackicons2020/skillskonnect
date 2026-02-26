@@ -27,7 +27,7 @@ export const Hero: React.FC<HeroProps> = ({ onSearch }) => {
                     Find Trusted Professionals Near You
                 </h1>
                 <p className="text-lg md:text-xl max-w-3xl mx-auto text-gray-200 mb-10">
-                    Connect instantly with top-rated skilled professionals across 100+ categories - from tech to trades, events to creative arts.
+                    Connect instantly with top-rated skilled professionals - from mechanics and plumbers to beauticians, hairstylists, cleaners, chefs, event experts, creative artists and many more.
                 </p>
                 
                 {/* Search Box Container */}

@@ -94,6 +94,7 @@ const LoginTab: React.FC<LoginTabProps> = ({ email, setEmail, password, setPassw
                     </div>
                 </div>
             </form>
+            {/* Google and Apple sign-in - commented out for now, uncomment when ready
             <div className="mt-6">
                 <div className="relative">
                     <div className="absolute inset-0 flex items-center">
@@ -112,6 +113,7 @@ const LoginTab: React.FC<LoginTabProps> = ({ email, setEmail, password, setPassw
                     </button>
                 </div>
             </div>
+            */}
         </div>
     );
 };

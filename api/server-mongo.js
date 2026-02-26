@@ -282,12 +282,42 @@ SupportTicketSchema.set('toJSON', {
   }
 });
 
+// Notification Schema
+const NotificationSchema = new mongoose.Schema({
+  userId: { type: String, required: true, index: true },
+  type: { type: String, required: true, enum: ['subscription', 'booking', 'verification', 'system', 'review', 'job'] },
+  title: { type: String, required: true },
+  message: { type: String, required: true },
+  isRead: { type: Boolean, default: false }
+}, { timestamps: true });
+
+NotificationSchema.set('toJSON', {
+  virtuals: true,
+  transform: (doc, ret) => {
+    ret.id = ret._id.toString();
+    ret.createdAt = ret.createdAt ? ret.createdAt.toISOString() : null;
+    delete ret._id;
+    delete ret.__v;
+    return ret;
+  }
+});
+
 // Create models
 const User = mongoose.model('User', UserSchema);
 const Job = mongoose.model('Job', JobSchema);
 const Booking = mongoose.model('Booking', BookingSchema);
 const Chat = mongoose.model('Chat', ChatSchema);
 const SupportTicket = mongoose.model('SupportTicket', SupportTicketSchema);
+const Notification = mongoose.model('Notification', NotificationSchema);
+
+// Helper: Create a notification for a user
+async function createNotification(userId, type, title, message) {
+  try {
+    await Notification.create({ userId, type, title, message });
+  } catch (err) {
+    console.error('Failed to create notification:', err.message);
+  }
+}
 
 // ==================== MONGODB CONNECTION ====================
 
@@ -1374,6 +1404,17 @@ app.post('/api/users/subscription/upgrade', authenticateToken, async (req, res) 
     user.pendingSubscription = plan;
     await user.save();
 
+    // Notify admins about the subscription request
+    const admins = await User.find({ isAdmin: true }).select('_id');
+    for (const admin of admins) {
+      await createNotification(
+        admin._id.toString(),
+        'subscription',
+        'New Subscription Request',
+        `${user.fullName || user.email} has requested an upgrade to the ${plan} plan.`
+      );
+    }
+
     res.json(normalizeUser(user.toObject()));
   } catch (error) {
     res.status(500).json({ error: error.message });
@@ -1513,11 +1554,20 @@ app.post('/api/admin/users/:userId/approve-subscription', authenticateToken, asy
     }
 
     // Move pending subscription to active subscription
+    const approvedPlan = user.pendingSubscription;
     user.subscriptionTier = user.pendingSubscription;
     user.pendingSubscription = undefined;
     user.subscriptionReceipt = undefined;
 
     await user.save();
+
+    // Notify the user about subscription approval
+    await createNotification(
+      user._id.toString(),
+      'subscription',
+      'Subscription Approved!',
+      `Your ${approvedPlan} subscription has been approved and is now active. Enjoy your premium features!`
+    );
 
     res.json({ 
       message: 'Subscription approved successfully',
@@ -1568,6 +1618,74 @@ app.post('/api/auth/register', async (req, res) => {
     });
   } catch (error) {
     console.error('Register error:', error);
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// ==================== NOTIFICATION ROUTES ====================
+
+// GET /api/notifications - Get notifications for the logged-in user
+app.get('/api/notifications', authenticateToken, async (req, res) => {
+  try {
+    const notifications = await Notification.find({ userId: req.user.id })
+      .sort({ createdAt: -1 })
+      .limit(50);
+    res.json(notifications);
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// PUT /api/notifications/:id/read - Mark a single notification as read
+app.put('/api/notifications/:id/read', authenticateToken, async (req, res) => {
+  try {
+    const notification = await Notification.findOneAndUpdate(
+      { _id: req.params.id, userId: req.user.id },
+      { isRead: true },
+      { new: true }
+    );
+    if (!notification) return res.status(404).json({ error: 'Notification not found' });
+    res.json(notification);
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// PUT /api/notifications/read-all - Mark all notifications as read
+app.put('/api/notifications/read-all', authenticateToken, async (req, res) => {
+  try {
+    await Notification.updateMany({ userId: req.user.id, isRead: false }, { isRead: true });
+    res.json({ message: 'All notifications marked as read' });
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// POST /api/admin/notifications/send - Admin sends notification to a user or all users
+app.post('/api/admin/notifications/send', authenticateToken, async (req, res) => {
+  try {
+    const admin = await User.findById(req.user.id);
+    if (!admin || !admin.isAdmin) return res.status(403).json({ error: 'Unauthorized' });
+
+    const { userId, type, title, message, sendToAll } = req.body;
+    
+    if (sendToAll) {
+      const users = await User.find({}).select('_id');
+      const notifications = users.map(u => ({
+        userId: u._id.toString(),
+        type: type || 'system',
+        title,
+        message
+      }));
+      await Notification.insertMany(notifications);
+      res.json({ message: `Notification sent to ${users.length} users` });
+    } else if (userId) {
+      await createNotification(userId, type || 'system', title, message);
+      res.json({ message: 'Notification sent' });
+    } else {
+      res.status(400).json({ error: 'userId or sendToAll is required' });
+    }
+  } catch (error) {
     res.status(500).json({ error: error.message });
   }
 });
@@ -1788,6 +1906,14 @@ app.post('/api/bookings', authenticateToken, async (req, res) => {
     });
 
     res.status(201).json(bookingObj);
+
+    // Notify the worker about the new booking
+    await createNotification(
+      cleanerId,
+      'booking',
+      'New Booking Received',
+      `${user.fullName || user.email} has booked you for ${service} on ${date}.`
+    );
   } catch (error) {
     res.status(500).json({ error: error.message });
   }

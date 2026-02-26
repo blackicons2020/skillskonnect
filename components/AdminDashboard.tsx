@@ -74,7 +74,7 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ user: currentUse
     // Current user context is now passed directly as a prop, avoiding redundant fetches
 
     // Initial state setup to avoid flashing incorrect tabs
-    const [activeTab, setActiveTab] = useState<'clients' | 'cleaners' | 'payments' | 'confirmations' | 'allBookings' | 'admins' | 'support' | 'jobs'>('clients');
+    const [activeTab, setActiveTab] = useState<'clients' | 'cleaners' | 'payments' | 'allBookings' | 'admins' | 'support' | 'jobs'>('clients');
     
     const [searchTerm, setSearchTerm] = useState('');
     const [userToView, setUserToView] = useState<User | null>(null);
@@ -91,7 +91,6 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ user: currentUse
     // Initial Tab Selection based on Role
     React.useEffect(() => {
          if (currentUser.adminRole === 'Payment') setActiveTab('payments');
-         else if (currentUser.adminRole === 'Verification') setActiveTab('confirmations');
          else setActiveTab('clients');
     }, [currentUser.adminRole]);
 
@@ -166,19 +165,22 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ user: currentUse
     const cleaners = users.filter(u => u.role === 'cleaner' && !u.isAdmin);
     const admins = allUsers ? allUsers.filter(u => u.isAdmin) : [];
 
-    const [paymentFilter, setPaymentFilter] = useState<'all' | 'pending'>('all');
+    const [subscriptionFilter, setSubscriptionFilter] = useState<'all' | 'pending' | 'active'>('all');
 
-    const filteredPayments = useMemo(() => {
-        const escrowBookings = allBookings.filter(b => b.paymentMethod === 'Escrow');
-        if (paymentFilter === 'pending') {
-            return escrowBookings.filter(b => b.paymentStatus === 'Pending Payout');
+    // All workers who have a subscription tier (active or pending)
+    const subscriptionPayments = useMemo(() => {
+        if (!allUsers) return [];
+        const workers = allUsers.filter(u => u.role === 'cleaner' && !u.isAdmin);
+        if (subscriptionFilter === 'pending') {
+            return workers.filter(u => u.pendingSubscription && u.subscriptionReceipt);
         }
-        return escrowBookings;
-    }, [allBookings, paymentFilter]);
+        if (subscriptionFilter === 'active') {
+            return workers.filter(u => u.subscriptionTier && u.subscriptionTier !== 'Free');
+        }
+        // 'all' — show everyone with a paid subscription OR pending
+        return workers.filter(u => (u.subscriptionTier && u.subscriptionTier !== 'Free') || u.pendingSubscription);
+    }, [allUsers, subscriptionFilter]);
 
-
-    // Data for Confirmations tab
-    const pendingPaymentConfirmations = allBookings.filter(b => b.paymentStatus === 'Pending Admin Confirmation');
     const pendingSubscriptionApprovals = allUsers ? allUsers.filter(u => u.pendingSubscription && u.subscriptionReceipt) : [];
 
     // Permissions Helper
@@ -195,8 +197,6 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ user: currentUse
                 return role === 'Support';
             case 'payments':
                 return role === 'Payment';
-            case 'confirmations':
-                return role === 'Payment' || role === 'Verification';
             case 'allBookings':
                 return role === 'Support' || role === 'Payment';
             case 'admins':
@@ -445,7 +445,6 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ user: currentUse
     const canSeeClients = canSeeTab('clients');
     const canSeeCleaners = canSeeTab('cleaners');
     const canSeePayments = canSeeTab('payments');
-    const canSeeConfirmations = canSeeTab('confirmations');
     const canSeeAllBookings = canSeeTab('allBookings');
     const canSeeAdmins = canSeeTab('admins');
     const canSeeSupport = canSeeTab('support');
@@ -506,18 +505,6 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ user: currentUse
                             Payments
                         </button>
                     )}
-                    {canSeeConfirmations && (
-                         <button
-                            onClick={() => setActiveTab('confirmations')}
-                            className={`${
-                                activeTab === 'confirmations'
-                                ? 'border-primary text-primary'
-                                : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
-                            } whitespace-nowrap py-4 px-1 border-b-2 font-medium text-sm`}
-                        >
-                            Confirmations
-                        </button>
-                    )}
                     {canSeeAllBookings && (
                         <button
                             onClick={() => setActiveTab('allBookings')}
@@ -574,32 +561,77 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ user: currentUse
                 {activeTab === 'payments' && canSeePayments && (
                     <div>
                         <div className="p-4 flex items-center justify-between">
-                             <h3 className="text-xl font-semibold">Payment History (Escrow)</h3>
+                             <h3 className="text-xl font-semibold">Subscription Payments</h3>
                              <div className="flex items-center gap-2 rounded-lg bg-gray-100 p-1">
-                                <button onClick={() => setPaymentFilter('all')} className={`px-3 py-1 text-sm font-medium rounded-md ${paymentFilter === 'all' ? 'bg-white shadow' : 'text-gray-600'}`}>All</button>
-                                <button onClick={() => setPaymentFilter('pending')} className={`px-3 py-1 text-sm font-medium rounded-md ${paymentFilter === 'pending' ? 'bg-white shadow' : 'text-gray-600'}`}>Pending Payout</button>
+                                <button onClick={() => setSubscriptionFilter('all')} className={`px-3 py-1 text-sm font-medium rounded-md ${subscriptionFilter === 'all' ? 'bg-white shadow' : 'text-gray-600'}`}>All</button>
+                                <button onClick={() => setSubscriptionFilter('pending')} className={`px-3 py-1 text-sm font-medium rounded-md ${subscriptionFilter === 'pending' ? 'bg-white shadow' : 'text-gray-600'}`}>Pending Approval</button>
+                                <button onClick={() => setSubscriptionFilter('active')} className={`px-3 py-1 text-sm font-medium rounded-md ${subscriptionFilter === 'active' ? 'bg-white shadow' : 'text-gray-600'}`}>Active</button>
                              </div>
                         </div>
-                        <PaymentTable bookings={filteredPayments} />
-                    </div>
-                )}
-                 {activeTab === 'confirmations' && canSeeConfirmations && (
-                    <div>
-                        {/* Only show Payment confirmations to Super or Payment Admins */}
-                        {(currentUser.adminRole === 'Super' || currentUser.adminRole === 'Payment' || !currentUser.adminRole) && (
-                            <ConfirmationPaymentTable bookings={pendingPaymentConfirmations} />
-                        )}
-                        
-                        {(currentUser.adminRole === 'Super' || !currentUser.adminRole) && (
-                             <div className="border-t mt-4"></div>
-                        )}
-
-                        {/* Only show Subscription confirmations to Super or Verification Admins */}
-                        {(currentUser.adminRole === 'Super' || currentUser.adminRole === 'Verification' || !currentUser.adminRole) && (
-                            <div className="mt-4">
-                                <SubscriptionTable users={pendingSubscriptionApprovals} onApprove={onApproveSubscription} />
-                            </div>
-                        )}
+                        <div className="overflow-x-auto">
+                            <table className="min-w-full divide-y divide-gray-200">
+                                <thead className="bg-gray-50">
+                                    <tr>
+                                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Worker Name</th>
+                                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Current Plan</th>
+                                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Pending Plan</th>
+                                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Receipt</th>
+                                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Expiry</th>
+                                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Status</th>
+                                        <th className="relative px-6 py-3"><span className="sr-only">Action</span></th>
+                                    </tr>
+                                </thead>
+                                <tbody className="bg-white divide-y divide-gray-200">
+                                    {subscriptionPayments.map((user) => (
+                                        <tr key={user.id}>
+                                            <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">{user.fullName}</td>
+                                            <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                                                <span className={`px-2 py-0.5 text-xs font-bold rounded-full ${
+                                                    user.subscriptionTier === 'Elite' ? 'bg-yellow-100 text-yellow-800' :
+                                                    user.subscriptionTier === 'Pro' ? 'bg-blue-100 text-blue-800' :
+                                                    user.subscriptionTier === 'Basic' ? 'bg-green-100 text-green-800' :
+                                                    'bg-gray-100 text-gray-800'
+                                                }`}>{user.subscriptionTier || 'Free'}</span>
+                                            </td>
+                                            <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                                                {user.pendingSubscription ? (
+                                                    <span className="px-2 py-0.5 text-xs font-bold rounded-full bg-orange-100 text-orange-800">{user.pendingSubscription}</span>
+                                                ) : (
+                                                    <span className="text-gray-400">—</span>
+                                                )}
+                                            </td>
+                                            <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                                                {user.subscriptionReceipt ? (
+                                                    <button 
+                                                        onClick={() => setReceiptToView(user.subscriptionReceipt!)} 
+                                                        className="text-primary hover:text-secondary flex items-center gap-1 font-medium"
+                                                    >
+                                                        <EyeIcon className="w-4 h-4" />
+                                                        View
+                                                    </button>
+                                                ) : (
+                                                    <span className="text-gray-400">—</span>
+                                                )}
+                                            </td>
+                                            <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{user.subscriptionEndDate || '—'}</td>
+                                            <td className="px-6 py-4 whitespace-nowrap text-sm">
+                                                {user.pendingSubscription ? (
+                                                    <span className="px-2 py-0.5 text-xs font-bold rounded-full bg-yellow-100 text-yellow-800">Pending</span>
+                                                ) : (
+                                                    <span className="px-2 py-0.5 text-xs font-bold rounded-full bg-green-100 text-green-800">Active</span>
+                                                )}
+                                            </td>
+                                            <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
+                                                {user.pendingSubscription && user.subscriptionReceipt && (
+                                                    <button onClick={() => onApproveSubscription(user.id)} className="bg-primary text-white px-3 py-1 rounded-md text-xs font-semibold hover:bg-secondary">Approve</button>
+                                                )}
+                                            </td>
+                                        </tr>
+                                    ))}
+                                </tbody>
+                            </table>
+                            {subscriptionPayments.length === 0 && <p className="text-center text-gray-500 p-4">No subscription records found.</p>}
+                        </div>
                     </div>
                 )}
                  {activeTab === 'allBookings' && canSeeAllBookings && (
