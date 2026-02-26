@@ -327,7 +327,7 @@ mongoose.connect(MONGO_URL)
     
     // Create super admin if doesn't exist
     try {
-      const adminEmail = 'superadmin@skillskonnect.ng';
+      const adminEmail = 'superadmin@skillskonnect.online';
       const existingAdmin = await User.findOne({ email: adminEmail });
       
       if (!existingAdmin) {
@@ -531,7 +531,7 @@ const sendVerificationEmail = async (to, verifyUrl) => {
     return;
   }
   await createMailTransporter().sendMail({
-    from: `"${process.env.FROM_NAME || 'Skills Konnect'}" <${process.env.FROM_EMAIL || 'no-reply@skillskonnect.ng'}>`,
+    from: `"${process.env.FROM_NAME || 'Skills Konnect'}" <${process.env.FROM_EMAIL || 'no-reply@skillskonnect.online'}>`,
     to,
     subject: 'Verify your Skills Konnect email address',
     text: `Welcome to Skills Konnect!\n\nClick the link below to verify your email (valid for 24 hours):\n${verifyUrl}\n\nIf you did not create this account, please ignore this email.`,
@@ -552,7 +552,7 @@ const sendResetEmail = async (to, resetUrl) => {
     return;
   }
   await createMailTransporter().sendMail({
-    from: `"${process.env.FROM_NAME || 'Skills Konnect'}" <${process.env.FROM_EMAIL || 'no-reply@skillskonnect.ng'}>`,
+    from: `"${process.env.FROM_NAME || 'Skills Konnect'}" <${process.env.FROM_EMAIL || 'no-reply@skillskonnect.online'}>`,
     to,
     subject: 'Reset your Skills Konnect password',
     text: `You requested a password reset.\n\nClick the link below (valid for 1 hour):\n${resetUrl}\n\nIf you did not request this, ignore this email.`,
