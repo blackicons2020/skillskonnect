@@ -22,7 +22,9 @@ const MONGO_URL = process.env.MONGO_URL;
 
 // Middleware
 app.use(cors({
-  origin: process.env.CORS_ORIGIN || '*',
+  origin: process.env.CORS_ORIGIN
+    ? process.env.CORS_ORIGIN.split(',').map(o => o.trim())
+    : '*',
   credentials: true
 }));
 app.use(express.json({ limit: '50mb' }));
@@ -580,7 +582,7 @@ app.post('/api/auth/forgot-password', async (req, res) => {
     user.resetPasswordExpires = new Date(Date.now() + 60 * 60 * 1000); // 1 hour
     await user.save();
 
-    const frontendUrl = process.env.FRONTEND_URL || 'https://skillskonnect.vercel.app';
+    const frontendUrl = process.env.FRONTEND_URL || 'https://skillskonnect.online';
     const resetUrl = `${frontendUrl}/?token=${rawToken}&action=resetPassword`;
 
     await sendResetEmail(email, resetUrl);

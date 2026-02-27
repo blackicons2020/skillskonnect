@@ -1,5 +1,5 @@
 // Quick test to check production database via API
-const ADMIN_EMAIL = 'superadmin@skillskonnect.ng';
+const ADMIN_EMAIL = 'superadmin@skillskonnect.online';
 const ADMIN_PASSWORD = 'SuperAdmin@2026!';
 const API_URL = 'https://skillskonnect.onrender.com/api';
 

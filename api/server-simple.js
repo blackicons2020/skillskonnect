@@ -106,7 +106,7 @@ process.on('SIGTERM', () => {
 // Seed admin users on startup
 const seedAdmins = async () => {
   const admins = [
-    { email: 'superadmin@skillskonnect.ng', name: 'Super Admin', role: 'Super', password: 'SuperAdmin@2026!' }
+    { email: 'superadmin@skillskonnect.online', name: 'Super Admin', role: 'Super', password: 'SuperAdmin@2026!' }
   ];
 
   for (const admin of admins) {
@@ -877,6 +877,6 @@ app.listen(PORT, async () => {
   console.log(`💾 Data persistence enabled - changes are auto-saved`);
   console.log(`📊 Current data: ${users.size} users, ${bookings.size} bookings, ${chats.size} chats\n`);
   console.log(`👤 Admin Login Credentials:`);
-  console.log(`   Email: superadmin@skillskonnect.ng`);
+  console.log(`   Email: superadmin@skillskonnect.online`);
   console.log(`   Password: SuperAdmin@2026!\n`);
 });
