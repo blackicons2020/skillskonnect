@@ -230,6 +230,8 @@ app.post('/api/auth/login', async (req: ExpressRequest, res: ExpressResponse) =>
         pendingSubscription: user.pending_subscription,
         subscriptionReceipt: user.subscription_receipt ? JSON.parse(user.subscription_receipt) : null,
         subscriptionEndDate: user.subscription_end_date,
+        subscriptionDate: user.subscription_date,
+        subscriptionAmount: user.subscription_amount,
         isSuspended: user.is_suspended,
         governmentId: user.government_id,
         businessRegDoc: user.business_reg_doc,
@@ -707,9 +709,28 @@ app.post('/api/admin/users/:id/approve-subscription', protect, admin, async (req
     const plan = userRes.rows[0]?.pending_subscription;
     if (!plan) return res.status(400).json({ message: 'No pending subscription' });
 
+    // Calculate subscription details
+    const subscriptionDate = new Date().toISOString();
+    const subscriptionEndDate = new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString(); // 30 days from now
+    
+    // Map plan to monthly price (in NGN)
+    const planPrices: Record<string, number> = {
+      'Free': 0,
+      'Standard': 5000,
+      'Pro': 10000,
+      'Premium': 30000,
+      'Basic': 5000,
+      'Elite': 30000,
+      'Regular': 20000,
+      'Silver': 30000,
+      'Gold': 50000,
+      'Diamond': 80000
+    };
+    const subscriptionAmount = planPrices[plan] || 0;
+
     await pool.query(
-      "UPDATE users SET subscription_tier = $1, pending_subscription = NULL, subscription_receipt = NULL WHERE id = $2",
-      [plan, req.params.id]
+      "UPDATE users SET subscription_tier = $1, pending_subscription = NULL, subscription_receipt = NULL, subscription_date = $2, subscription_end_date = $3, subscription_amount = $4 WHERE id = $5",
+      [plan, subscriptionDate, subscriptionEndDate, subscriptionAmount, req.params.id]
     );
     res.json({ message: 'Subscription approved' });
   } catch (error) { handleError(res, error); }

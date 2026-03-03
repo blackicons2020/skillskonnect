@@ -164,6 +164,10 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ user: currentUse
     const cleaners = users.filter(u => u.role === 'cleaner' && !u.isAdmin);
     const admins = allUsers ? allUsers.filter(u => u.isAdmin) : [];
 
+    // Total counts for tab labels (independent of search)
+    const totalClients = useMemo(() => allUsers ? allUsers.filter(u => u.role === 'client' && !u.isAdmin).length : 0, [allUsers]);
+    const totalCleaners = useMemo(() => allUsers ? allUsers.filter(u => u.role === 'cleaner' && !u.isAdmin).length : 0, [allUsers]);
+
     const [subscriptionFilter, setSubscriptionFilter] = useState<'all' | 'pending' | 'active'>('all');
 
     // All workers who have a subscription tier (active or pending)
@@ -474,7 +478,7 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ user: currentUse
                                 : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
                                 } whitespace-nowrap py-4 px-1 border-b-2 font-medium text-sm`}
                         >
-                            Manage Clients ({clients.length})
+                            Manage Clients ({totalClients})
                         </button>
                     )}
                     {canSeeCleaners && (
@@ -485,7 +489,7 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ user: currentUse
                                 : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
                                 } whitespace-nowrap py-4 px-1 border-b-2 font-medium text-sm`}
                         >
-                            Manage Workers ({cleaners.length})
+                            Manage Workers ({totalCleaners})
                         </button>
                     )}
                     {canSeePayments && (
