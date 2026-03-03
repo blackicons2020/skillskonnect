@@ -354,7 +354,7 @@ export const Dashboard: React.FC<DashboardProps> = ({ user, onUpdateUser, onNavi
                     {/* User Info */}
                     <div className="flex-grow text-center sm:text-left">
                         <h1 className="text-3xl font-bold text-gray-800">
-                            {profileDisplayName || displayName || 'User'}
+                            Hello, {profileDisplayName || displayName || 'User'}!
                         </h1>
                         <p className="text-gray-600 text-lg mt-1">{user.email}</p>
                         {user.userType && (
