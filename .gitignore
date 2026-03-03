@@ -15,7 +15,7 @@ dist-ssr
 # Environment variables
 .env
 .env.local
-.env.production
+# .env.production is intentionally NOT ignored - it only contains the public API URL
 api/.env
 
 # Database and data files

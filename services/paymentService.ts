@@ -120,15 +120,13 @@ class PaymentService {
     }
 
     /**
-     * Get API URL
+     * Get API URL - uses same logic as apiService.ts
      */
     private getApiUrl(): string {
         try {
             const env = (import.meta as any).env;
             if (env) {
-                return env.PROD 
-                    ? '/api' 
-                    : (env.VITE_API_URL || 'http://localhost:5000/api');
+                return env.VITE_API_URL || 'http://localhost:5000/api';
             }
         } catch (e) {
             // Ignore errors
