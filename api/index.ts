@@ -784,6 +784,104 @@ app.post('/api/admin/bookings/:id/mark-paid', protect, admin, async (req: Expres
   } catch (error) { handleError(res, error); }
 });
 
+// ============================================================================
+// PAYMENT GATEWAY ENDPOINTS (Paystack & Flutterwave)
+// ============================================================================
+
+app.post('/api/payment/initialize', protect, async (req: ExpressRequest, res: ExpressResponse) => {
+  const authReq = req as any;
+  try {
+    const { email, amount, plan, billingCycle } = req.body;
+    const PAYSTACK_SECRET_KEY = process.env.PAYSTACK_SECRET_KEY;
+
+    if (!PAYSTACK_SECRET_KEY) {
+      return res.status(500).json({ message: 'Payment gateway not configured' });
+    }
+
+    const reference = `SUB_${Date.now()}_${Math.random().toString(36).substring(2, 9)}`;
+
+    // Initialize Paystack transaction
+    const paystackResponse = await fetch('https://api.paystack.co/transaction/initialize', {
+      method: 'POST',
+      headers: {
+        'Authorization': `Bearer ${PAYSTACK_SECRET_KEY}`,
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify({
+        email,
+        amount: amount * 100, // Paystack expects amount in kobo (NGN cents)
+        reference,
+        callback_url: req.body.callback_url || undefined,
+        metadata: {
+          plan,
+          billingCycle,
+          userId: authReq.user?.id
+        }
+      })
+    });
+
+    const paystackData = await paystackResponse.json();
+
+    if (!paystackData.status) {
+      return res.status(400).json({ message: paystackData.message || 'Payment initialization failed' });
+    }
+
+    // Store pending subscription
+    await User.findByIdAndUpdate(authReq.user!.id, { pendingSubscription: plan });
+
+    res.json({
+      authorization_url: paystackData.data.authorization_url,
+      access_code: paystackData.data.access_code,
+      reference: paystackData.data.reference
+    });
+  } catch (error) { handleError(res, error); }
+});
+
+app.get('/api/payment/verify/:reference', protect, async (req: ExpressRequest, res: ExpressResponse) => {
+  const authReq = req as any;
+  try {
+    const { reference } = req.params;
+    const PAYSTACK_SECRET_KEY = process.env.PAYSTACK_SECRET_KEY;
+
+    if (!PAYSTACK_SECRET_KEY) {
+      return res.status(500).json({ message: 'Payment gateway not configured' });
+    }
+
+    const paystackResponse = await fetch(`https://api.paystack.co/transaction/verify/${reference}`, {
+      method: 'GET',
+      headers: {
+        'Authorization': `Bearer ${PAYSTACK_SECRET_KEY}`
+      }
+    });
+
+    const paystackData = await paystackResponse.json();
+
+    if (paystackData.status && paystackData.data.status === 'success') {
+      const plan = paystackData.data.metadata?.plan;
+      const amount = paystackData.data.amount / 100; // Convert from kobo back to NGN
+      const userId = paystackData.data.metadata?.userId || authReq.user?.id;
+
+      if (plan && userId) {
+        const subscriptionDate = new Date();
+        const subscriptionEndDate = new Date(Date.now() + 30 * 24 * 60 * 60 * 1000);
+
+        await User.findByIdAndUpdate(userId, {
+          subscriptionTier: plan,
+          subscriptionDate,
+          subscriptionEndDate,
+          subscriptionAmount: amount,
+          pendingSubscription: undefined,
+          subscriptionReceipt: undefined
+        });
+      }
+
+      res.json({ success: true, message: 'Payment verified and subscription activated' });
+    } else {
+      res.json({ success: false, message: 'Payment not successful' });
+    }
+  } catch (error) { handleError(res, error); }
+});
+
 app.post('/api/admin/users/:id/approve-subscription', protect, admin, async (req: ExpressRequest, res: ExpressResponse) => {
   try {
     const user = await User.findById(req.params.id);

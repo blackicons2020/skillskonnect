@@ -61,6 +61,10 @@ class PaymentService {
     /**
      * Initialize Paystack payment via backend API
      */
+    private getToken(): string | null {
+        return localStorage.getItem('skillskonnect_token') || sessionStorage.getItem('skillskonnect_token');
+    }
+
     async initiatePaystackPayment(data: {
         email: string;
         amount: number;
@@ -69,8 +73,8 @@ class PaymentService {
         metadata?: any;
     }): Promise<PaymentInitiationResponse> {
         try {
-            // Get token from localStorage
-            const token = localStorage.getItem('skillskonnect_token');
+            // Get token from localStorage or sessionStorage
+            const token = this.getToken();
             if (!token) {
                 throw new Error('Authentication required');
             }
@@ -189,7 +193,7 @@ class PaymentService {
      */
     async verifyPaystackPayment(reference: string): Promise<boolean> {
         try {
-            const token = localStorage.getItem('skillskonnect_token');
+            const token = this.getToken();
             if (!token) {
                 throw new Error('Authentication required');
             }
