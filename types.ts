@@ -59,7 +59,7 @@ export interface Booking {
   reviewSubmitted?: boolean;
   paymentMethod: 'Escrow' | 'Direct';
   paymentStatus: 'Pending Payment' | 'Pending Admin Confirmation' | 'Confirmed' | 'Pending Payout' | 'Paid' | 'Not Applicable';
-  paymentReceipt?: Receipt; 
+  paymentReceipt?: Receipt;
   jobApprovedByClient?: boolean;
 }
 
@@ -88,17 +88,17 @@ export interface Job {
 export type TicketCategory = 'Technical Issue' | 'Payment Issue' | 'Booking Dispute' | 'Account Verification' | 'Other';
 
 export interface SupportTicket {
-    id: string;
-    userId: string;
-    userName?: string; // Populated for admin view
-    userRole?: string; // Populated for admin view
-    category: TicketCategory;
-    subject: string;
-    message: string;
-    status: 'Open' | 'Resolved';
-    adminResponse?: string;
-    createdAt: string;
-    updatedAt?: string;
+  id: string;
+  userId: string;
+  userName?: string; // Populated for admin view
+  userRole?: string; // Populated for admin view
+  category: TicketCategory;
+  subject: string;
+  message: string;
+  status: 'Open' | 'Resolved';
+  adminResponse?: string;
+  createdAt: string;
+  updatedAt?: string;
 }
 
 export type NotificationType = 'subscription' | 'booking' | 'verification' | 'system' | 'review' | 'job';
@@ -114,10 +114,10 @@ export interface AppNotification {
 }
 
 // User Type - determines which fields are required
-export type UserType = 
-  | 'Client (Individual)' 
-  | 'Client (Registered Company)' 
-  | 'Worker (Individual)' 
+export type UserType =
+  | 'Client (Individual)'
+  | 'Client (Registered Company)'
+  | 'Worker (Individual)'
   | 'Worker (Registered Company)';
 
 export type ChargeRateType = 'Per Hour' | 'Per Day' | 'Contract' | 'Not Fixed';
@@ -132,18 +132,18 @@ export interface User {
   id: string;
   email: string;
   password?: string;
-  
+
   // User Type Selection (REQUIRED)
   userType?: UserType;
-  
+
   // Common fields for Individual Clients & Workers
   fullName?: string;
   gender?: 'Male' | 'Female' | 'Other';
-  
+
   // Contact Information (All user types)
   phoneCountryCode?: string; // e.g., "+234"
   phoneNumber?: string;
-  
+
   // Location (All user types)
   country?: string;
   state?: string; // Province/Region
@@ -154,15 +154,15 @@ export interface User {
   officeAddress?: string; // For companies
   companyAddress?: string; // Legacy field for company address
   workplaceAddress?: string; // Optional for Client (Individual)
-  
+
   // Company-specific fields
   companyName?: string;
   companyRegistrationNumber?: string;
-  
+
   // User type indicators
   clientType?: 'Individual' | 'Company';
   cleanerType?: 'Individual' | 'Company';
-  
+
   // Worker-specific fields
   skillType?: string[]; // Multiple skills allowed
   yearsOfExperience?: number;
@@ -174,11 +174,11 @@ export interface User {
   chargeRateType?: ChargeRateType;
   profilePicture?: string; // URL or base64
   profilePhoto?: string | File; // Legacy field for profile picture
-  
+
   // Verification
   isVerified?: boolean;
   verificationDocuments?: VerificationDocuments;
-  
+
   // Legacy fields for backward compatibility
   role: UserRole;
   bookingHistory?: Booking[];
@@ -187,7 +187,7 @@ export interface User {
   isAdmin?: boolean;
   adminRole?: AdminRole;
   isSuspended?: boolean;
-  
+
   // Cleaner/Worker legacy fields
   experience?: number;
   services?: string[];
@@ -199,6 +199,8 @@ export interface User {
   pendingSubscription?: string;
   subscriptionReceipt?: Receipt;
   subscriptionEndDate?: string;
+  subscriptionDate?: string; // Date subscription was activated (ISO string)
+  subscriptionAmount?: number; // Amount paid for the subscription (in NGN)
   trialStartDate?: string; // For tracking trial periods
   trialEndDate?: string;
   reviewsData?: Review[];
@@ -208,16 +210,16 @@ export interface User {
 }
 
 export interface SubscriptionPlan {
-    name: string; // Supports Free, Basic, Pro, Elite, Regular, Silver, Gold, Diamond
-    priceMonthly: number;
-    priceYearly: number;
-    currency?: string; // 'NGN', 'USD', etc. (defaults to NGN if not specified)
-    features: string[];
-    isRecommended?: boolean;
-    maxClients?: number; // For worker plans
-    hasJobAccess?: boolean; // For worker plans - access to job listings
-    maxJobPosts?: number; // For client plans
-    trialDays?: number; // For free plans with trial periods
+  name: string; // Supports Free, Basic, Pro, Elite, Regular, Silver, Gold, Diamond
+  priceMonthly: number;
+  priceYearly: number;
+  currency?: string; // 'NGN', 'USD', etc. (defaults to NGN if not specified)
+  features: string[];
+  isRecommended?: boolean;
+  maxClients?: number; // For worker plans
+  hasJobAccess?: boolean; // For worker plans - access to job listings
+  maxJobPosts?: number; // For client plans
+  trialDays?: number; // For free plans with trial periods
 }
 
 export interface Message {
@@ -236,13 +238,13 @@ export interface Chat {
   updatedAt: string;
 }
 
-export type View = 
-  | 'landing' 
+export type View =
+  | 'landing'
   | 'auth'
-  | 'signup' 
+  | 'signup'
   | 'setupProfile'
-  | 'clientDashboard' 
-  | 'cleanerDashboard' 
+  | 'clientDashboard'
+  | 'cleanerDashboard'
   | 'cleanerProfile'
   | 'adminDashboard'
   | 'subscription'

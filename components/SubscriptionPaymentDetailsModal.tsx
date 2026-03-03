@@ -1,12 +1,8 @@
 /**
  * Subscription Payment Modal
  * 
- * PAYMENT CONFIGURATION:
- * - Currently in TEST MODE (line 29: isTestMode = true)
- * - To enable real payments:
- *   1. Add your Paystack secret key to api/.env (PAYSTACK_SECRET_KEY)
- *   2. Change line 29 to: const isTestMode = false;
- *   3. Restart the backend server
+ * PAYMENT: Production mode — uses Paystack (Nigeria) or Flutterwave (other regions).
+ * Keys are configured in api/.env.
  */
 import React, { useState } from 'react';
 import { SubscriptionPlan, User } from '../types';
@@ -25,7 +21,7 @@ export const SubscriptionPaymentDetailsModal: React.FC<SubscriptionPaymentDetail
     const [billingCycle, setBillingCycle] = useState<'monthly' | 'yearly'>('monthly');
     const [isProcessing, setIsProcessing] = useState(false);
     const [error, setError] = useState<string | null>(null);
-    
+
     const amount = billingCycle === 'monthly' ? plan.priceMonthly : plan.priceYearly;
     const gateway = paymentService.getPaymentGateway(user.country || 'Nigeria');
     const gatewayName = gateway === 'paystack' ? 'Paystack' : 'Flutterwave';
@@ -39,41 +35,6 @@ export const SubscriptionPaymentDetailsModal: React.FC<SubscriptionPaymentDetail
 
         setIsProcessing(true);
         setError(null);
-
-        // TEST MODE: Always use test mode for now (no payment gateway configured)
-        // Change this to false when you have real payment keys configured
-        const isTestMode = true; // Force test mode
-        
-        if (isTestMode) {
-            try {
-                // Simulate processing delay
-                await new Promise(resolve => setTimeout(resolve, 1500));
-                
-                // In test mode, directly update the subscription without receipt requirement
-                if (onUpdateUser) {
-                    const updatedUser = {
-                        ...user,
-                        subscriptionTier: plan.name as 'Free' | 'Standard' | 'Pro' | 'Premium',
-                        pendingSubscription: undefined
-                    };
-                    
-                    // Update user directly through API
-                    await onUpdateUser(updatedUser);
-                    
-                    // Close modal immediately (alert will be shown by onUpdateUser)
-                    onClose();
-                } else {
-                    // Fallback to old flow if onUpdateUser not provided
-                    onConfirm(plan);
-                    alert(`✓ TEST MODE: Subscription to ${plan.name} plan (${billingCycle}) successful!\n\nAmount: ${user.country === 'Nigeria' ? '₦' : '$'}${amount.toLocaleString()}\n\nYour subscription has been activated. In production, this will redirect to ${gatewayName} for actual payment.`);
-                    onClose();
-                }
-            } catch (err: any) {
-                setError('Test payment failed. Please try again.');
-                setIsProcessing(false);
-            }
-            return;
-        }
 
         // PRODUCTION MODE: Real payment gateway integration
         try {
@@ -110,7 +71,7 @@ export const SubscriptionPaymentDetailsModal: React.FC<SubscriptionPaymentDetail
                     <button onClick={onClose} className="absolute top-4 right-4 text-gray-400 hover:text-gray-600" disabled={isProcessing}>
                         <XCircleIcon className="w-6 h-6" />
                     </button>
-                    
+
                     <div className="text-center mb-6">
                         <h3 className="text-2xl font-bold text-gray-900">Subscription Payment</h3>
                         <p className="mt-2 text-sm text-gray-600">
@@ -126,11 +87,10 @@ export const SubscriptionPaymentDetailsModal: React.FC<SubscriptionPaymentDetail
                                 <button
                                     type="button"
                                     onClick={() => setBillingCycle('monthly')}
-                                    className={`p-4 rounded-lg border-2 transition-all ${
-                                        billingCycle === 'monthly'
+                                    className={`p-4 rounded-lg border-2 transition-all ${billingCycle === 'monthly'
                                             ? 'border-primary bg-green-50'
                                             : 'border-gray-200 hover:border-gray-300'
-                                    }`}
+                                        }`}
                                 >
                                     <div className="text-center">
                                         <p className="font-semibold text-gray-900">Monthly</p>
@@ -143,11 +103,10 @@ export const SubscriptionPaymentDetailsModal: React.FC<SubscriptionPaymentDetail
                                 <button
                                     type="button"
                                     onClick={() => setBillingCycle('yearly')}
-                                    className={`p-4 rounded-lg border-2 transition-all ${
-                                        billingCycle === 'yearly'
+                                    className={`p-4 rounded-lg border-2 transition-all ${billingCycle === 'yearly'
                                             ? 'border-primary bg-green-50'
                                             : 'border-gray-200 hover:border-gray-300'
-                                    }`}
+                                        }`}
                                 >
                                     <div className="text-center">
                                         <p className="font-semibold text-gray-900">Yearly</p>
@@ -161,20 +120,7 @@ export const SubscriptionPaymentDetailsModal: React.FC<SubscriptionPaymentDetail
                         </div>
                     )}
 
-                    {/* Test Mode Banner */}
-                    {(window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1') && plan.name !== 'Free' && (
-                        <div className="mb-4 p-3 bg-yellow-50 border-l-4 border-yellow-400 rounded">
-                            <div className="flex items-start">
-                                <svg className="h-5 w-5 text-yellow-600 mt-0.5 mr-2" fill="currentColor" viewBox="0 0 20 20">
-                                    <path fillRule="evenodd" d="M8.257 3.099c.765-1.36 2.722-1.36 3.486 0l5.58 9.92c.75 1.334-.213 2.98-1.742 2.98H4.42c-1.53 0-2.493-1.646-1.743-2.98l5.58-9.92zM11 13a1 1 0 11-2 0 1 1 0 012 0zm-1-8a1 1 0 00-1 1v3a1 1 0 002 0V6a1 1 0 00-1-1z" clipRule="evenodd" />
-                                </svg>
-                                <div>
-                                    <p className="text-sm font-semibold text-yellow-800">TEST MODE</p>
-                                    <p className="text-xs text-yellow-700 mt-1">Payment will be simulated for local testing. Real gateway integration works in production.</p>
-                                </div>
-                            </div>
-                        </div>
-                    )}
+
 
                     {/* Payment Gateway Info */}
                     <div className="mb-6 p-4 bg-gradient-to-r from-blue-50 to-purple-50 rounded-lg border border-blue-200">
@@ -205,11 +151,10 @@ export const SubscriptionPaymentDetailsModal: React.FC<SubscriptionPaymentDetail
                         <button
                             onClick={handlePayment}
                             disabled={isProcessing || (plan.name === 'Free' && user.subscriptionTier === 'Free')}
-                            className={`w-full flex justify-center items-center rounded-md px-4 py-3 text-base font-semibold shadow-sm transition-colors ${
-                                isProcessing
+                            className={`w-full flex justify-center items-center rounded-md px-4 py-3 text-base font-semibold shadow-sm transition-colors ${isProcessing
                                     ? 'bg-gray-400 text-white cursor-wait'
                                     : 'bg-primary text-white hover:bg-secondary focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-2'
-                            }`}
+                                }`}
                         >
                             {isProcessing ? (
                                 <>

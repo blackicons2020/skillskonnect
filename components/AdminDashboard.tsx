@@ -18,7 +18,6 @@ interface AdminDashboardProps {
     onDeleteUser: (userId: string) => void;
     onMarkAsPaid: (bookingId: string) => void;
     onConfirmPayment: (bookingId: string) => void;
-    onApproveSubscription: (userId: string) => void;
 }
 
 const CreateAdminModal: React.FC<{ onClose: () => void; onCreate: (data: any) => void }> = ({ onClose, onCreate }) => {
@@ -35,7 +34,7 @@ const CreateAdminModal: React.FC<{ onClose: () => void; onCreate: (data: any) =>
     return (
         <div className="fixed inset-0 bg-black bg-opacity-60 flex items-center justify-center z-50 p-4">
             <div className="bg-white rounded-2xl shadow-xl w-full max-w-md p-6 relative">
-                 <button onClick={onClose} className="absolute top-4 right-4 text-gray-400 hover:text-gray-600">
+                <button onClick={onClose} className="absolute top-4 right-4 text-gray-400 hover:text-gray-600">
                     <XCircleIcon className="w-6 h-6" />
                 </button>
                 <h3 className="text-xl font-bold text-gray-900 mb-4">Create New Admin</h3>
@@ -70,19 +69,19 @@ const CreateAdminModal: React.FC<{ onClose: () => void; onCreate: (data: any) =>
     );
 };
 
-export const AdminDashboard: React.FC<AdminDashboardProps> = ({ user: currentUser, allUsers, allJobs = [], onUpdateUser, onDeleteUser, onMarkAsPaid, onConfirmPayment, onApproveSubscription }) => {
+export const AdminDashboard: React.FC<AdminDashboardProps> = ({ user: currentUser, allUsers, allJobs = [], onUpdateUser, onDeleteUser, onMarkAsPaid, onConfirmPayment }) => {
     // Current user context is now passed directly as a prop, avoiding redundant fetches
 
     // Initial state setup to avoid flashing incorrect tabs
     const [activeTab, setActiveTab] = useState<'clients' | 'cleaners' | 'payments' | 'allBookings' | 'admins' | 'support' | 'jobs'>('clients');
-    
+
     const [searchTerm, setSearchTerm] = useState('');
     const [userToView, setUserToView] = useState<User | null>(null);
     const [userToSuspend, setUserToSuspend] = useState<User | null>(null);
     const [userToDelete, setUserToDelete] = useState<User | null>(null);
     const [receiptToView, setReceiptToView] = useState<Receipt | null>(null);
     const [isCreateAdminModalOpen, setIsCreateAdminModalOpen] = useState(false);
-    
+
     // Support Tab State
     const [supportTickets, setSupportTickets] = useState<SupportTicket[]>([]);
     const [ticketToResolve, setTicketToResolve] = useState<SupportTicket | null>(null);
@@ -90,8 +89,8 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ user: currentUse
 
     // Initial Tab Selection based on Role
     React.useEffect(() => {
-         if (currentUser.adminRole === 'Payment') setActiveTab('payments');
-         else setActiveTab('clients');
+        if (currentUser.adminRole === 'Payment') setActiveTab('payments');
+        else setActiveTab('clients');
     }, [currentUser.adminRole]);
 
     // Fetch support tickets when tab is active
@@ -132,7 +131,7 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ user: currentUse
 
     const allBookings = useMemo(() => {
         if (!allUsers) return [];
-        
+
         return allUsers.flatMap(u => u.bookingHistory || []).sort((a, b) => {
             const getDate = (dateStr?: string) => {
                 if (!dateStr) return 0;
@@ -160,7 +159,7 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ user: currentUse
             return (user.fullName || '').toLowerCase().includes(term) || (user.email || '').toLowerCase().includes(term);
         });
     }, [searchTerm, allUsers]);
-    
+
     const clients = users.filter(u => u.role === 'client' && !u.isAdmin);
     const cleaners = users.filter(u => u.role === 'cleaner' && !u.isAdmin);
     const admins = allUsers ? allUsers.filter(u => u.isAdmin) : [];
@@ -187,7 +186,7 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ user: currentUse
     const canSeeTab = (tab: typeof activeTab) => {
         if (!currentUser?.isAdmin) return false;
         const role = currentUser.adminRole;
-        
+
         // Fallback: If role is undefined/null but user IS admin, assume Super access (or basic) to avoid lockout
         if (!role || role === 'Super') return true;
 
@@ -244,13 +243,12 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ user: currentUse
                                     <div className="text-sm text-gray-900">{user.email}</div>
                                     <div className="text-sm text-gray-500">{user.phoneNumber}</div>
                                 </td>
-                                 {!isAdminTable && (
-                                     <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                                         <span className={`px-2 inline-flex text-xs leading-5 font-semibold rounded-full ${
-                                            user.isSuspended ? 'bg-yellow-100 text-yellow-800' : 'bg-green-100 text-green-800'
-                                         }`}>
+                                {!isAdminTable && (
+                                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                                        <span className={`px-2 inline-flex text-xs leading-5 font-semibold rounded-full ${user.isSuspended ? 'bg-yellow-100 text-yellow-800' : 'bg-green-100 text-green-800'
+                                            }`}>
                                             {user.isSuspended ? 'Suspended' : 'Active'}
-                                         </span>
+                                        </span>
                                     </td>
                                 )}
                                 {isCleanerTable && (
@@ -272,13 +270,12 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ user: currentUse
                                     </td>
                                 )}
                                 <td className="px-6 py-4 whitespace-nowrap">
-                                    <span className={`px-2 inline-flex text-xs leading-5 font-semibold rounded-full ${
-                                        isAdminTable 
-                                            ? 'bg-purple-100 text-purple-800'
-                                            : user.clientType === 'Company' || user.cleanerType === 'Company'
+                                    <span className={`px-2 inline-flex text-xs leading-5 font-semibold rounded-full ${isAdminTable
+                                        ? 'bg-purple-100 text-purple-800'
+                                        : user.clientType === 'Company' || user.cleanerType === 'Company'
                                             ? 'bg-blue-100 text-blue-800'
                                             : 'bg-green-100 text-green-800'
-                                    }`}>
+                                        }`}>
                                         {isAdminTable ? (user.adminRole || 'Admin') : (user.clientType || user.cleanerType)}
                                     </span>
                                 </td>
@@ -294,7 +291,7 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ user: currentUse
             </div>
         );
     }
-    
+
     const PaymentTable: React.FC<{ bookings: Booking[] }> = ({ bookings }) => (
         <div className="overflow-x-auto">
             <table className="min-w-full divide-y divide-gray-200">
@@ -325,12 +322,12 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ user: currentUse
                     ))}
                 </tbody>
             </table>
-             {bookings.length === 0 && <p className="text-center text-gray-500 p-4">No records found.</p>}
+            {bookings.length === 0 && <p className="text-center text-gray-500 p-4">No records found.</p>}
         </div>
     );
 
-    const ConfirmationPaymentTable: React.FC<{ bookings: Booking[]}> = ({ bookings }) => (
-         <div>
+    const ConfirmationPaymentTable: React.FC<{ bookings: Booking[] }> = ({ bookings }) => (
+        <div>
             <h3 className="text-xl font-semibold p-4">Payment Confirmations (Escrow)</h3>
             <div className="overflow-x-auto">
                 <table className="min-w-full divide-y divide-gray-200">
@@ -353,8 +350,8 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ user: currentUse
                                 <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{booking.date}</td>
                                 <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
                                     {booking.paymentReceipt ? (
-                                        <button 
-                                            onClick={() => setReceiptToView(booking.paymentReceipt!)} 
+                                        <button
+                                            onClick={() => setReceiptToView(booking.paymentReceipt!)}
                                             className="text-primary hover:text-secondary flex items-center gap-1 font-medium"
                                         >
                                             <EyeIcon className="w-4 h-4" />
@@ -371,13 +368,13 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ user: currentUse
                         ))}
                     </tbody>
                 </table>
-                 {bookings.length === 0 && <p className="text-center text-gray-500 p-4">No records found.</p>}
+                {bookings.length === 0 && <p className="text-center text-gray-500 p-4">No records found.</p>}
             </div>
         </div>
     );
-    
+
     const getJobStatusBadge = (status: Booking['status']) => {
-        switch(status) {
+        switch (status) {
             case 'Upcoming': return 'bg-indigo-100 text-indigo-800';
             case 'Completed': return 'bg-green-100 text-green-800';
             case 'Cancelled': return 'bg-red-100 text-red-800';
@@ -385,7 +382,7 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ user: currentUse
         }
     }
     const getPaymentStatusBadge = (status: Booking['paymentStatus']) => {
-        switch(status) {
+        switch (status) {
             case 'Pending Payment': return 'bg-yellow-100 text-yellow-800';
             case 'Pending Admin Confirmation': return 'bg-blue-100 text-blue-800';
             case 'Confirmed': return 'bg-teal-100 text-teal-800';
@@ -416,8 +413,8 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ user: currentUse
                                 <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{user.pendingSubscription}</td>
                                 <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
                                     {user.subscriptionReceipt ? (
-                                        <button 
-                                            onClick={() => setReceiptToView(user.subscriptionReceipt!)} 
+                                        <button
+                                            onClick={() => setReceiptToView(user.subscriptionReceipt!)}
                                             className="text-primary hover:text-secondary flex items-center gap-1 font-medium"
                                         >
                                             <EyeIcon className="w-4 h-4" />
@@ -438,7 +435,7 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ user: currentUse
             </div>
         </div>
     );
-    
+
     // Only render dashboard if we have current user context (passed via prop now)
     if (!currentUser) return <div className="p-8 text-center">Loading admin dashboard...</div>;
 
@@ -452,12 +449,12 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ user: currentUse
     return (
         <div className="container mx-auto px-4 sm:px-6 lg:px-8 py-12">
             <div className="flex flex-col sm:flex-row justify-between items-center mb-8">
-                 <h1 className="text-3xl font-bold text-dark flex items-center gap-3">
-                    <UserGroupIcon className="w-8 h-8"/>
+                <h1 className="text-3xl font-bold text-dark flex items-center gap-3">
+                    <UserGroupIcon className="w-8 h-8" />
                     <span>{currentUser.adminRole || 'System'} Admin Dashboard</span>
                 </h1>
                 <div className="mt-4 sm:mt-0 w-full sm:w-auto">
-                    <input 
+                    <input
                         type="text"
                         placeholder="Search by name or email..."
                         value={searchTerm}
@@ -467,16 +464,15 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ user: currentUse
                 </div>
             </div>
 
-             <div className="border-b border-gray-200 overflow-x-auto">
+            <div className="border-b border-gray-200 overflow-x-auto">
                 <nav className="-mb-px flex space-x-8" aria-label="Tabs">
                     {canSeeClients && (
                         <button
                             onClick={() => setActiveTab('clients')}
-                            className={`${
-                                activeTab === 'clients'
+                            className={`${activeTab === 'clients'
                                 ? 'border-primary text-primary'
                                 : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
-                            } whitespace-nowrap py-4 px-1 border-b-2 font-medium text-sm`}
+                                } whitespace-nowrap py-4 px-1 border-b-2 font-medium text-sm`}
                         >
                             Manage Clients ({clients.length})
                         </button>
@@ -484,11 +480,10 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ user: currentUse
                     {canSeeCleaners && (
                         <button
                             onClick={() => setActiveTab('cleaners')}
-                            className={`${
-                                activeTab === 'cleaners'
+                            className={`${activeTab === 'cleaners'
                                 ? 'border-primary text-primary'
                                 : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
-                            } whitespace-nowrap py-4 px-1 border-b-2 font-medium text-sm`}
+                                } whitespace-nowrap py-4 px-1 border-b-2 font-medium text-sm`}
                         >
                             Manage Workers ({cleaners.length})
                         </button>
@@ -496,35 +491,32 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ user: currentUse
                     {canSeePayments && (
                         <button
                             onClick={() => setActiveTab('payments')}
-                            className={`${
-                                activeTab === 'payments'
+                            className={`${activeTab === 'payments'
                                 ? 'border-primary text-primary'
                                 : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
-                            } whitespace-nowrap py-4 px-1 border-b-2 font-medium text-sm`}
+                                } whitespace-nowrap py-4 px-1 border-b-2 font-medium text-sm`}
                         >
-                            Payments
+                            Subscription
                         </button>
                     )}
                     {canSeeAllBookings && (
                         <button
                             onClick={() => setActiveTab('allBookings')}
-                            className={`${
-                                activeTab === 'allBookings'
+                            className={`${activeTab === 'allBookings'
                                 ? 'border-primary text-primary'
                                 : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
-                            } whitespace-nowrap py-4 px-1 border-b-2 font-medium text-sm`}
+                                } whitespace-nowrap py-4 px-1 border-b-2 font-medium text-sm`}
                         >
-                        All Bookings ({allBookings.length})
+                            All Bookings ({allBookings.length})
                         </button>
                     )}
                     {canSeeAdmins && (
                         <button
                             onClick={() => setActiveTab('admins')}
-                            className={`${
-                                activeTab === 'admins'
+                            className={`${activeTab === 'admins'
                                 ? 'border-primary text-primary'
                                 : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
-                            } whitespace-nowrap py-4 px-1 border-b-2 font-medium text-sm`}
+                                } whitespace-nowrap py-4 px-1 border-b-2 font-medium text-sm`}
                         >
                             Manage Admins ({admins.length})
                         </button>
@@ -532,11 +524,10 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ user: currentUse
                     {canSeeSupport && (
                         <button
                             onClick={() => setActiveTab('support')}
-                            className={`${
-                                activeTab === 'support'
+                            className={`${activeTab === 'support'
                                 ? 'border-primary text-primary'
                                 : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
-                            } whitespace-nowrap py-4 px-1 border-b-2 font-medium text-sm flex items-center gap-1`}
+                                } whitespace-nowrap py-4 px-1 border-b-2 font-medium text-sm flex items-center gap-1`}
                         >
                             <LifebuoyIcon className="w-4 h-4" />
                             Support Tickets
@@ -544,29 +535,28 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ user: currentUse
                     )}
                     <button
                         onClick={() => setActiveTab('jobs')}
-                        className={`${
-                            activeTab === 'jobs'
+                        className={`${activeTab === 'jobs'
                             ? 'border-primary text-primary'
                             : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
-                        } whitespace-nowrap py-4 px-1 border-b-2 font-medium text-sm`}
+                            } whitespace-nowrap py-4 px-1 border-b-2 font-medium text-sm`}
                     >
                         Job Postings ({allJobs.length})
                     </button>
                 </nav>
             </div>
-            
+
             <div className="mt-8 bg-white shadow-md rounded-lg">
                 {activeTab === 'clients' && canSeeClients && <UserTable users={clients} onView={setUserToView} onSuspend={setUserToSuspend} onDelete={setUserToDelete} />}
                 {activeTab === 'cleaners' && canSeeCleaners && <UserTable users={cleaners} onView={setUserToView} onSuspend={setUserToSuspend} onDelete={setUserToDelete} />}
                 {activeTab === 'payments' && canSeePayments && (
                     <div>
                         <div className="p-4 flex items-center justify-between">
-                             <h3 className="text-xl font-semibold">Subscription Payments</h3>
-                             <div className="flex items-center gap-2 rounded-lg bg-gray-100 p-1">
+                            <h3 className="text-xl font-semibold">Subscription Payments</h3>
+                            <div className="flex items-center gap-2 rounded-lg bg-gray-100 p-1">
                                 <button onClick={() => setSubscriptionFilter('all')} className={`px-3 py-1 text-sm font-medium rounded-md ${subscriptionFilter === 'all' ? 'bg-white shadow' : 'text-gray-600'}`}>All</button>
                                 <button onClick={() => setSubscriptionFilter('pending')} className={`px-3 py-1 text-sm font-medium rounded-md ${subscriptionFilter === 'pending' ? 'bg-white shadow' : 'text-gray-600'}`}>Pending Approval</button>
                                 <button onClick={() => setSubscriptionFilter('active')} className={`px-3 py-1 text-sm font-medium rounded-md ${subscriptionFilter === 'active' ? 'bg-white shadow' : 'text-gray-600'}`}>Active</button>
-                             </div>
+                            </div>
                         </div>
                         <div className="overflow-x-auto">
                             <table className="min-w-full divide-y divide-gray-200">
@@ -574,11 +564,10 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ user: currentUse
                                     <tr>
                                         <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Worker Name</th>
                                         <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Current Plan</th>
-                                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Pending Plan</th>
-                                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Receipt</th>
-                                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Expiry</th>
+                                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Amount Paid</th>
+                                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Sub. Date</th>
+                                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Expiry Date</th>
                                         <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Status</th>
-                                        <th className="relative px-6 py-3"><span className="sr-only">Action</span></th>
                                     </tr>
                                 </thead>
                                 <tbody className="bg-white divide-y divide-gray-200">
@@ -586,45 +575,32 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ user: currentUse
                                         <tr key={user.id}>
                                             <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">{user.fullName}</td>
                                             <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                                                <span className={`px-2 py-0.5 text-xs font-bold rounded-full ${
-                                                    user.subscriptionTier === 'Elite' ? 'bg-yellow-100 text-yellow-800' :
+                                                <span className={`px-2 py-0.5 text-xs font-bold rounded-full ${user.subscriptionTier === 'Elite' ? 'bg-yellow-100 text-yellow-800' :
                                                     user.subscriptionTier === 'Pro' ? 'bg-blue-100 text-blue-800' :
-                                                    user.subscriptionTier === 'Basic' ? 'bg-green-100 text-green-800' :
-                                                    'bg-gray-100 text-gray-800'
-                                                }`}>{user.subscriptionTier || 'Free'}</span>
+                                                        user.subscriptionTier === 'Basic' ? 'bg-green-100 text-green-800' :
+                                                            'bg-gray-100 text-gray-800'
+                                                    }`}>{user.subscriptionTier || 'Free'}</span>
+                                            </td>
+                                            <td className="px-6 py-4 whitespace-nowrap text-sm font-semibold text-gray-800">
+                                                {user.subscriptionAmount != null
+                                                    ? `₦${user.subscriptionAmount.toLocaleString()}`
+                                                    : <span className="text-gray-400 font-normal">—</span>
+                                                }
                                             </td>
                                             <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                                                {user.pendingSubscription ? (
-                                                    <span className="px-2 py-0.5 text-xs font-bold rounded-full bg-orange-100 text-orange-800">{user.pendingSubscription}</span>
-                                                ) : (
-                                                    <span className="text-gray-400">—</span>
-                                                )}
+                                                {user.subscriptionDate
+                                                    ? new Date(user.subscriptionDate).toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' })
+                                                    : <span className="text-gray-400">—</span>
+                                                }
                                             </td>
                                             <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                                                {user.subscriptionReceipt ? (
-                                                    <button 
-                                                        onClick={() => setReceiptToView(user.subscriptionReceipt!)} 
-                                                        className="text-primary hover:text-secondary flex items-center gap-1 font-medium"
-                                                    >
-                                                        <EyeIcon className="w-4 h-4" />
-                                                        View
-                                                    </button>
-                                                ) : (
-                                                    <span className="text-gray-400">—</span>
-                                                )}
+                                                {user.subscriptionEndDate
+                                                    ? new Date(user.subscriptionEndDate).toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' })
+                                                    : <span className="text-gray-400">—</span>
+                                                }
                                             </td>
-                                            <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{user.subscriptionEndDate || '—'}</td>
                                             <td className="px-6 py-4 whitespace-nowrap text-sm">
-                                                {user.pendingSubscription ? (
-                                                    <span className="px-2 py-0.5 text-xs font-bold rounded-full bg-yellow-100 text-yellow-800">Pending</span>
-                                                ) : (
-                                                    <span className="px-2 py-0.5 text-xs font-bold rounded-full bg-green-100 text-green-800">Active</span>
-                                                )}
-                                            </td>
-                                            <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
-                                                {user.pendingSubscription && user.subscriptionReceipt && (
-                                                    <button onClick={() => onApproveSubscription(user.id)} className="bg-primary text-white px-3 py-1 rounded-md text-xs font-semibold hover:bg-secondary">Approve</button>
-                                                )}
+                                                <span className="px-2 py-0.5 text-xs font-bold rounded-full bg-green-100 text-green-800">Active</span>
                                             </td>
                                         </tr>
                                     ))}
@@ -634,11 +610,11 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ user: currentUse
                         </div>
                     </div>
                 )}
-                 {activeTab === 'allBookings' && canSeeAllBookings && (
-                     <div>
+                {activeTab === 'allBookings' && canSeeAllBookings && (
+                    <div>
                         <h3 className="text-xl font-semibold p-4">All Bookings History</h3>
                         <div className="overflow-x-auto">
-                           <table className="min-w-full divide-y divide-gray-200">
+                            <table className="min-w-full divide-y divide-gray-200">
                                 <thead className="bg-gray-50">
                                     <tr>
                                         <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Client</th>
@@ -660,36 +636,36 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ user: currentUse
                                             <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">₦{(b.amount || 0).toLocaleString()}</td>
                                             <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
                                                 <div className="flex flex-col gap-1 items-start">
-                                                     <span className="text-xs">{b.paymentMethod}</span>
-                                                     <span className={`text-xs font-bold px-2 py-0.5 rounded-full ${getPaymentStatusBadge(b.paymentStatus)}`}>
+                                                    <span className="text-xs">{b.paymentMethod}</span>
+                                                    <span className={`text-xs font-bold px-2 py-0.5 rounded-full ${getPaymentStatusBadge(b.paymentStatus)}`}>
                                                         {b.paymentStatus}
-                                                     </span>
+                                                    </span>
                                                 </div>
                                             </td>
                                             <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                                                 <span className={`text-xs font-bold px-2 py-1 rounded-full ${getJobStatusBadge(b.status)}`}>
+                                                <span className={`text-xs font-bold px-2 py-1 rounded-full ${getJobStatusBadge(b.status)}`}>
                                                     {b.status}
-                                                 </span>
+                                                </span>
                                             </td>
                                         </tr>
                                     ))}
                                 </tbody>
-                           </table>
+                            </table>
                         </div>
-                     </div>
+                    </div>
                 )}
                 {activeTab === 'admins' && canSeeAdmins && (
                     <div>
                         <div className="p-4 flex justify-between items-center">
                             <h3 className="text-xl font-semibold">Manage Administrators</h3>
-                            <button 
+                            <button
                                 onClick={() => setIsCreateAdminModalOpen(true)}
                                 className="bg-primary text-white px-4 py-2 rounded-lg text-sm font-semibold hover:bg-secondary transition-colors"
                             >
                                 + Create New Admin
                             </button>
                         </div>
-                        <UserTable users={admins} onView={() => {}} onSuspend={setUserToSuspend} onDelete={setUserToDelete} isAdminTable={true} />
+                        <UserTable users={admins} onView={() => { }} onSuspend={setUserToSuspend} onDelete={setUserToDelete} isAdminTable={true} />
                     </div>
                 )}
 
@@ -699,8 +675,8 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ user: currentUse
                         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
                             <div className="space-y-4">
                                 {supportTickets.map(ticket => (
-                                    <div 
-                                        key={ticket.id} 
+                                    <div
+                                        key={ticket.id}
                                         onClick={() => setTicketToResolve(ticket)}
                                         className={`p-4 border rounded-lg cursor-pointer hover:bg-gray-50 transition-colors ${ticketToResolve?.id === ticket.id ? 'border-primary ring-1 ring-primary bg-gray-50' : 'border-gray-200'}`}
                                     >
@@ -722,10 +698,10 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ user: currentUse
                                     <div className="flex justify-between items-start mb-4">
                                         <h3 className="text-lg font-bold">{ticketToResolve.subject}</h3>
                                         <button onClick={() => setTicketToResolve(null)} className="text-gray-400 hover:text-gray-600">
-                                            <XCircleIcon className="w-5 h-5"/>
+                                            <XCircleIcon className="w-5 h-5" />
                                         </button>
                                     </div>
-                                    
+
                                     <div className="bg-gray-50 p-3 rounded mb-4 text-sm">
                                         <p className="font-semibold text-gray-700 mb-1">User Message:</p>
                                         <p className="text-gray-600 whitespace-pre-wrap">{ticketToResolve.message}</p>
@@ -746,7 +722,7 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ user: currentUse
                                                 value={adminResponseText}
                                                 onChange={(e) => setAdminResponseText(e.target.value)}
                                             ></textarea>
-                                            <button 
+                                            <button
                                                 onClick={handleResolveTicket}
                                                 className="w-full bg-primary text-white py-2 rounded-lg font-semibold hover:bg-secondary"
                                             >
@@ -801,12 +777,11 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ user: currentUse
                                                     <span className="text-xs text-gray-500 block">{job.budgetType}</span>
                                                 </td>
                                                 <td className="px-4 py-4">
-                                                    <span className={`px-2 py-1 text-xs font-bold rounded-full ${
-                                                        job.status === 'Open' ? 'bg-green-100 text-green-800' :
+                                                    <span className={`px-2 py-1 text-xs font-bold rounded-full ${job.status === 'Open' ? 'bg-green-100 text-green-800' :
                                                         job.status === 'In Progress' ? 'bg-blue-100 text-blue-800' :
-                                                        job.status === 'Completed' ? 'bg-gray-100 text-gray-800' :
-                                                        'bg-red-100 text-red-800'
-                                                    }`}>
+                                                            job.status === 'Completed' ? 'bg-gray-100 text-gray-800' :
+                                                                'bg-red-100 text-red-800'
+                                                        }`}>
                                                         {job.status}
                                                     </span>
                                                 </td>
@@ -827,11 +802,11 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ user: currentUse
                     </div>
                 )}
             </div>
-            
+
             {userToView && (
-                <UserDetailsModal 
-                    user={userToView} 
-                    onClose={() => setUserToView(null)} 
+                <UserDetailsModal
+                    user={userToView}
+                    onClose={() => setUserToView(null)}
                     isAdmin={true}
                     onApproveVerification={(userId) => {
                         onUpdateUser({ ...userToView, isVerified: true });
@@ -871,9 +846,9 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ user: currentUse
                     confirmButtonClass="bg-red-600 hover:bg-red-500 focus-visible:outline-red-600"
                 />
             )}
-            
+
             {receiptToView && <ReceiptViewerModal receipt={receiptToView} onClose={() => setReceiptToView(null)} />}
-            
+
             {isCreateAdminModalOpen && (
                 <CreateAdminModal onClose={() => setIsCreateAdminModalOpen(false)} onCreate={handleCreateAdmin} />
             )}

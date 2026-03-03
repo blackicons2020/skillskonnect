@@ -118,15 +118,15 @@ const seedAdmins = async () => {
         break;
       }
     }
-    
+
     if (adminExists) {
       console.log(`Admin ${admin.email} already exists, skipping...`);
       continue;
     }
-    
+
     const salt = await bcrypt.genSalt(10);
     const hashedPassword = await bcrypt.hash(admin.password, salt);
-    
+
     const id = `admin_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
     const adminUser = {
       id,
@@ -180,7 +180,7 @@ const protect = (req, res, next) => {
 app.post('/api/auth/register', async (req, res) => {
   try {
     const { email, password, role = 'client', gender = 'Male' } = req.body;
-    
+
     // Check if user exists
     for (const [id, user] of users) {
       if (user.email === email) {
@@ -190,7 +190,7 @@ app.post('/api/auth/register', async (req, res) => {
 
     const salt = await bcrypt.genSalt(10);
     const hashedPassword = await bcrypt.hash(password, salt);
-    
+
     const id = `user_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
     const newUser = {
       id,
@@ -229,7 +229,7 @@ app.post('/api/auth/register', async (req, res) => {
 app.post('/api/auth/login', async (req, res) => {
   try {
     const { email, password } = req.body;
-    
+
     let foundUser = null;
     for (const [id, user] of users) {
       if (user.email === email) {
@@ -293,7 +293,7 @@ app.put('/api/users/me', protect, (req, res) => {
         user[key] = updates[key];
       }
     });
-    
+
     // Auto-set role based on userType
     if (updates.userType) {
       if (updates.userType.includes('Client')) {
@@ -373,21 +373,21 @@ app.put('/api/jobs/:jobId', protect, (req, res) => {
     const { jobId } = req.params;
     const updates = req.body;
     const user = users.get(req.user.id);
-    
+
     if (!user || !user.postedJobs) {
       return res.status(404).json({ message: 'User or jobs not found' });
     }
-    
+
     const jobIndex = user.postedJobs.findIndex(j => j.id === jobId);
     if (jobIndex === -1) {
       return res.status(404).json({ message: 'Job not found' });
     }
-    
+
     // Verify ownership
     if (user.postedJobs[jobIndex].clientId !== req.user.id) {
       return res.status(403).json({ message: 'Not authorized to edit this job' });
     }
-    
+
     // Update the job
     user.postedJobs[jobIndex] = {
       ...user.postedJobs[jobIndex],
@@ -396,10 +396,10 @@ app.put('/api/jobs/:jobId', protect, (req, res) => {
       clientId: req.user.id, // Preserve ownership
       postedDate: user.postedJobs[jobIndex].postedDate // Preserve original date
     };
-    
+
     users.set(req.user.id, user);
     saveData();
-    
+
     res.json(user.postedJobs[jobIndex]);
   } catch (error) {
     res.status(500).json({ message: error.message });
@@ -411,27 +411,27 @@ app.put('/api/jobs/:jobId/cancel', protect, (req, res) => {
   try {
     const { jobId } = req.params;
     const user = users.get(req.user.id);
-    
+
     if (!user || !user.postedJobs) {
       return res.status(404).json({ message: 'User or jobs not found' });
     }
-    
+
     const jobIndex = user.postedJobs.findIndex(j => j.id === jobId);
     if (jobIndex === -1) {
       return res.status(404).json({ message: 'Job not found' });
     }
-    
+
     // Verify ownership
     if (user.postedJobs[jobIndex].clientId !== req.user.id) {
       return res.status(403).json({ message: 'Not authorized to cancel this job' });
     }
-    
+
     // Update status to Cancelled
     user.postedJobs[jobIndex].status = 'Cancelled';
-    
+
     users.set(req.user.id, user);
     saveData();
-    
+
     res.json(user.postedJobs[jobIndex]);
   } catch (error) {
     res.status(500).json({ message: error.message });
@@ -443,27 +443,27 @@ app.delete('/api/jobs/:jobId', protect, (req, res) => {
   try {
     const { jobId } = req.params;
     const user = users.get(req.user.id);
-    
+
     if (!user || !user.postedJobs) {
       return res.status(404).json({ message: 'User or jobs not found' });
     }
-    
+
     const jobIndex = user.postedJobs.findIndex(j => j.id === jobId);
     if (jobIndex === -1) {
       return res.status(404).json({ message: 'Job not found' });
     }
-    
+
     // Verify ownership
     if (user.postedJobs[jobIndex].clientId !== req.user.id) {
       return res.status(403).json({ message: 'Not authorized to delete this job' });
     }
-    
+
     // Remove the job
     user.postedJobs.splice(jobIndex, 1);
-    
+
     users.set(req.user.id, user);
     saveData();
-    
+
     res.json({ message: 'Job deleted successfully' });
   } catch (error) {
     res.status(500).json({ message: error.message });
@@ -475,22 +475,22 @@ app.get('/api/jobs/:jobId/applicants', protect, (req, res) => {
   try {
     const { jobId } = req.params;
     const user = users.get(req.user.id);
-    
+
     if (!user || !user.postedJobs) {
       return res.status(404).json({ message: 'User or jobs not found' });
     }
-    
+
     // Find the job
     const job = user.postedJobs.find(j => j.id === jobId);
     if (!job) {
       return res.status(404).json({ message: 'Job not found' });
     }
-    
+
     // Verify ownership
     if (job.clientId !== req.user.id) {
       return res.status(403).json({ message: 'Not authorized to view applicants for this job' });
     }
-    
+
     // Get applicant details (limited info for privacy)
     const applicants = [];
     if (job.applicants) {
@@ -518,7 +518,7 @@ app.get('/api/jobs/:jobId/applicants', protect, (req, res) => {
         }
       }
     }
-    
+
     res.json(applicants);
   } catch (error) {
     res.status(500).json({ message: error.message });
@@ -582,7 +582,7 @@ app.post('/api/jobs/:jobId/apply', protect, (req, res) => {
 
     saveData(); // Persist changes
 
-    res.json({ 
+    res.json({
       message: 'Application submitted successfully',
       job: jobFound
     });
@@ -602,9 +602,9 @@ app.post('/api/bookings', protect, (req, res) => {
       status: 'Upcoming',
       createdAt: new Date().toISOString()
     };
-    
+
     bookings.set(bookingId, booking);
-    
+
     // Update user's booking history
     const user = users.get(req.user.id);
     if (user) {
@@ -612,7 +612,7 @@ app.post('/api/bookings', protect, (req, res) => {
       user.bookingHistory.push(booking);
       users.set(req.user.id, user);
     }
-    
+
     saveData();
 
     res.status(201).json(booking);
@@ -625,7 +625,7 @@ app.post('/api/bookings', protect, (req, res) => {
 app.post('/api/chats', protect, (req, res) => {
   try {
     const { participantId, participantName, currentUserName } = req.body;
-    
+
     const chatId = `chat_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
     const chat = {
       id: chatId,
@@ -636,7 +636,7 @@ app.post('/api/chats', protect, (req, res) => {
       },
       updatedAt: new Date().toISOString()
     };
-    
+
     chats.set(chatId, chat);
     saveData();
     res.status(201).json(chat);
@@ -659,7 +659,7 @@ app.get('/api/chats', protect, (req, res) => {
         }
         chatMessages.sort((a, b) => new Date(a.timestamp) - new Date(b.timestamp));
         const lastMessage = chatMessages[chatMessages.length - 1] || null;
-        
+
         userChats.push({
           ...chat,
           lastMessage: lastMessage
@@ -677,16 +677,16 @@ app.get('/api/chats/:chatId/messages', protect, (req, res) => {
   try {
     const { chatId } = req.params;
     const chat = chats.get(chatId);
-    
+
     if (!chat) {
       return res.status(404).json({ message: 'Chat not found' });
     }
-    
+
     // Verify user is part of this chat
     if (!chat.participants.includes(req.user.id)) {
       return res.status(403).json({ message: 'Not authorized to view this chat' });
     }
-    
+
     // Get all messages for this chat
     const chatMessages = [];
     for (const [msgId, msg] of messages) {
@@ -694,10 +694,10 @@ app.get('/api/chats/:chatId/messages', protect, (req, res) => {
         chatMessages.push(msg);
       }
     }
-    
+
     // Sort by timestamp
     chatMessages.sort((a, b) => new Date(a.timestamp) - new Date(b.timestamp));
-    
+
     res.json(chatMessages);
   } catch (error) {
     res.status(500).json({ message: error.message });
@@ -710,20 +710,20 @@ app.post('/api/chats/:chatId/messages', protect, (req, res) => {
     const { chatId } = req.params;
     const { text } = req.body;
     const chat = chats.get(chatId);
-    
+
     if (!chat) {
       return res.status(404).json({ message: 'Chat not found' });
     }
-    
+
     // Verify user is part of this chat
     if (!chat.participants.includes(req.user.id)) {
       return res.status(403).json({ message: 'Not authorized to send messages in this chat' });
     }
-    
+
     if (!text || !text.trim()) {
       return res.status(400).json({ message: 'Message text is required' });
     }
-    
+
     const messageId = `msg_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
     const message = {
       id: messageId,
@@ -732,13 +732,13 @@ app.post('/api/chats/:chatId/messages', protect, (req, res) => {
       text: text.trim(),
       timestamp: new Date().toISOString()
     };
-    
+
     messages.set(messageId, message);
-    
+
     // Update chat's updatedAt
     chat.updatedAt = message.timestamp;
     chats.set(chatId, chat);
-    
+
     saveData();
     res.status(201).json(message);
   } catch (error) {
@@ -753,8 +753,8 @@ app.post('/api/payment/initialize', protect, async (req, res) => {
     const PAYSTACK_SECRET_KEY = process.env.PAYSTACK_SECRET_KEY;
 
     if (!PAYSTACK_SECRET_KEY || PAYSTACK_SECRET_KEY === 'sk_test_your_paystack_secret_key_here') {
-      return res.status(400).json({ 
-        message: 'Payment gateway not configured. Please add PAYSTACK_SECRET_KEY to .env file' 
+      return res.status(400).json({
+        message: 'Payment gateway not configured. Please add PAYSTACK_SECRET_KEY to .env file'
       });
     }
 
@@ -783,10 +783,10 @@ app.post('/api/payment/initialize', protect, async (req, res) => {
     });
 
     const result = await paystackResponse.json();
-    
+
     if (!result.status) {
-      return res.status(400).json({ 
-        message: result.message || 'Payment initialization failed' 
+      return res.status(400).json({
+        message: result.message || 'Payment initialization failed'
       });
     }
 
@@ -807,8 +807,8 @@ app.get('/api/payment/verify/:reference', protect, async (req, res) => {
     const PAYSTACK_SECRET_KEY = process.env.PAYSTACK_SECRET_KEY;
 
     if (!PAYSTACK_SECRET_KEY || PAYSTACK_SECRET_KEY === 'sk_test_your_paystack_secret_key_here') {
-      return res.status(400).json({ 
-        message: 'Payment gateway not configured' 
+      return res.status(400).json({
+        message: 'Payment gateway not configured'
       });
     }
 
@@ -820,7 +820,7 @@ app.get('/api/payment/verify/:reference', protect, async (req, res) => {
     });
 
     const result = await paystackResponse.json();
-    
+
     if (result.status && result.data.status === 'success') {
       // Update user subscription
       const user = users.get(req.user.id);
@@ -866,13 +866,220 @@ app.get('/api/admin/users', protect, (req, res) => {
   }
 });
 
+// Admin approve subscription
+app.post('/api/admin/users/:userId/approve-subscription', protect, (req, res) => {
+  try {
+    if (!req.user.isAdmin) {
+      return res.status(403).json({ message: 'Admin access required' });
+    }
+
+    const { userId } = req.params;
+    const user = users.get(userId);
+
+    if (!user) {
+      return res.status(404).json({ message: 'User not found' });
+    }
+
+    if (!user.pendingSubscription) {
+      return res.status(400).json({ message: 'No pending subscription to approve' });
+    }
+
+    // Plan price lookup (NGN)
+    const planPrices = {
+      'Basic': 5000,
+      'Pro': 10000,
+      'Elite': 20000,
+      'Standard': 7500,
+      'Premium': 15000,
+      'Silver': 8000,
+      'Gold': 15000,
+      'Diamond': 25000,
+      'Regular': 5000,
+    };
+
+    const now = new Date();
+    const endDate = new Date(now);
+    endDate.setDate(endDate.getDate() + 30); // 30 days subscription
+
+    user.subscriptionTier = user.pendingSubscription;
+    user.subscriptionDate = now.toISOString();
+    user.subscriptionEndDate = endDate.toISOString();
+    user.subscriptionAmount = planPrices[user.pendingSubscription] || 0;
+    user.pendingSubscription = undefined;
+    user.subscriptionReceipt = undefined;
+
+    users.set(userId, user);
+    saveData();
+
+    const userData = { ...user };
+    delete userData.password;
+    res.json(userData);
+  } catch (error) {
+    res.status(500).json({ message: error.message });
+  }
+});
+
+// Admin update user
+app.put('/api/admin/users/:userId', protect, (req, res) => {
+  try {
+    if (!req.user.isAdmin) {
+      return res.status(403).json({ message: 'Admin access required' });
+    }
+
+    const { userId } = req.params;
+    const user = users.get(userId);
+
+    if (!user) {
+      return res.status(404).json({ message: 'User not found' });
+    }
+
+    const updates = req.body;
+    Object.keys(updates).forEach(key => {
+      if (key !== 'id' && key !== 'password') {
+        user[key] = updates[key];
+      }
+    });
+
+    users.set(userId, user);
+    saveData();
+
+    const userData = { ...user };
+    delete userData.password;
+    res.json(userData);
+  } catch (error) {
+    res.status(500).json({ message: error.message });
+  }
+});
+
+// Admin delete user
+app.delete('/api/admin/users/:userId', protect, (req, res) => {
+  try {
+    if (!req.user.isAdmin) {
+      return res.status(403).json({ message: 'Admin access required' });
+    }
+
+    const { userId } = req.params;
+    if (!users.has(userId)) {
+      return res.status(404).json({ message: 'User not found' });
+    }
+
+    users.delete(userId);
+    saveData();
+    res.json({ message: 'User deleted successfully' });
+  } catch (error) {
+    res.status(500).json({ message: error.message });
+  }
+});
+
+// Admin create admin user
+app.post('/api/admin/users/create-admin', protect, async (req, res) => {
+  try {
+    if (!req.user.isAdmin) {
+      return res.status(403).json({ message: 'Admin access required' });
+    }
+
+    const { email, fullName, role, password } = req.body;
+
+    // Check if email already exists
+    for (const [id, user] of users) {
+      if (user.email === email) {
+        return res.status(400).json({ message: 'Email already in use' });
+      }
+    }
+
+    const salt = await bcrypt.genSalt(10);
+    const hashedPassword = await bcrypt.hash(password || 'Admin@2026!', salt);
+    const id = `admin_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+
+    const newAdmin = {
+      id, email, password: hashedPassword,
+      fullName: fullName || 'New Admin',
+      role: 'admin',
+      isAdmin: true,
+      adminRole: role || 'Support',
+      subscriptionTier: 'Premium',
+      bookingHistory: [],
+      services: [],
+      isSuspended: false,
+      createdAt: new Date().toISOString()
+    };
+
+    users.set(id, newAdmin);
+    saveData();
+
+    const userData = { ...newAdmin };
+    delete userData.password;
+    res.status(201).json(userData);
+  } catch (error) {
+    res.status(500).json({ message: error.message });
+  }
+});
+
+// Support tickets routes
+const supportTickets = new Map();
+
+app.post('/api/support/tickets', protect, (req, res) => {
+  try {
+    const ticketId = `ticket_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+    const ticket = {
+      id: ticketId,
+      userId: req.user.id,
+      ...req.body,
+      status: 'Open',
+      createdAt: new Date().toISOString()
+    };
+    supportTickets.set(ticketId, ticket);
+    res.status(201).json(ticket);
+  } catch (error) {
+    res.status(500).json({ message: error.message });
+  }
+});
+
+app.get('/api/support/tickets', protect, (req, res) => {
+  try {
+    const allTickets = [];
+    for (const [id, ticket] of supportTickets) {
+      const user = users.get(ticket.userId);
+      allTickets.push({
+        ...ticket,
+        userName: user?.fullName || 'Unknown',
+        userRole: user?.role || 'Unknown'
+      });
+    }
+    allTickets.sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
+    res.json(allTickets);
+  } catch (error) {
+    res.status(500).json({ message: error.message });
+  }
+});
+
+app.put('/api/support/tickets/:ticketId/resolve', protect, (req, res) => {
+  try {
+    if (!req.user.isAdmin) {
+      return res.status(403).json({ message: 'Admin access required' });
+    }
+    const { ticketId } = req.params;
+    const ticket = supportTickets.get(ticketId);
+    if (!ticket) {
+      return res.status(404).json({ message: 'Ticket not found' });
+    }
+    ticket.status = 'Resolved';
+    ticket.adminResponse = req.body.response;
+    ticket.updatedAt = new Date().toISOString();
+    supportTickets.set(ticketId, ticket);
+    res.json(ticket);
+  } catch (error) {
+    res.status(500).json({ message: error.message });
+  }
+});
+
 // Start server
 app.listen(PORT, async () => {
   loadData();
-  
+
   // Always check and seed admins if they don't exist
   await seedAdmins();
-  
+
   console.log(`\n🚀 Skills Konnect API Server running on http://localhost:${PORT}`);
   console.log(`💾 Data persistence enabled - changes are auto-saved`);
   console.log(`📊 Current data: ${users.size} users, ${bookings.size} bookings, ${chats.size} chats\n`);

@@ -404,14 +404,14 @@ const App: React.FC = () => {
             if (!isAdminUpdatingOtherUser) {
                 setUser(updatedUser);
             }
-            
+
             // Check if postedJobs changed (client posting/updating jobs)
             const jobsChanged = user && user.postedJobs?.length !== updatedUser.postedJobs?.length;
-            
+
             // Check if verification status changed
-            const isVerificationUpdate = user && updatedData.isVerified !== undefined && 
-                                        user.isVerified !== updatedData.isVerified;
-            
+            const isVerificationUpdate = user && updatedData.isVerified !== undefined &&
+                user.isVerified !== updatedData.isVerified;
+
             if (updatedUser.isAdmin || isAdminUpdatingOtherUser) {
                 await refetchAllData(user || updatedUser);
             } else if (jobsChanged && (updatedUser.role === 'client' || (updatedUser as any).userType === 'client')) {
@@ -423,15 +423,15 @@ const App: React.FC = () => {
                     console.error("Failed to refresh jobs:", error);
                 }
             }
-            
+
             // Check if this was a subscription update for the current user
-            const isSubscriptionUpdate = !isAdminUpdatingOtherUser && user && 
-                                        user.subscriptionTier !== updatedUser.subscriptionTier;
-            
+            const isSubscriptionUpdate = !isAdminUpdatingOtherUser && user &&
+                user.subscriptionTier !== updatedUser.subscriptionTier;
+
             // Show appropriate success message
             if (isAdminUpdatingOtherUser && isVerificationUpdate) {
-                alert(updatedData.isVerified 
-                    ? "✓ Verification approved successfully!" 
+                alert(updatedData.isVerified
+                    ? "✓ Verification approved successfully!"
                     : "Verification rejected.");
             } else if (isSubscriptionUpdate) {
                 alert(`✓ Subscription upgraded to ${updatedUser.subscriptionTier} plan!\n\nYou now have access to all ${updatedUser.subscriptionTier} features.`);
@@ -481,7 +481,7 @@ const App: React.FC = () => {
     const handleCancelBooking = async (bookingId: string) => {
         try {
             const cancelledBooking = await apiService.cancelBooking(bookingId);
-            
+
             // Fetch updated bookings from backend to ensure sync
             try {
                 const updatedBookings = await apiService.getBookings();
@@ -490,7 +490,7 @@ const App: React.FC = () => {
                 // Fallback to local state update if fetch fails
                 setUser(prev => prev ? ({ ...prev, bookingHistory: prev.bookingHistory?.map(b => b.id === bookingId ? cancelledBooking : b) }) : null);
             }
-            
+
             alert("Booking cancelled successfully.");
         } catch (e: any) { alert(`Cancellation failed: ${e.message}`); }
     };
@@ -498,7 +498,7 @@ const App: React.FC = () => {
     const handleApproveJobCompletion = async (bookingId: string) => {
         try {
             const completedBooking = await apiService.markJobComplete(bookingId);
-            
+
             // Fetch updated bookings from backend to ensure sync
             try {
                 const updatedBookings = await apiService.getBookings();
@@ -513,7 +513,7 @@ const App: React.FC = () => {
     const handleReviewSubmit = async (bookingId: string, cleanerId: string, reviewData: Omit<Review, 'reviewerName'>) => {
         try {
             await apiService.submitReview(bookingId, { ...reviewData, cleanerId });
-            
+
             // Fetch updated bookings from backend to ensure sync
             try {
                 const updatedBookings = await apiService.getBookings();
@@ -522,7 +522,7 @@ const App: React.FC = () => {
                 // Fallback to local state update if fetch fails
                 setUser(prev => prev ? ({ ...prev, bookingHistory: prev.bookingHistory?.map(b => b.id === bookingId ? { ...b, reviewSubmitted: true } : b) }) : null);
             }
-            
+
             alert("Review submitted successfully!");
         } catch (e: any) { alert(`Failed to submit review: ${e.message}`); }
     };
@@ -584,16 +584,11 @@ const App: React.FC = () => {
 
     const handleUpgradeRequest = (plan: SubscriptionPlan) => { setIsSubPaymentModalOpen(true); setPlanToUpgrade(plan); };
 
-    const handleConfirmSubscriptionRequest = async (plan: SubscriptionPlan) => {
-        try {
-            const updatedUser = await apiService.requestSubscriptionUpgrade(plan);
-            setUser(updatedUser);
-            handleCloseBookingModals();
-            alert("Upgrade request sent. Please upload your payment receipt from your dashboard to finalize.");
-            handleNavigate('cleanerDashboard');
-        } catch (error: any) {
-            alert(`Failed to request upgrade: ${error.message}`);
-        }
+    const handleConfirmSubscriptionRequest = async (_plan: SubscriptionPlan) => {
+        // Payment is handled directly by the gateway redirect in SubscriptionPaymentDetailsModal.
+        // This callback is only reached for the Free plan confirmation.
+        setIsSubPaymentModalOpen(false);
+        setPlanToUpgrade(null);
     };
 
     const handleUploadBookingReceipt = async (bookingId: string, receipt: Receipt) => {
@@ -606,16 +601,6 @@ const App: React.FC = () => {
         }
     };
 
-    const handleUploadSubscriptionReceipt = async (receipt: Receipt) => {
-        if (!user) return;
-        try {
-            const updatedUser = await apiService.uploadReceipt(user.id, receipt, 'subscription');
-            setUser(updatedUser);
-            alert('Subscription receipt uploaded successfully. Your plan will be upgraded upon admin confirmation.');
-        } catch (error: any) {
-            alert(`Failed to upload receipt: ${error.message}`);
-        }
-    };
 
     const handleMarkAsPaid = async (bookingId: string) => {
         if (!user) return;
@@ -636,17 +621,6 @@ const App: React.FC = () => {
             alert("Payment confirmed successfully.");
         } catch (e: any) {
             alert(`Failed to confirm payment: ${e.message}`);
-        }
-    };
-
-    const handleApproveSubscription = async (userId: string) => {
-        if (!user) return;
-        try {
-            await apiService.adminApproveSubscription(userId);
-            await refetchAllData(user);
-            alert("Subscription approved successfully.");
-        } catch (e: any) {
-            alert(`Failed to approve subscription: ${e.message}`);
         }
     };
 
@@ -697,7 +671,6 @@ const App: React.FC = () => {
                         user={user}
                         onUpdateUser={handleUpdateUser}
                         onNavigate={handleNavigate}
-                        onUploadSubscriptionReceipt={handleUploadSubscriptionReceipt}
                         initialTab={dashboardInitialTab as any}
                         allJobs={allJobs}
                     />;
@@ -714,7 +687,6 @@ const App: React.FC = () => {
                         onDeleteUser={handleDeleteUser}
                         onMarkAsPaid={handleMarkAsPaid}
                         onConfirmPayment={handleConfirmEscrowPayment}
-                        onApproveSubscription={handleApproveSubscription}
                     />;
                 }
                 handleNavigate('auth');
