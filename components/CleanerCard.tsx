@@ -2,6 +2,7 @@
 import React from 'react';
 import { Cleaner } from '../types';
 import { StarIcon, MapPinIcon, RocketLaunchIcon, CheckBadgeIcon } from './icons';
+import { getPricingModel } from '../constants/countries';
 
 interface CleanerCardProps {
   cleaner: Cleaner;
@@ -11,6 +12,7 @@ interface CleanerCardProps {
 export const CleanerCard: React.FC<CleanerCardProps> = ({ cleaner, onClick }) => {
   const locationString = cleaner.city === 'Other' && cleaner.otherCity ? cleaner.otherCity : cleaner.city;
   const locationDisplay = [cleaner.country || 'Nigeria', cleaner.state, locationString].filter(Boolean).join(', ');
+  const pricingModel = getPricingModel(cleaner.country || 'Nigeria');
   
   return (
     <div
@@ -68,37 +70,19 @@ export const CleanerCard: React.FC<CleanerCardProps> = ({ cleaner, onClick }) =>
             </div>
         )}
          <div className="mt-2">
-            {cleaner.chargeHourly ? (
-                <>
-                    <span className="text-xl font-bold text-primary">
-                        ₦{cleaner.chargeHourly.toLocaleString()}
-                    </span>
-                    <span className="text-xs text-gray-500 ml-1">
-                        /hour
-                    </span>
-                </>
-            ) : cleaner.chargeDaily ? (
-                <>
-                    <span className="text-xl font-bold text-primary">
-                        ₦{cleaner.chargeDaily.toLocaleString()}
-                    </span>
-                    <span className="text-xs text-gray-500 ml-1">
-                        /day
-                    </span>
-                </>
-            ) : cleaner.chargePerContract ? (
-                 <>
-                    <span className="text-xl font-bold text-primary">
-                        ₦{cleaner.chargePerContract.toLocaleString()}
-                    </span>
-                    <span className="text-xs text-gray-500 ml-1">
-                        /contract
-                    </span>
-                </>
-            ) : cleaner.chargePerContractNegotiable ? (
-                <span className="text-xl font-bold text-primary">Not Fixed</span>
+            {pricingModel === 'hourly' ? (
+                cleaner.chargeHourly ? (
+                    <>
+                        <span className="text-xl font-bold text-primary">
+                            ₦{cleaner.chargeHourly.toLocaleString()}
+                        </span>
+                        <span className="text-xs text-gray-500 ml-1">/hour</span>
+                    </>
+                ) : (
+                    <span className="text-base font-semibold text-orange-600 italic">Price: Negotiable</span>
+                )
             ) : (
-                <span className="text-lg font-semibold text-gray-700">Contact for price</span>
+                <span className="text-base font-semibold text-orange-600 italic">Price: Negotiable</span>
             )}
         </div>
         <div className="mt-auto pt-4">

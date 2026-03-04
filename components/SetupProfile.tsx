@@ -4,6 +4,7 @@ import { User, UserRole, View } from '../types';
 import { NIGERIA_LOCATIONS } from '../constants/locations';
 import { CLEANING_SERVICES } from '../constants/services';
 import { apiService } from '../services/apiService';
+import { getPricingModel } from '../constants/countries';
 
 interface SetupProfileProps {
     user: User;
@@ -26,6 +27,7 @@ const FormSection: React.FC<{ title: string; children: React.ReactNode; descript
 export const SetupProfile: React.FC<SetupProfileProps> = ({ user, onSave, onNavigate }) => {
     const [userKind, setUserKind] = useState<UserKind>('');
     const [isSaving, setIsSaving] = useState(false);
+    const pricingModel = getPricingModel(user.country || 'Nigeria');
     const [formData, setFormData] = useState({
         fullName: user.fullName || '',
         phoneNumber: user.phoneNumber || '',
@@ -45,7 +47,7 @@ export const SetupProfile: React.FC<SetupProfileProps> = ({ user, onSave, onNavi
         accountNumber: user.accountNumber || '',
     });
     const [selectedServices, setSelectedServices] = useState<string[]>(user.services || []);
-    const [chargePerContractNegotiable, setChargePerContractNegotiable] = useState(false);
+    const [chargePerContractNegotiable, setChargePerContractNegotiable] = useState(() => getPricingModel(user.country || 'Nigeria') === 'negotiable');
     const [profilePhoto, setProfilePhoto] = useState<File | null>(null);
     const [governmentIdFile, setGovernmentIdFile] = useState<File | null>(null);
     const [businessRegFile, setBusinessRegFile] = useState<File | null>(null);
@@ -175,15 +177,23 @@ export const SetupProfile: React.FC<SetupProfileProps> = ({ user, onSave, onNavi
                 }
             }
 
-            // Validate pricing - at least one must be provided
-            const hasHourly = formData.chargeHourly && Number(formData.chargeHourly) > 0;
-            const hasDaily = formData.chargeDaily && Number(formData.chargeDaily) > 0;
-            const hasContract = (formData.chargePerContract && Number(formData.chargePerContract) > 0) || chargePerContractNegotiable;
-            
-            if (!hasHourly && !hasDaily && !hasContract) {
-                alert('Please provide at least one pricing option (hourly, daily, or per contract).');
-                return;
+            // Validate pricing — requirements vary by country pricing model
+            if (pricingModel === 'hourly') {
+                const hasHourly = formData.chargeHourly && Number(formData.chargeHourly) > 0;
+                const hasContract = (formData.chargePerContract && Number(formData.chargePerContract) > 0) || chargePerContractNegotiable;
+                if (!hasHourly && !hasContract) {
+                    alert('Please enter your hourly rate, or check "Negotiable" to indicate variable pricing.');
+                    return;
+                }
+            } else if (pricingModel === 'daily') {
+                const hasDaily = formData.chargeDaily && Number(formData.chargeDaily) > 0;
+                const hasContract = (formData.chargePerContract && Number(formData.chargePerContract) > 0) || chargePerContractNegotiable;
+                if (!hasDaily && !hasContract) {
+                    alert('Please enter your daily rate, or check "Negotiable" to indicate variable pricing.');
+                    return;
+                }
             }
+            // 'negotiable' countries have no required price field
         }
 
         // Validate company-specific fields
@@ -382,20 +392,33 @@ export const SetupProfile: React.FC<SetupProfileProps> = ({ user, onSave, onNavi
                                 </FormSection>
 
                                 <FormSection title="Pricing">
-                                    <div className="sm:col-span-2">
-                                        <label htmlFor="chargeHourly" className="block text-sm font-medium text-gray-700">Charge per Hour (₦)</label>
-                                        <input type="number" name="chargeHourly" id="chargeHourly" value={formData.chargeHourly} onChange={handleInputChange} min="0" placeholder="e.g., 3000" className="mt-1 block w-full shadow-sm sm:text-sm border-gray-600 rounded-md focus:ring-primary focus:border-primary bg-dark text-light placeholder-gray-400" />
-                                    </div>
-                                    <div className="sm:col-span-2">
-                                        <label htmlFor="chargeDaily" className="block text-sm font-medium text-gray-700">Charge per Day (₦)</label>
-                                        <input type="number" name="chargeDaily" id="chargeDaily" value={formData.chargeDaily} onChange={handleInputChange} min="0" placeholder="e.g., 20000" className="mt-1 block w-full shadow-sm sm:text-sm border-gray-600 rounded-md focus:ring-primary focus:border-primary bg-dark text-light placeholder-gray-400" />
-                                    </div>
-                                    <div className="sm:col-span-2">
-                                        <label htmlFor="chargePerContract" className="block text-sm font-medium text-gray-700">Charge per Contract</label>
+                                    {pricingModel === 'hourly' && (
+                                        <div className="sm:col-span-3">
+                                            <label htmlFor="chargeHourly" className="block text-sm font-medium text-gray-700">Charge per Hour (₦)</label>
+                                            <input type="number" name="chargeHourly" id="chargeHourly" value={formData.chargeHourly} onChange={handleInputChange} min="0" placeholder="e.g., 3000" disabled={chargePerContractNegotiable} className="mt-1 block w-full shadow-sm sm:text-sm border-gray-600 rounded-md focus:ring-primary focus:border-primary bg-dark text-light placeholder-gray-400 disabled:bg-gray-800" />
+                                        </div>
+                                    )}
+                                    {pricingModel === 'daily' && (
+                                        <div className="sm:col-span-3">
+                                            <label htmlFor="chargeDaily" className="block text-sm font-medium text-gray-700">Charge per Day (₦)</label>
+                                            <input type="number" name="chargeDaily" id="chargeDaily" value={formData.chargeDaily} onChange={handleInputChange} min="0" placeholder="e.g., 20000" disabled={chargePerContractNegotiable} className="mt-1 block w-full shadow-sm sm:text-sm border-gray-600 rounded-md focus:ring-primary focus:border-primary bg-dark text-light placeholder-gray-400 disabled:bg-gray-800" />
+                                        </div>
+                                    )}
+                                    {pricingModel === 'negotiable' && (
+                                        <div className="sm:col-span-6">
+                                            <p className="text-sm text-gray-600 bg-amber-50 border border-amber-200 rounded-md px-4 py-3">
+                                                In your region, work is typically priced by negotiation with clients. You may optionally set a starting contract price below.
+                                            </p>
+                                        </div>
+                                    )}
+                                    <div className="sm:col-span-3">
+                                        <label htmlFor="chargePerContract" className="block text-sm font-medium text-gray-700">
+                                            {pricingModel === 'negotiable' ? 'Starting Contract Price (Optional, ₦)' : 'Charge per Contract (₦)'}
+                                        </label>
                                         <input type="number" name="chargePerContract" id="chargePerContract" placeholder="e.g., 150000" value={formData.chargePerContract} onChange={handleInputChange} disabled={chargePerContractNegotiable} min="0" className="mt-1 block w-full shadow-sm sm:text-sm border-gray-600 rounded-md focus:ring-primary focus:border-primary bg-dark text-light placeholder-gray-400 disabled:bg-gray-800" />
                                         <div className="mt-2 flex items-center">
                                             <input id="negotiable" name="negotiable" type="checkbox" checked={chargePerContractNegotiable} onChange={(e) => { setChargePerContractNegotiable(e.target.checked); if (e.target.checked) setFormData(prev => ({ ...prev, chargePerContract: '' })); }} className="h-4 w-4 text-primary focus:ring-secondary border-gray-300 rounded" />
-                                            <label htmlFor="negotiable" className="ml-2 block text-sm text-gray-700">Not Fixed</label>
+                                            <label htmlFor="negotiable" className="ml-2 block text-sm text-gray-700">Negotiable</label>
                                         </div>
                                     </div>
                                 </FormSection>

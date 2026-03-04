@@ -339,3 +339,56 @@ export const getCountryByCode = (code: string) => {
 export const getCountryByName = (name: string) => {
   return countries.find(c => c.name === name);
 };
+
+// ─── Pricing Model Classification ───────────────────────────────────────────
+// Determines how workers in a country typically price their services.
+
+/** Countries where workers are commonly billed at an hourly rate */
+export const HOURLY_PRICING_COUNTRIES = new Set([
+  'United States', 'Canada', 'United Kingdom', 'Australia', 'New Zealand', 'Ireland',
+  'Germany', 'France', 'Netherlands', 'Belgium', 'Switzerland', 'Austria', 'Sweden',
+  'Norway', 'Denmark', 'Finland', 'Luxembourg', 'Iceland', 'Liechtenstein', 'Monaco',
+  'Andorra', 'San Marino', 'Vatican City',
+  'Spain', 'Italy', 'Portugal', 'Greece', 'Cyprus', 'Malta',
+  'Poland', 'Czech Republic', 'Slovakia', 'Hungary', 'Romania', 'Bulgaria',
+  'Croatia', 'Slovenia', 'Estonia', 'Latvia', 'Lithuania',
+  'Israel', 'Singapore', 'Japan', 'South Korea', 'Taiwan', 'Brunei',
+  'United Arab Emirates', 'Qatar', 'Kuwait', 'Bahrain', 'Saudi Arabia', 'Oman',
+]);
+
+/** Countries where workers are commonly billed at a daily rate (not hourly) */
+export const DAILY_PRICING_COUNTRIES = new Set([
+  'India', 'Pakistan', 'Bangladesh', 'Sri Lanka', 'Nepal', 'Bhutan',
+  'Philippines', 'Indonesia', 'Vietnam', 'Thailand', 'Malaysia', 'Myanmar',
+  'Cambodia', 'Laos', 'Timor-Leste', 'Mongolia',
+  'China',
+  'Egypt', 'Jordan', 'Morocco', 'Tunisia', 'Algeria', 'Libya', 'Sudan',
+  'Palestine', 'Lebanon', 'Iraq', 'Iran', 'Syria', 'Yemen',
+  'Turkey', 'Russia', 'Ukraine', 'Georgia', 'Armenia', 'Azerbaijan',
+  'Kazakhstan', 'Kyrgyzstan', 'Tajikistan', 'Uzbekistan', 'Turkmenistan',
+  'Moldova', 'Belarus', 'Serbia', 'Bosnia and Herzegovina',
+  'North Macedonia', 'Montenegro', 'Kosovo', 'Albania',
+  'Mexico', 'Brazil', 'Colombia', 'Argentina', 'Chile', 'Peru', 'Venezuela',
+  'Bolivia', 'Ecuador', 'Paraguay', 'Uruguay', 'Guyana', 'Suriname',
+  'Costa Rica', 'Panama', 'Guatemala', 'Honduras', 'El Salvador', 'Nicaragua',
+  'Dominican Republic', 'Jamaica', 'Trinidad and Tobago', 'Haiti', 'Cuba',
+  'South Africa', 'Kenya', 'Tanzania', 'Uganda', 'Rwanda', 'Ethiopia',
+  'Ghana', 'Zimbabwe', 'Zambia', 'Mozambique', 'Namibia', 'Botswana',
+  'Malawi', 'Madagascar', 'Mauritius', 'Seychelles',
+]);
+
+/** All other countries default to fully negotiable pricing */
+
+export type PricingModel = 'hourly' | 'daily' | 'negotiable';
+
+/**
+ * Returns the dominant pricing convention for a country.
+ *   'hourly'     → show chargeHourly on cards; form shows hourly field
+ *   'daily'      → hide per-hour; form shows daily field + negotiable toggle
+ *   'negotiable' → always show "Price: Negotiable" on cards; form shows negotiable only
+ */
+export function getPricingModel(countryName: string): PricingModel {
+  if (HOURLY_PRICING_COUNTRIES.has(countryName)) return 'hourly';
+  if (DAILY_PRICING_COUNTRIES.has(countryName)) return 'daily';
+  return 'negotiable';
+}

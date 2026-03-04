@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { User, UserType, ChargeRateType } from '../types';
-import { countries, phoneCodes } from '../constants/countries';
+import { countries, phoneCodes, getPricingModel } from '../constants/countries';
 import { skillCategories, chargeRateTypes } from '../constants/skillTypes';
 
 interface ProfileCompletionFormProps {
@@ -90,6 +90,8 @@ export default function ProfileCompletionForm({ user, onSave, onCancel }: Profil
   const isClient = isIndividualClient || isCompanyClient;
   const isIndividual = isIndividualClient || isIndividualWorker;
   const isCompany = isCompanyClient || isCompanyWorker;
+  const pricingModel = getPricingModel((formData.country as string) || 'Nigeria');
+  const isNegotiable = formData.chargeRateType === 'Not Fixed';
 
   return (
     <form onSubmit={handleSubmit} className="space-y-6">
@@ -391,37 +393,71 @@ export default function ProfileCompletionForm({ user, onSave, onCancel }: Profil
               </div>
 
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">
-                    Hourly Rate (₦) <span className="text-red-500">*</span>
-                  </label>
-                  <input
-                    type="number"
-                    value={formData.chargeHourly || ''}
-                    onChange={(e) => handleChange('chargeHourly', parseFloat(e.target.value) || 0)}
-                    className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
-                    placeholder="Enter hourly rate"
-                    min="0"
-                    step="0.01"
-                    required
-                  />
-                </div>
+                {/* Rate input — shown per country pricing convention */}
+                {pricingModel === 'hourly' && (
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">
+                      Hourly Rate (₦) {!isNegotiable && <span className="text-red-500">*</span>}
+                    </label>
+                    <input
+                      type="number"
+                      value={formData.chargeHourly || ''}
+                      onChange={(e) => handleChange('chargeHourly', parseFloat(e.target.value) || 0)}
+                      className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 disabled:bg-gray-100"
+                      placeholder="Enter hourly rate"
+                      min="0"
+                      step="0.01"
+                      disabled={isNegotiable}
+                      required={!isNegotiable}
+                    />
+                  </div>
+                )}
+                {pricingModel === 'daily' && (
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">
+                      Daily Rate (₦) {!isNegotiable && <span className="text-red-500">*</span>}
+                    </label>
+                    <input
+                      type="number"
+                      value={formData.chargeDaily || ''}
+                      onChange={(e) => handleChange('chargeDaily', parseFloat(e.target.value) || 0)}
+                      className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 disabled:bg-gray-100"
+                      placeholder="Enter daily rate"
+                      min="0"
+                      step="0.01"
+                      disabled={isNegotiable}
+                      required={!isNegotiable}
+                    />
+                  </div>
+                )}
+                {pricingModel === 'negotiable' && (
+                  <div className="md:col-span-2">
+                    <p className="text-sm text-gray-600 bg-amber-50 border border-amber-200 rounded-lg px-4 py-3">
+                      In your region, work is typically priced by negotiation. Your rate will be agreed directly with each client.
+                    </p>
+                  </div>
+                )}
 
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">
-                    Daily Rate (₦) <span className="text-red-500">*</span>
-                  </label>
-                  <input
-                    type="number"
-                    value={formData.chargeDaily || ''}
-                    onChange={(e) => handleChange('chargeDaily', parseFloat(e.target.value) || 0)}
-                    className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
-                    placeholder="Enter daily rate"
-                    min="0"
-                    step="0.01"
-                    required
-                  />
-                </div>
+                {/* Negotiable toggle (available for hourly and daily countries too) */}
+                {pricingModel !== 'negotiable' && (
+                  <div className="flex items-end pb-1">
+                    <label className="flex items-center gap-2 cursor-pointer">
+                      <input
+                        type="checkbox"
+                        checked={isNegotiable}
+                        onChange={(e) => {
+                          handleChange('chargeRateType', e.target.checked ? 'Not Fixed' : (pricingModel === 'hourly' ? 'Per Hour' : 'Per Day'));
+                          if (e.target.checked) {
+                            handleChange('chargeHourly', 0);
+                            handleChange('chargeDaily', 0);
+                          }
+                        }}
+                        className="w-4 h-4 text-primary rounded border-gray-300 focus:ring-primary"
+                      />
+                      <span className="text-sm font-medium text-gray-700">Negotiable (no fixed rate)</span>
+                    </label>
+                  </div>
+                )}
               </div>
 
               {/* Profile Picture Upload - For Display */}
