@@ -1699,10 +1699,12 @@ app.post('/api/admin/notifications/send', authenticateToken, async (req, res) =>
 
 // Alias: GET /api/cleaners -> GET /api/users (workers only)
 // Maps MongoDB User documents to frontend Cleaner interface format
+// Includes ALL workers (free-tier and paid). Priority sorting happens on the frontend.
 app.get('/api/cleaners', async (req, res) => {
   try {
     const workers = await User.find({
-      userType: 'worker'
+      role: 'cleaner',
+      isSuspended: { $ne: true }
     }).select('-password');
     
     // Map to Cleaner interface expected by frontend

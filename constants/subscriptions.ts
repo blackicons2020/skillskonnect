@@ -22,8 +22,9 @@ export const WORKER_PLANS_NIGERIA: SubscriptionPlan[] = [
         priceMonthly: 0,
         priceYearly: 0,
         features: [
-            '1 client per month only',
-            'Profile hidden after 1st client',
+            '1 client booking per month',
+            'Profile visible in search & landing page',
+            'Bookings paused after 1st client/month',
             'No messaging after limit',
             'No job listing access',
             'Manual profile setup'
@@ -90,10 +91,10 @@ export const WORKER_PLANS_AFRICA: SubscriptionPlan[] = [
         priceYearly: 0,
         features: [
             '1 month free trial',
-            '1 client during trial',
-            'Full search visibility (trial)',
+            '1 client booking during trial',
+            'Profile visible in search & landing page',
             'Messaging enabled (trial)',
-            'Profile hidden after trial'
+            'Bookings paused after trial period'
         ],
         maxClients: 1,
         hasJobAccess: false,
@@ -161,10 +162,10 @@ export const WORKER_PLANS_GLOBAL: SubscriptionPlan[] = [
         priceYearly: 0,
         features: [
             '4 days free trial',
-            '1 client during trial',
-            'Full search visibility (trial)',
+            '1 client booking during trial',
+            'Profile visible in search & landing page',
             'Messaging enabled (trial)',
-            'Profile hidden after trial'
+            'Bookings paused after trial period'
         ],
         maxClients: 1,
         hasJobAccess: false,

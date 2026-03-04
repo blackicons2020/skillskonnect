@@ -376,10 +376,10 @@ export const Dashboard: React.FC<DashboardProps> = ({ user, onUpdateUser, onNavi
                         <div className="mt-2 p-3 bg-red-50 rounded border border-red-300">
                             <p className="text-sm font-semibold mb-2">⚠️ Free Tier Restrictions:</p>
                             <ul className="text-sm space-y-1 list-disc list-inside">
-                                <li>Your profile is now hidden from client searches</li>
-                                <li>Messaging is disabled</li>
+                                <li>Your profile is still visible but you cannot accept new bookings this month</li>
+                                <li>Messaging is disabled until next monthly reset</li>
                                 <li>You cannot access job listings</li>
-                                <li>You cannot accept new bookings</li>
+                                <li>Upgrade to a paid plan to remove these limits immediately</li>
                             </ul>
                         </div>
                     )}
