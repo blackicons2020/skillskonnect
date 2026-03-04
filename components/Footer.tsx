@@ -28,8 +28,9 @@ export const Footer: React.FC<FooterProps> = ({ onNavigate }) => {
             <div className="container mx-auto px-4 sm:px-6 lg:px-8 py-12">
                 <div className="grid grid-cols-2 md:grid-cols-5 gap-8">
                     <div className="col-span-2 md:col-span-2">
-                         <div className="flex items-center gap-2">
-                            <img src="/logo.png" alt="Clean Connect" className="h-10 w-auto" />
+                         <div className="flex items-center gap-2 text-2xl font-bold text-primary">
+                            <img src="/footer-logo.png" alt="Skills Konnect" className="h-9 w-auto" />
+                            <span>Skills Konnect</span>
                         </div>
                         <p className="mt-2 text-gray-500 max-w-xs">
                             Connecting with trusted, skilled professionals for every service need, every time.
