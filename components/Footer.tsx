@@ -29,7 +29,7 @@ export const Footer: React.FC<FooterProps> = ({ onNavigate }) => {
                 <div className="grid grid-cols-2 md:grid-cols-5 gap-8">
                     <div className="col-span-2 md:col-span-2">
                          <div className="flex items-center gap-3 text-2xl font-bold text-primary">
-                            <img src="/sk-logo.png" alt="Skills Konnect" className="h-16 w-16 rounded-full" />
+                            <img src="/footer-logo.jpg" alt="Skills Konnect" className="h-16 w-16 rounded-full" />
                             <span>Skills Konnect</span>
                         </div>
                         <p className="mt-2 text-gray-500 max-w-xs">
