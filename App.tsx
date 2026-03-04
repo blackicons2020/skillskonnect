@@ -10,6 +10,7 @@ import { ErrorBoundary } from './components/ErrorBoundary';
 
 import { User, Cleaner, View, SubscriptionPlan, Review, Job } from './types';
 import { apiService, getStoredToken, storeToken, clearToken } from './services/apiService';
+import { paymentService } from './services/paymentService';
 
 // Lazy Load Pages to optimize initial bundle size
 const LandingPage = React.lazy(() => import('./components/LandingPage').then(module => ({ default: module.LandingPage })));
@@ -154,6 +155,57 @@ const App: React.FC = () => {
                 setView('resetPassword');
                 // Remove the token from the URL bar without reloading
                 window.history.replaceState({}, document.title, '/');
+                setIsLoading(false);
+                return;
+            }
+
+            // Detect Paystack/Flutterwave payment callback: /payment/verify?trxref=...&reference=...
+            const isPaymentCallback = window.location.pathname === '/payment/verify';
+            const paymentReference = urlParams.get('reference') || urlParams.get('trxref');
+            if (isPaymentCallback && paymentReference) {
+                // Clean the URL immediately
+                window.history.replaceState({}, document.title, '/');
+
+                // Read the stored pending payment info
+                const pendingPaymentRaw = localStorage.getItem('pending_subscription_payment');
+                localStorage.removeItem('pending_subscription_payment');
+
+                const tokenAtStart = getStoredToken();
+                if (tokenAtStart) {
+                    try {
+                        // Verify the payment via backend
+                        const verified = await paymentService.verifyPaystackPayment(paymentReference);
+                        if (verified) {
+                            // Refresh user data to get the updated subscription
+                            const updatedUser = await apiService.getMe();
+                            const bookings = await apiService.getBookings().catch(() => []);
+                            updatedUser.bookingHistory = bookings as any;
+                            await handleAuthSuccess(updatedUser, true, false);
+                            alert(`✓ Payment successful! Your subscription to the ${updatedUser.subscriptionTier || 'selected'} plan is now active.`);
+                        } else {
+                            // Payment verification failed
+                            const meResult = await apiService.getMe();
+                            const bookings = await apiService.getBookings().catch(() => []);
+                            meResult.bookingHistory = bookings as any;
+                            await handleAuthSuccess(meResult, true, false);
+                            alert('Payment could not be verified. If you were charged, please contact support.');
+                        }
+                    } catch (error) {
+                        console.error('Payment verification error:', error);
+                        // Still try to restore the session
+                        try {
+                            const meResult = await apiService.getMe();
+                            await handleAuthSuccess(meResult, true, false);
+                        } catch (e) {
+                            handleLogout();
+                        }
+                        alert('Payment verification encountered an error. Please contact support if you were charged.');
+                    }
+                } else {
+                    // No token — user was somehow logged out during payment
+                    setView('auth');
+                    setAuthMessage({ type: 'error', text: 'Your session expired during payment. Please log in to check your subscription status.' });
+                }
                 setIsLoading(false);
                 return;
             }

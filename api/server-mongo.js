@@ -101,7 +101,7 @@ const UserSchema = new mongoose.Schema({
   // Subscription
   subscriptionTier: String,
   pendingSubscription: String,
-  subscriptionEndDate: String,
+  subscriptionEndDate: Date,
   subscriptionDate: Date,
   subscriptionAmount: Number,
   
@@ -2154,12 +2154,16 @@ app.get('/api/payment/verify/:reference', authenticateToken, async (req, res) =>
 
     if (paystackData.status && paystackData.data.status === 'success') {
       const plan = paystackData.data.metadata?.plan;
+      const billingCycle = paystackData.data.metadata?.billingCycle || 'monthly';
       const amount = paystackData.data.amount / 100; // Convert from kobo back to NGN
       const userId = paystackData.data.metadata?.userId;
 
       if (plan && userId) {
         const subscriptionDate = new Date();
-        const subscriptionEndDate = new Date(Date.now() + 30 * 24 * 60 * 60 * 1000);
+        const durationMs = billingCycle === 'yearly'
+          ? 365 * 24 * 60 * 60 * 1000
+          : 30 * 24 * 60 * 60 * 1000;
+        const subscriptionEndDate = new Date(Date.now() + durationMs);
 
         await User.findByIdAndUpdate(userId, {
           subscriptionTier: plan,

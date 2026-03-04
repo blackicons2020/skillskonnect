@@ -91,7 +91,8 @@ class PaymentService {
                     email: data.email,
                     amount: data.amount,
                     plan: data.metadata?.plan,
-                    billingCycle: data.metadata?.billingCycle
+                    billingCycle: data.metadata?.billingCycle,
+                    callback_url: data.callback_url
                 })
             });
 
