@@ -228,6 +228,7 @@ export interface Chat {
   participantNames: Record<string, string>; // Map UserID -> Name
   lastMessage?: Message;
   updatedAt: string;
+  unreadCount?: number; // Unread messages for the current user
 }
 
 export type View =

@@ -8,9 +8,10 @@ interface ChatInterfaceProps {
     currentUser: User;
     initialChatId?: string | null;
     onChatOpened?: () => void;
+    onUnreadCountChange?: (count: number) => void;
 }
 
-export const ChatInterface: React.FC<ChatInterfaceProps> = ({ currentUser, initialChatId, onChatOpened }) => {
+export const ChatInterface: React.FC<ChatInterfaceProps> = ({ currentUser, initialChatId, onChatOpened, onUnreadCountChange }) => {
     const [chats, setChats] = useState<Chat[]>([]);
     const [selectedChat, setSelectedChat] = useState<Chat | null>(null);
     const [messages, setMessages] = useState<Message[]>([]);
@@ -29,7 +30,7 @@ export const ChatInterface: React.FC<ChatInterfaceProps> = ({ currentUser, initi
         if (initialChatId && chats.length > 0) {
             const chatToSelect = chats.find(c => c.id === initialChatId);
             if (chatToSelect) {
-                setSelectedChat(chatToSelect);
+                handleSelectChat(chatToSelect);
                 onChatOpened?.();
             }
         }
@@ -50,7 +51,11 @@ export const ChatInterface: React.FC<ChatInterfaceProps> = ({ currentUser, initi
     const loadChats = async () => {
         try {
             const userChats = await apiService.getChats(currentUser.id);
-            setChats(Array.isArray(userChats) ? userChats : []);
+            const safeChats = Array.isArray(userChats) ? userChats : [];
+            setChats(safeChats);
+            // Report total unread count to parent
+            const total = safeChats.reduce((sum, c) => sum + (c.unreadCount || 0), 0);
+            onUnreadCountChange?.(total);
         } catch (error) {
             console.error('Failed to load chats:', error);
         } finally {
@@ -86,6 +91,23 @@ export const ChatInterface: React.FC<ChatInterfaceProps> = ({ currentUser, initi
 
     const scrollToBottom = () => {
         messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
+    };
+
+    const handleSelectChat = async (chat: Chat) => {
+        setSelectedChat(chat);
+        // Mark messages in this chat as read
+        try {
+            await apiService.markChatAsRead(chat.id);
+            // Update local unread count to zero for this chat
+            setChats(prev => {
+                const updated = prev.map(c => c.id === chat.id ? { ...c, unreadCount: 0 } : c);
+                const total = updated.reduce((sum, c) => sum + (c.unreadCount || 0), 0);
+                onUnreadCountChange?.(total);
+                return updated;
+            });
+        } catch {
+            // Non-critical
+        }
     };
 
     const getOtherParticipantName = (chat: Chat) => {
@@ -138,16 +160,23 @@ export const ChatInterface: React.FC<ChatInterfaceProps> = ({ currentUser, initi
                             {chats.map(chat => (
                                 <li 
                                     key={chat.id}
-                                    onClick={() => setSelectedChat(chat)}
+                                    onClick={() => handleSelectChat(chat)}
                                     className={`p-4 border-b border-gray-100 cursor-pointer hover:bg-gray-100 transition-colors ${selectedChat?.id === chat.id ? 'bg-white border-l-4 border-l-primary shadow-sm' : ''}`}
                                 >
                                     <div className="flex justify-between items-start">
-                                        <h3 className="font-semibold text-gray-900">{getOtherParticipantName(chat)}</h3>
-                                        {chat.lastMessage && (
-                                            <span className="text-xs text-gray-400">{formatTime(chat.lastMessage.timestamp)}</span>
-                                        )}
+                                        <h3 className={`font-semibold ${chat.unreadCount && chat.unreadCount > 0 ? 'text-gray-900' : 'text-gray-700'}`}>{getOtherParticipantName(chat)}</h3>
+                                        <div className="flex items-center gap-2 ml-2 flex-shrink-0">
+                                            {chat.lastMessage && (
+                                                <span className="text-xs text-gray-400">{formatTime(chat.lastMessage.timestamp)}</span>
+                                            )}
+                                            {chat.unreadCount && chat.unreadCount > 0 ? (
+                                                <span className="bg-primary text-white text-[10px] font-bold rounded-full min-w-[18px] h-[18px] flex items-center justify-center px-1">
+                                                    {chat.unreadCount > 9 ? '9+' : chat.unreadCount}
+                                                </span>
+                                            ) : null}
+                                        </div>
                                     </div>
-                                    <p className="text-sm text-gray-500 truncate mt-1">
+                                    <p className={`text-sm truncate mt-1 ${chat.unreadCount && chat.unreadCount > 0 ? 'text-gray-800 font-medium' : 'text-gray-500'}`}>
                                         {chat.lastMessage ? (
                                             <span>
                                                 {chat.lastMessage.senderId === currentUser.id ? 'You: ' : ''}

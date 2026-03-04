@@ -450,6 +450,14 @@ export const apiService = {
         return handleResponse(response);
     },
 
+    markChatAsRead: async (chatId: string): Promise<void> => {
+        const response = await fetch(`${API_URL}/chats/${chatId}/read`, {
+            method: 'PUT',
+            headers: getHeaders(),
+        });
+        return handleResponse(response);
+    },
+
     // ==================== NOTIFICATION API ====================
 
     getNotifications: async (): Promise<AppNotification[]> => {

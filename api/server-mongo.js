@@ -1201,6 +1201,12 @@ app.get('/api/chats', authenticateToken, async (req, res) => {
       if (!chatObj.participantNames || typeof chatObj.participantNames !== 'object') {
         chatObj.participantNames = {};
       }
+      // Compute unread count: messages not sent by current user that are unread
+      chatObj.unreadCount = (chat.messages || []).filter(
+        msg => msg.senderId !== userId && !msg.read
+      ).length;
+      // Strip full messages array from list response (only keep lastMessage)
+      delete chatObj.messages;
       return chatObj;
     }));
 
@@ -2340,6 +2346,123 @@ app.post('/api/payment/webhook', async (req, res) => {
     res.status(200).json({ received: true }); // Always return 200 so Paystack doesn't retry
   }
 });
+
+// ==================== SYSTEM NOTIFICATION JOBS ====================
+
+async function sendSystemNotifications() {
+  try {
+    const now = new Date();
+    const allUsers = await User.find({ isAdmin: { $ne: true } });
+
+    for (const u of allUsers) {
+      const uid = u._id.toString();
+
+      // --- 1. Nudge un-subscribed / free-tier users ---
+      const isFree = !u.subscriptionTier || u.subscriptionTier === 'Free';
+      if (isFree) {
+        // Only send this nudge once every 3 days to avoid spam
+        const recent = await Notification.findOne({
+          userId: uid,
+          type: 'subscription',
+          title: { $regex: /upgrade/i },
+          createdAt: { $gte: new Date(now.getTime() - 3 * 24 * 60 * 60 * 1000) }
+        });
+        if (!recent) {
+          const isWorker = u.role === 'cleaner' || (u.userType || '').toLowerCase().includes('worker');
+          await createNotification(
+            uid, 'subscription',
+            '🚀 Upgrade Your Plan',
+            isWorker
+              ? 'You are currently on the Free plan. Upgrade now to receive more client bookings, appear higher in search results, and grow your business.'
+              : 'You are on the Free plan. Upgrade to post more jobs, access verified workers, and unlock premium client features.'
+          );
+        }
+      }
+
+      // --- 2. Subscription expiring in 7 days ---
+      if (u.subscriptionEndDate && u.subscriptionTier && u.subscriptionTier !== 'Free') {
+        const endDate = new Date(u.subscriptionEndDate);
+        const msLeft = endDate.getTime() - now.getTime();
+        const daysLeft = Math.ceil(msLeft / (1000 * 60 * 60 * 24));
+        if (daysLeft === 7 || daysLeft === 3 || daysLeft === 1) {
+          const alreadySent = await Notification.findOne({
+            userId: uid,
+            type: 'subscription',
+            title: { $regex: /expir/i },
+            createdAt: { $gte: new Date(now.getTime() - 20 * 60 * 60 * 1000) } // within 20h
+          });
+          if (!alreadySent) {
+            await createNotification(
+              uid, 'subscription',
+              `⚠️ Subscription Expiring in ${daysLeft} Day${daysLeft !== 1 ? 's' : ''}`,
+              `Your ${u.subscriptionTier} subscription expires on ${endDate.toLocaleDateString()}. Renew now to avoid service interruption and keep all your premium benefits.`
+            );
+          }
+        }
+        // --- 3. Subscription just expired ---
+        if (daysLeft <= 0 && daysLeft >= -1) {
+          const alreadySent = await Notification.findOne({
+            userId: uid,
+            type: 'subscription',
+            title: { $regex: /expired/i },
+            createdAt: { $gte: new Date(now.getTime() - 20 * 60 * 60 * 1000) }
+          });
+          if (!alreadySent) {
+            await createNotification(
+              uid, 'subscription',
+              '❌ Subscription Expired',
+              `Your ${u.subscriptionTier} subscription has expired. Your account has been moved to the Free plan. Renew now to restore your premium features.`
+            );
+          }
+        }
+      }
+
+      // --- 4. Profile incomplete reminder ---
+      const profileIncomplete = !u.phoneNumber || !u.country || !u.userType;
+      if (profileIncomplete) {
+        const recentProfileNote = await Notification.findOne({
+          userId: uid,
+          type: 'system',
+          title: { $regex: /profile/i },
+          createdAt: { $gte: new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000) }
+        });
+        if (!recentProfileNote) {
+          await createNotification(
+            uid, 'system',
+            '📝 Complete Your Profile',
+            'Your profile is incomplete. A complete profile helps clients find you faster and builds trust. Head to your dashboard to fill in the missing details.'
+          );
+        }
+      }
+
+      // --- 5. Unverified worker reminder ---
+      const isWorkerUser = u.role === 'cleaner' || (u.userType || '').toLowerCase().includes('worker');
+      if (isWorkerUser && !u.isVerified) {
+        const recentVerifyNote = await Notification.findOne({
+          userId: uid,
+          type: 'verification',
+          createdAt: { $gte: new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000) }
+        });
+        if (!recentVerifyNote) {
+          await createNotification(
+            uid, 'verification',
+            '✅ Get Verified Today',
+            'Verified workers get 3× more bookings and appear with a trust badge. Upload your documents in the Verification tab of your dashboard.'
+          );
+        }
+      }
+    }
+    console.log(`[SystemNotifications] Processed ${allUsers.length} users at ${now.toISOString()}`);
+  } catch (err) {
+    console.error('[SystemNotifications] Error:', err.message);
+  }
+}
+
+// Run system notifications once on startup (after 10s) then every 12 hours
+setTimeout(() => {
+  sendSystemNotifications();
+  setInterval(sendSystemNotifications, 12 * 60 * 60 * 1000);
+}, 10000);
 
 // ==================== HEALTH CHECK ====================
 

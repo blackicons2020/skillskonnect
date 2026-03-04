@@ -83,6 +83,9 @@ export const Dashboard: React.FC<DashboardProps> = ({ user, onUpdateUser, onNavi
     const limit = user.subscriptionTier ? CLIENT_LIMITS[user.subscriptionTier] : 0;
     const currentClientsCount = user.monthlyNewClientsIds?.length || 0;
     const isLimitReached = user.subscriptionTier ? currentClientsCount >= limit : false;
+    const [unreadMessageCount, setUnreadMessageCount] = useState(0);
+    const isFreeUser = !user.subscriptionTier || user.subscriptionTier === 'Free';
+    const [showUpgradeBanner, setShowUpgradeBanner] = useState(true);
 
 
     useEffect(() => {
@@ -411,6 +414,34 @@ export const Dashboard: React.FC<DashboardProps> = ({ user, onUpdateUser, onNavi
                 </div>
             )}
 
+            {/* Upgrade Banner — shown to free/unsubscribed workers */}
+            {isFreeUser && showUpgradeBanner && !isLimitReached && (
+                <div className="bg-gradient-to-r from-primary to-secondary text-white rounded-xl p-4 mb-6 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 shadow-lg">
+                    <div className="flex items-start gap-3">
+                        <span className="text-2xl">🚀</span>
+                        <div>
+                            <h4 className="font-bold text-base">Unlock Your Full Potential — Upgrade Today!</h4>
+                            <p className="text-sm text-white/85 mt-0.5">
+                                You're on the <strong>Free Plan</strong>. Upgrade to receive more client bookings, get priority placement in search results, access job listings, and earn more.
+                            </p>
+                        </div>
+                    </div>
+                    <div className="flex items-center gap-2 flex-shrink-0">
+                        <button
+                            onClick={() => onNavigate('subscription')}
+                            className="bg-white text-primary font-bold text-sm px-4 py-2 rounded-lg hover:bg-gray-100 transition-colors whitespace-nowrap"
+                        >
+                            Upgrade Now
+                        </button>
+                        <button
+                            onClick={() => setShowUpgradeBanner(false)}
+                            className="text-white/70 hover:text-white text-lg leading-none p-1"
+                            aria-label="Dismiss"
+                        >✕</button>
+                    </div>
+                </div>
+            )}
+
             <div className="border-b border-gray-200 mb-6 overflow-x-auto">
                 <nav className="-mb-px flex space-x-8" aria-label="Tabs">
                     <button onClick={() => setActiveTab('profile')} className={`${activeTab === 'profile' ? 'border-primary text-primary' : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'} whitespace-nowrap py-4 px-1 border-b-2 font-medium text-sm`}>
@@ -429,6 +460,11 @@ export const Dashboard: React.FC<DashboardProps> = ({ user, onUpdateUser, onNavi
                     <button onClick={() => setActiveTab('messages')} className={`${activeTab === 'messages' ? 'border-primary text-primary' : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'} whitespace-nowrap py-4 px-1 border-b-2 font-medium text-sm flex items-center gap-2`}>
                         <ChatBubbleLeftRightIcon className="w-4 h-4" />
                         Messages
+                        {unreadMessageCount > 0 && (
+                            <span className="bg-primary text-white text-[10px] font-bold rounded-full min-w-[18px] h-[18px] flex items-center justify-center px-1">
+                                {unreadMessageCount > 9 ? '9+' : unreadMessageCount}
+                            </span>
+                        )}
                     </button>
                     <button onClick={() => setActiveTab('support')} className={`${activeTab === 'support' ? 'border-primary text-primary' : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'} whitespace-nowrap py-4 px-1 border-b-2 font-medium text-sm flex items-center gap-2`}>
                         <LifebuoyIcon className="w-4 h-4" />
@@ -1033,7 +1069,7 @@ export const Dashboard: React.FC<DashboardProps> = ({ user, onUpdateUser, onNavi
 
             {activeTab === 'messages' && (
                 <div className="bg-white p-6 rounded-lg shadow-md min-h-[600px]">
-                    <ChatInterface currentUser={user} initialChatId={chatToOpen} onChatOpened={() => setChatToOpen(null)} />
+                    <ChatInterface currentUser={user} initialChatId={chatToOpen} onChatOpened={() => setChatToOpen(null)} onUnreadCountChange={setUnreadMessageCount} />
                 </div>
             )}
 
