@@ -18,6 +18,16 @@ export const ChatInterface: React.FC<ChatInterfaceProps> = ({ currentUser, initi
     const [newMessage, setNewMessage] = useState('');
     const [loading, setLoading] = useState(true);
     const messagesEndRef = useRef<HTMLDivElement>(null);
+    const messagesContainerRef = useRef<HTMLDivElement>(null);
+    const isAtBottomRef = useRef(true);
+    const prevMessageCountRef = useRef(0);
+    const initialChatHandledRef = useRef(false);
+
+    const handleMessagesScroll = () => {
+        const el = messagesContainerRef.current;
+        if (!el) return;
+        isAtBottomRef.current = el.scrollHeight - el.scrollTop - el.clientHeight < 80;
+    };
 
     useEffect(() => {
         loadChats();
@@ -25,11 +35,12 @@ export const ChatInterface: React.FC<ChatInterfaceProps> = ({ currentUser, initi
         return () => clearInterval(interval);
     }, [currentUser.id]);
 
-    // Auto-select chat when initialChatId is provided
+    // Auto-select chat when initialChatId is provided — only once, not on every poll
     useEffect(() => {
-        if (initialChatId && chats.length > 0) {
+        if (initialChatId && chats.length > 0 && !initialChatHandledRef.current) {
             const chatToSelect = chats.find(c => c.id === initialChatId);
             if (chatToSelect) {
+                initialChatHandledRef.current = true;
                 handleSelectChat(chatToSelect);
                 onChatOpened?.();
             }
@@ -45,7 +56,17 @@ export const ChatInterface: React.FC<ChatInterfaceProps> = ({ currentUser, initi
     }, [selectedChat]);
 
     useEffect(() => {
-        scrollToBottom();
+        if (messages.length > prevMessageCountRef.current) {
+            if (isAtBottomRef.current) {
+                const isFirstLoad = prevMessageCountRef.current === 0;
+                if (isFirstLoad) {
+                    messagesEndRef.current?.scrollIntoView({ behavior: 'instant' as ScrollBehavior });
+                } else {
+                    scrollToBottom();
+                }
+            }
+        }
+        prevMessageCountRef.current = messages.length;
     }, [messages]);
 
     const loadChats = async () => {
@@ -66,7 +87,15 @@ export const ChatInterface: React.FC<ChatInterfaceProps> = ({ currentUser, initi
     const loadMessages = async (chatId: string) => {
         try {
             const msgs = await apiService.getChatMessages(chatId);
-            setMessages(Array.isArray(msgs) ? msgs : []);
+            const safeMessages = Array.isArray(msgs) ? msgs : [];
+            setMessages(prev => {
+                // Only update state if messages actually changed to prevent layout jitter
+                if (prev.length === safeMessages.length &&
+                    (prev.length === 0 || prev[prev.length - 1]?.id === safeMessages[safeMessages.length - 1]?.id)) {
+                    return prev;
+                }
+                return safeMessages;
+            });
         } catch (error) {
             console.error('Failed to load messages:', error);
         }
@@ -90,11 +119,15 @@ export const ChatInterface: React.FC<ChatInterfaceProps> = ({ currentUser, initi
     };
 
     const scrollToBottom = () => {
-        messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
+        if (isAtBottomRef.current) {
+            messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
+        }
     };
 
     const handleSelectChat = async (chat: Chat) => {
         setSelectedChat(chat);
+        isAtBottomRef.current = true; // always scroll to bottom on chat open
+        prevMessageCountRef.current = 0;
         // Mark messages in this chat as read
         try {
             await apiService.markChatAsRead(chat.id);
@@ -141,7 +174,7 @@ export const ChatInterface: React.FC<ChatInterfaceProps> = ({ currentUser, initi
     }
 
     return (
-        <div className="flex h-[600px] bg-white rounded-lg shadow-lg overflow-hidden border border-gray-200">
+        <div className="flex bg-white rounded-lg shadow-lg overflow-hidden border border-gray-200" style={{ height: 'min(600px, calc(100dvh - 200px))' }}>
             {/* Sidebar / Chat List */}
             <div className={`w-full md:w-1/3 border-r border-gray-200 bg-gray-50 flex flex-col ${selectedChat ? 'hidden md:flex' : 'flex'}`}>
                 <div className="p-4 border-b border-gray-200 bg-white">
@@ -214,7 +247,7 @@ export const ChatInterface: React.FC<ChatInterfaceProps> = ({ currentUser, initi
                             </div>
                         </div>
 
-                        <div className="flex-grow p-4 overflow-y-auto bg-gray-50 space-y-4">
+                        <div className="flex-grow p-4 overflow-y-auto bg-gray-50 space-y-4" ref={messagesContainerRef} onScroll={handleMessagesScroll}>
                             {messages.length === 0 ? (
                                 <div className="flex items-center justify-center h-full text-gray-400">
                                     <p className="text-center">
@@ -255,27 +288,26 @@ export const ChatInterface: React.FC<ChatInterfaceProps> = ({ currentUser, initi
                             <div ref={messagesEndRef} />
                         </div>
 
-                        <div className="p-4 bg-white border-t border-gray-200">
-                            <form onSubmit={handleSendMessage} className="flex gap-2">
+                        <div className="p-3 bg-white border-t border-gray-200 flex-shrink-0">
+                            <form onSubmit={handleSendMessage} className="flex gap-2 items-center">
                                 <input
                                     type="text"
                                     value={newMessage}
                                     onChange={(e) => setNewMessage(e.target.value)}
                                     placeholder="Type a message..."
-                                    className="flex-grow p-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent"
+                                    className="flex-grow p-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent text-sm"
                                 />
                                 <button 
                                     type="submit" 
                                     disabled={!newMessage.trim()}
-                                    className="bg-primary text-white p-3 rounded-lg hover:bg-secondary disabled:bg-gray-300 transition-colors"
+                                    className="bg-primary text-white px-4 py-3 rounded-lg hover:bg-secondary disabled:bg-gray-300 transition-colors flex items-center gap-1.5 flex-shrink-0"
                                     title="Send message"
+                                    aria-label="Send"
                                 >
                                     <PaperAirplaneIcon className="w-5 h-5 transform rotate-90" />
+                                    <span className="text-sm font-semibold hidden sm:inline">Send</span>
                                 </button>
                             </form>
-                            <p className="text-[10px] text-gray-400 mt-2 text-center">
-                                💾 Messages are automatically saved
-                            </p>
                         </div>
                     </>
                 ) : (
