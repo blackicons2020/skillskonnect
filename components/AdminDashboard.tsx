@@ -349,17 +349,7 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ user: currentUse
     // Only render dashboard if we have current user context (passed via prop now)
     if (!currentUser) return <div className="p-8 text-center">Loading admin dashboard...</div>;
 
-    const dataStillLoading = isDataLoading && allUsers.length === 0;
 
-    const LoadingOverlay = () => (
-        <div className="flex flex-col items-center justify-center py-16">
-            <svg className="animate-spin h-10 w-10 text-primary mb-4" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
-                <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
-                <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z" />
-            </svg>
-            <p className="text-gray-500 font-medium">Loading dashboard data...</p>
-        </div>
-    );
 
     const canSeeClients = canSeeTab('clients');
     const canSeeCleaners = canSeeTab('cleaners');
@@ -468,7 +458,12 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ user: currentUse
             </div>
 
             <div className="mt-8 bg-white shadow-md rounded-lg">
-                {dataStillLoading ? <LoadingOverlay /> : (<>
+                {isDataLoading && allUsers.length === 0 && (
+                    <div className="flex items-center justify-center gap-2 py-3 px-4 bg-blue-50 text-blue-700 text-sm font-medium rounded-t-lg">
+                        <svg className="animate-spin h-4 w-4" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24"><circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" /><path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z" /></svg>
+                        Loading data...
+                    </div>
+                )}
                 {activeTab === 'clients' && canSeeClients && <UserTable users={clients} onView={setUserToView} onSuspend={setUserToSuspend} onDelete={setUserToDelete} />}
                 {activeTab === 'cleaners' && canSeeCleaners && <UserTable users={cleaners} onView={setUserToView} onSuspend={setUserToSuspend} onDelete={setUserToDelete} />}
                 {activeTab === 'payments' && canSeePayments && (
@@ -730,7 +725,6 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ user: currentUse
                         )}
                     </div>
                 )}
-                </>)}
             </div>
 
             {userToView && (
