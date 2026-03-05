@@ -1,5 +1,4 @@
 import React, { useState } from 'react';
-import { MailIcon } from './icons';
 import { apiService } from '../services/apiService';
 
 export const ContactPage: React.FC = () => {
@@ -39,12 +38,8 @@ export const ContactPage: React.FC = () => {
                     <div className="text-center mb-10">
                         <h1 className="text-4xl font-bold text-dark mb-2">Get in Touch</h1>
                         <p className="text-lg text-gray-600">
-                            Have a question or need help? Fill out the form below or email us directly.
+                            Have a question or need help? Fill out the form below and we'll get back to you shortly.
                         </p>
-                        <a href="mailto:skillskonnectng@gmail.com" className="inline-flex items-center gap-2 mt-4 text-primary font-semibold hover:underline">
-                            <MailIcon className="h-5 w-5" />
-                            skillskonnectng@gmail.com
-                        </a>
                     </div>
 
                     {/* Contact Form */}
