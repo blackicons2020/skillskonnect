@@ -49,6 +49,9 @@ export default function ProfileCompletionForm({ user, onSave, onCancel }: Profil
       if (country.phoneCode !== formData.phoneCountryCode) {
         handleChange('phoneCountryCode', country.phoneCode);
       }
+      // Reset state and city when country changes
+      handleChange('state', '');
+      handleChange('city', '');
     }
   }, [formData.country]);
 
@@ -274,20 +277,32 @@ export default function ProfileCompletionForm({ user, onSave, onCancel }: Profil
                   <label className="block text-sm font-medium text-gray-700 mb-2">
                     State/Province <span className="text-red-500">*</span>
                   </label>
-                  <input
-                    type="text"
-                    value={formData.state || ''}
-                    onChange={(e) => handleChange('state', e.target.value)}
-                    className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-shadow"
-                    placeholder={selectedCountry.states.length > 0 
-                      ? `e.g., ${selectedCountry.states.slice(0, 3).join(', ')}...` 
-                      : 'Enter state'}
-                    required
-                  />
-                  {selectedCountry.states.length > 0 && (
-                    <p className="text-xs text-gray-500 mt-1 truncate">
-                      Suggestions: {selectedCountry.states.slice(0, 5).join(', ')}
-                    </p>
+                  {selectedCountry.states.length > 0 ? (
+                    <select
+                      value={formData.state || ''}
+                      onChange={(e) => {
+                        handleChange('state', e.target.value);
+                        handleChange('city', ''); // Reset city when state changes
+                      }}
+                      className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 bg-white"
+                      required
+                    >
+                      <option value="">Select state/province...</option>
+                      {selectedCountry.states.map(state => (
+                        <option key={state} value={state}>
+                          {state}
+                        </option>
+                      ))}
+                    </select>
+                  ) : (
+                    <input
+                      type="text"
+                      value={formData.state || ''}
+                      onChange={(e) => handleChange('state', e.target.value)}
+                      className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-shadow"
+                      placeholder="Enter state/province"
+                      required
+                    />
                   )}
                 </div>
 

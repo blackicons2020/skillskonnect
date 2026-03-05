@@ -372,9 +372,15 @@ export const DAILY_PRICING_COUNTRIES = new Set([
   'Bolivia', 'Ecuador', 'Paraguay', 'Uruguay', 'Guyana', 'Suriname',
   'Costa Rica', 'Panama', 'Guatemala', 'Honduras', 'El Salvador', 'Nicaragua',
   'Dominican Republic', 'Jamaica', 'Trinidad and Tobago', 'Haiti', 'Cuba',
-  'South Africa', 'Kenya', 'Tanzania', 'Uganda', 'Rwanda', 'Ethiopia',
+  // Africa - per day/per month pricing is standard
+  'Nigeria', 'South Africa', 'Kenya', 'Tanzania', 'Uganda', 'Rwanda', 'Ethiopia',
   'Ghana', 'Zimbabwe', 'Zambia', 'Mozambique', 'Namibia', 'Botswana',
   'Malawi', 'Madagascar', 'Mauritius', 'Seychelles',
+  'Cameroon', 'Ivory Coast', 'Senegal', 'Mali', 'Burkina Faso', 'Niger',
+  'Togo', 'Benin', 'Guinea-Bissau', 'Guinea', 'Chad', 'Gabon',
+  'Congo (Republic)', 'Congo (DRC)', 'Equatorial Guinea', 'Central African Republic',
+  'Angola', 'Liberia', 'Sierra Leone', 'Gambia', 'Eswatini', 'Lesotho',
+  'Djibouti', 'Eritrea', 'Somalia', 'Comoros', 'Cape Verde', 'Burundi',
 ]);
 
 /** All other countries default to fully negotiable pricing */

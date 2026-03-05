@@ -269,10 +269,13 @@ export const ClientDashboard: React.FC<ClientDashboardProps> = ({ user, allClean
         setIsRecsLoading(false);
         setProfileFormData(user);
         
+        // Set profile photo preview from either profilePhoto or profilePicture
         if (user.profilePhoto && user.profilePhoto instanceof File) {
             setProfilePhotoPreview(URL.createObjectURL(user.profilePhoto));
         } else if (typeof user.profilePhoto === 'string') {
              setProfilePhotoPreview(user.profilePhoto);
+        } else if (typeof user.profilePicture === 'string') {
+             setProfilePhotoPreview(user.profilePicture);
         }
     }, [user]);
 
@@ -440,71 +443,70 @@ export const ClientDashboard: React.FC<ClientDashboardProps> = ({ user, allClean
     return (
         <div className="p-4 sm:p-8 container mx-auto">
              
-             {/* Profile Header with Name and Email */}
-             <div className="bg-white rounded-lg shadow-md p-6 mb-6">
-                <div className="flex flex-col sm:flex-row items-center gap-6">
+             {/* Profile Header with Name, Email, and Upgrade Banner */}
+             <div className="bg-white rounded-lg shadow-md p-4 sm:p-6 mb-6">
+                <div className="flex flex-col sm:flex-row items-center gap-4 sm:gap-6">
                     {/* Profile Avatar */}
                     <div className="flex-shrink-0">
-                        {user.profilePicture ? (
+                        {(user.profilePicture || profilePhotoPreview) ? (
                             <img 
-                                src={user.profilePicture} 
+                                src={user.profilePicture || profilePhotoPreview || ''} 
                                 alt="Profile" 
-                                className="w-24 h-24 rounded-full object-cover border-4 border-blue-500"
+                                className="w-16 h-16 sm:w-20 sm:h-20 rounded-full object-cover border-4 border-blue-500"
                             />
                         ) : (
-                            <div className="w-24 h-24 rounded-full bg-gradient-to-br from-purple-500 to-purple-600 flex items-center justify-center text-white text-3xl font-bold border-4 border-purple-500">
+                            <div className="w-16 h-16 sm:w-20 sm:h-20 rounded-full bg-gradient-to-br from-purple-500 to-purple-600 flex items-center justify-center text-white text-2xl sm:text-3xl font-bold border-4 border-purple-500">
                                 {(displayName || 'U')[0].toUpperCase()}
                             </div>
                         )}
                     </div>
                     
                     {/* User Info */}
-                    <div className="flex-grow text-center sm:text-left">
-                        <h1 className="text-3xl font-bold text-gray-800">
+                    <div className="flex-grow text-center sm:text-left min-w-0">
+                        <h1 className="text-xl sm:text-2xl font-bold text-gray-800 truncate">
                             {profileDisplayName || displayName || 'User'}
                         </h1>
-                        <p className="text-gray-600 text-lg mt-1">{user.email}</p>
-                        {user.userType && (
-                            <span className="inline-block mt-2 px-3 py-1 bg-purple-100 text-purple-700 rounded-full text-sm font-medium">
-                                {user.userType}
-                            </span>
-                        )}
-                        {user.isVerified && (
-                            <span className="inline-block mt-2 ml-2 px-3 py-1 bg-green-100 text-green-700 rounded-full text-sm font-medium">
-                                ✓ Verified
-                            </span>
-                        )}
-                    </div>
-                </div>
-            </div>
-
-            {/* Upgrade Banner — shown to free/unsubscribed clients */}
-            {isFreeUser && showUpgradeBanner && !isProfileIncomplete && (
-                <div className="bg-gradient-to-r from-primary to-secondary text-white rounded-xl p-4 mb-6 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 shadow-lg">
-                    <div className="flex items-start gap-3">
-                        <span className="text-2xl">✨</span>
-                        <div>
-                            <h4 className="font-bold text-base">Get More From Skills Konnect — Upgrade Today!</h4>
-                            <p className="text-sm text-white/85 mt-0.5">
-                                You're on the <strong>Free Plan</strong>. Upgrade to post more jobs, find top-rated verified workers, and access exclusive premium features.
-                            </p>
+                        <p className="text-gray-600 text-sm sm:text-base mt-0.5 truncate">{user.email}</p>
+                        <div className="flex flex-wrap items-center justify-center sm:justify-start gap-2 mt-2">
+                            {user.userType && (
+                                <span className="px-2 py-0.5 bg-purple-100 text-purple-700 rounded-full text-xs font-medium">
+                                    {user.userType}
+                                </span>
+                            )}
+                            {user.isVerified && (
+                                <span className="px-2 py-0.5 bg-green-100 text-green-700 rounded-full text-xs font-medium">
+                                    ✓ Verified
+                                </span>
+                            )}
                         </div>
                     </div>
-                    <div className="flex items-center gap-2 flex-shrink-0">
-                        <button
-                            onClick={() => onNavigate('subscription')}
-                            className="bg-white text-primary font-bold text-sm px-4 py-2 rounded-lg hover:bg-gray-100 transition-colors whitespace-nowrap"
-                        >
-                            Upgrade Now
-                        </button>
-                        <button
-                            onClick={() => setShowUpgradeBanner(false)}
-                            className="text-white/70 hover:text-white text-lg leading-none p-1"
-                            aria-label="Dismiss"
-                        >✕</button>
-                    </div>
+
+                    {/* Compact Upgrade Banner — inline with header on desktop */}
+                    {isFreeUser && showUpgradeBanner && !isProfileIncomplete && (
+                        <div className="w-full sm:w-auto flex-shrink-0 mt-2 sm:mt-0">
+                            <div className="bg-gradient-to-r from-primary to-secondary text-white rounded-lg px-3 py-2 flex items-center justify-between gap-2 shadow">
+                                <div className="flex items-center gap-2 min-w-0">
+                                    <span className="text-sm">✨</span>
+                                    <span className="text-xs sm:text-sm font-medium truncate">Free Plan — Upgrade for more!</span>
+                                </div>
+                                <div className="flex items-center gap-1 flex-shrink-0">
+                                    <button
+                                        onClick={() => onNavigate('subscription')}
+                                        className="bg-white text-primary font-bold text-xs px-2 py-1 rounded hover:bg-gray-100 transition-colors whitespace-nowrap"
+                                    >
+                                        Upgrade
+                                    </button>
+                                    <button
+                                        onClick={() => setShowUpgradeBanner(false)}
+                                        className="text-white/70 hover:text-white text-sm leading-none p-0.5"
+                                        aria-label="Dismiss"
+                                    >✕</button>
+                                </div>
+                            </div>
+                        </div>
+                    )}
                 </div>
-            )}
+            </div>
 
             <div className="border-b border-gray-200 mb-6 overflow-x-auto">
                 <nav className="-mb-px flex space-x-8" aria-label="Tabs">
@@ -553,19 +555,20 @@ export const ClientDashboard: React.FC<ClientDashboardProps> = ({ user, allClean
                         <div className="flex-1">
                             <h3 className="text-sm font-medium text-blue-800">Welcome! Complete Your Profile</h3>
                             <p className="mt-1 text-sm text-blue-700">
-                                Please complete your profile to access all features including search and booking.
+                                Please fill out the form below to access all features including search and booking.
                             </p>
                         </div>
-                        <button
-                            onClick={() => {
-                                setActiveTab('profile');
-                                setShowProfileCompletion(true);
-                            }}
-                            className="ml-4 bg-blue-600 text-white px-4 py-2 rounded-md text-sm font-medium hover:bg-blue-700"
-                        >
-                            Complete Profile
-                        </button>
                     </div>
+                </div>
+            )}
+
+            {/* Show Profile Completion Form immediately when profile is incomplete */}
+            {isProfileIncomplete && (
+                <div className="mb-6">
+                    <ProfileCompletionForm 
+                        user={user} 
+                        onSave={handleProfileUpdate}
+                    />
                 </div>
             )}
             
