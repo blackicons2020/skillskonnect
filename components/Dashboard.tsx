@@ -16,7 +16,7 @@ interface DashboardProps {
     user: User;
     onUpdateUser: (user: User) => void;
     onNavigate: (view: View) => void;
-    initialTab?: 'profile' | 'jobs' | 'reviews' | 'messages' | 'support' | 'verification' | 'listings';
+    initialTab?: 'profile' | 'jobs' | 'reviews' | 'messages' | 'support' | 'verification' | 'listings' | 'notifications';
     allJobs?: Job[];
 }
 
@@ -53,7 +53,7 @@ export const Dashboard: React.FC<DashboardProps> = ({ user, onUpdateUser, onNavi
     const isProfileIncomplete = !user.userType || !user.phoneNumber || !user.country;
 
     // Default to 'jobs' (My Jobs & Payments) if profile is complete, otherwise 'profile'
-    const [activeTab, setActiveTab] = useState<'profile' | 'jobs' | 'reviews' | 'messages' | 'support' | 'verification' | 'listings'>(
+    const [activeTab, setActiveTab] = useState<'profile' | 'jobs' | 'reviews' | 'messages' | 'support' | 'verification' | 'listings' | 'notifications'>(
         initialTab || (isProfileIncomplete ? 'profile' : 'jobs')
     );
     const [showProfileCompletion, setShowProfileCompletion] = useState(false);
@@ -345,12 +345,32 @@ export const Dashboard: React.FC<DashboardProps> = ({ user, onUpdateUser, onNavi
                            {/* Action Buttons could go here */}
                            {activeTab === 'profile' && !isEditing && (
                                 <button
-                                    onClick={() => setShowProfileCompletion(true)} // Or setIsEditing(true) depending on logic
+                                    onClick={() => setShowProfileCompletion(true)}
                                     className="inline-flex items-center px-4 py-2 border border-gray-300 shadow-sm text-sm font-medium rounded-lg text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
                                 >
                                     <PencilIcon className="-ml-1 mr-2 h-4 w-4 text-gray-500" />
                                     Edit Profile
                                 </button>
+                           )}
+                           {/* Compact Upgrade Banner — shown to free/unsubscribed workers */}
+                           {isFreeUser && showUpgradeBanner && (
+                               <div className="flex-shrink-0">
+                                   <div className="bg-gradient-to-r from-primary to-secondary text-white rounded-lg px-3 py-2 flex items-center gap-2 shadow">
+                                       <span className="text-sm">🚀</span>
+                                       <span className="text-xs sm:text-sm font-medium whitespace-nowrap">Free Plan — Upgrade for more visibility!</span>
+                                       <button
+                                           onClick={() => onNavigate('subscription')}
+                                           className="bg-white text-primary font-bold text-xs px-2 py-1 rounded hover:bg-gray-100 transition-colors whitespace-nowrap"
+                                       >
+                                           Upgrade
+                                       </button>
+                                       <button
+                                           onClick={() => setShowUpgradeBanner(false)}
+                                           className="text-white/70 hover:text-white text-sm leading-none p-0.5"
+                                           aria-label="Dismiss"
+                                       >✕</button>
+                                   </div>
+                               </div>
                            )}
                         </div>
                     </div>
@@ -431,33 +451,7 @@ export const Dashboard: React.FC<DashboardProps> = ({ user, onUpdateUser, onNavi
                 </div>
             )}
 
-            {/* Upgrade Banner — shown to free/unsubscribed workers */}
-            {isFreeUser && showUpgradeBanner && !isLimitReached && (
-                <div className="bg-gradient-to-r from-primary to-secondary text-white rounded-xl p-4 mb-6 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 shadow-lg">
-                    <div className="flex items-start gap-3">
-                        <span className="text-2xl">🚀</span>
-                        <div>
-                            <h4 className="font-bold text-base">Unlock Your Full Potential — Upgrade Today!</h4>
-                            <p className="text-sm text-white/85 mt-0.5">
-                                You're on the <strong>Free Plan</strong>. Upgrade to receive more client bookings, get priority placement in search results, access job listings, and earn more.
-                            </p>
-                        </div>
-                    </div>
-                    <div className="flex items-center gap-2 flex-shrink-0">
-                        <button
-                            onClick={() => onNavigate('subscription')}
-                            className="bg-white text-primary font-bold text-sm px-4 py-2 rounded-lg hover:bg-gray-100 transition-colors whitespace-nowrap"
-                        >
-                            Upgrade Now
-                        </button>
-                        <button
-                            onClick={() => setShowUpgradeBanner(false)}
-                            className="text-white/70 hover:text-white text-lg leading-none p-1"
-                            aria-label="Dismiss"
-                        >✕</button>
-                    </div>
-                </div>
-            )}
+            {/* Upgrade Banner — removed, now shown compactly in header */}
 
             <div className="border-b border-gray-200 mb-6 overflow-x-auto">
                 <nav className="-mb-px flex space-x-8" aria-label="Tabs">
@@ -489,6 +483,9 @@ export const Dashboard: React.FC<DashboardProps> = ({ user, onUpdateUser, onNavi
                     </button>
                     <button onClick={() => setActiveTab('verification')} className={`${activeTab === 'verification' ? 'border-primary text-primary' : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'} whitespace-nowrap py-4 px-1 border-b-2 font-medium text-sm flex items-center gap-2`}>
                         {user.isVerified ? '✓' : '○'} Verification
+                    </button>
+                    <button onClick={() => setActiveTab('notifications')} className={`${activeTab === 'notifications' ? 'border-primary text-primary' : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'} whitespace-nowrap py-4 px-1 border-b-2 font-medium text-sm flex items-center gap-2`}>
+                        🔔 Notifications
                     </button>
                 </nav>
             </div>
@@ -1082,6 +1079,73 @@ export const Dashboard: React.FC<DashboardProps> = ({ user, onUpdateUser, onNavi
                     user={user}
                     onUpload={handleVerificationUpload}
                 />
+            )}
+
+            {activeTab === 'notifications' && (
+                <div className="bg-white rounded-lg shadow-lg overflow-hidden p-6">
+                    <h2 className="text-xl font-bold text-gray-800 mb-6 flex items-center gap-2">
+                        🔔 Notifications
+                    </h2>
+                    <div className="space-y-4">
+                        {/* Subscription status notification */}
+                        {isFreeUser && (
+                            <div className="flex items-start gap-4 p-4 bg-blue-50 border border-blue-100 rounded-lg">
+                                <span className="text-2xl flex-shrink-0">🚀</span>
+                                <div className="flex-1 min-w-0">
+                                    <p className="text-sm font-semibold text-blue-900">Upgrade to unlock more opportunities</p>
+                                    <p className="text-sm text-blue-700 mt-0.5">You're on the Free Plan. Upgrade to get priority placement in search, access posted jobs, and receive more bookings.</p>
+                                    <button onClick={() => onNavigate('subscription')} className="mt-2 text-xs font-bold text-blue-600 hover:underline">View Plans →</button>
+                                </div>
+                                <span className="text-xs text-gray-400 flex-shrink-0">Today</span>
+                            </div>
+                        )}
+                        {daysRemaining !== null && daysRemaining <= 7 && user.subscriptionTier !== 'Free' && (
+                            <div className="flex items-start gap-4 p-4 bg-yellow-50 border border-yellow-100 rounded-lg">
+                                <span className="text-2xl flex-shrink-0">⚠️</span>
+                                <div className="flex-1 min-w-0">
+                                    <p className="text-sm font-semibold text-yellow-900">
+                                        {daysRemaining <= 0 ? 'Subscription Expired' : `Subscription expiring in ${daysRemaining} day${daysRemaining !== 1 ? 's' : ''}`}
+                                    </p>
+                                    <p className="text-sm text-yellow-700 mt-0.5">Renew your plan to keep your premium features and keep appearing in search results.</p>
+                                    <button onClick={() => onNavigate('subscription')} className="mt-2 text-xs font-bold text-yellow-700 hover:underline">Renew Now →</button>
+                                </div>
+                                <span className="text-xs text-gray-400 flex-shrink-0">Today</span>
+                            </div>
+                        )}
+                        {isProfileIncomplete && (
+                            <div className="flex items-start gap-4 p-4 bg-orange-50 border border-orange-100 rounded-lg">
+                                <span className="text-2xl flex-shrink-0">📋</span>
+                                <div className="flex-1 min-w-0">
+                                    <p className="text-sm font-semibold text-orange-900">Complete your profile</p>
+                                    <p className="text-sm text-orange-700 mt-0.5">Your profile is incomplete. Add your personal and professional details to be visible to clients and receive bookings.</p>
+                                    <button onClick={() => setActiveTab('profile')} className="mt-2 text-xs font-bold text-orange-600 hover:underline">Complete Profile →</button>
+                                </div>
+                                <span className="text-xs text-gray-400 flex-shrink-0">Today</span>
+                            </div>
+                        )}
+                        {!user.isVerified && (
+                            <div className="flex items-start gap-4 p-4 bg-purple-50 border border-purple-100 rounded-lg">
+                                <span className="text-2xl flex-shrink-0">🛡️</span>
+                                <div className="flex-1 min-w-0">
+                                    <p className="text-sm font-semibold text-purple-900">Get verified to build trust</p>
+                                    <p className="text-sm text-purple-700 mt-0.5">Verified workers get a badge on their profile and appear higher in search results. Submit your documents to get verified.</p>
+                                    <button onClick={() => setActiveTab('verification')} className="mt-2 text-xs font-bold text-purple-600 hover:underline">Start Verification →</button>
+                                </div>
+                                <span className="text-xs text-gray-400 flex-shrink-0">Today</span>
+                            </div>
+                        )}
+                        {!isFreeUser && !isProfileIncomplete && user.isVerified && daysRemaining !== null && daysRemaining > 7 && (
+                            <div className="flex items-start gap-4 p-4 bg-green-50 border border-green-100 rounded-lg">
+                                <span className="text-2xl flex-shrink-0">✅</span>
+                                <div className="flex-1 min-w-0">
+                                    <p className="text-sm font-semibold text-green-900">You're all set!</p>
+                                    <p className="text-sm text-green-700 mt-0.5">Your profile is complete, verified, and your subscription is active. Keep checking the Available Jobs tab for new opportunities.</p>
+                                </div>
+                                <span className="text-xs text-gray-400 flex-shrink-0">Today</span>
+                            </div>
+                        )}
+                    </div>
+                </div>
             )}
             </div>
         </div>

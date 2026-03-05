@@ -117,7 +117,7 @@ interface ClientDashboardProps {
     onUpdateUser: (user: User) => void;
     onRefreshJobs?: () => Promise<void>;
     appError: string | null;
-    initialTab?: 'find' | 'bookings' | 'messages' | 'support' | 'profile' | 'verification' | 'jobs';
+    initialTab?: 'find' | 'bookings' | 'messages' | 'support' | 'profile' | 'verification' | 'jobs' | 'notifications';
 }
 
 export const ClientDashboard: React.FC<ClientDashboardProps> = ({ user, allCleaners, allUsers = [], allJobs = [], onSelectCleaner, initialFilters, clearInitialFilters, onNavigate, onCancelBooking, onReviewSubmit, onApproveJobCompletion, onUpdateUser, onRefreshJobs, appError, initialTab }) => {
@@ -145,7 +145,7 @@ export const ClientDashboard: React.FC<ClientDashboardProps> = ({ user, allClean
     const isProfileIncomplete = !user.userType || !user.phoneNumber || !user.country;
     
     // Set initial tab - if profile is incomplete, always start with profile, otherwise use initialTab or 'find'
-    const [activeTab, setActiveTab] = useState<'find' | 'bookings' | 'messages' | 'support' | 'profile' | 'verification' | 'jobs'>(
+    const [activeTab, setActiveTab] = useState<'find' | 'bookings' | 'messages' | 'support' | 'profile' | 'verification' | 'jobs' | 'notifications'>(
         isProfileIncomplete ? 'profile' : (initialTab || 'find')
     );
     const [showProfileCompletion, setShowProfileCompletion] = useState(isProfileIncomplete);
@@ -544,6 +544,9 @@ export const ClientDashboard: React.FC<ClientDashboardProps> = ({ user, allClean
                     </button>
                     <button onClick={() => setActiveTab('verification')} className={`${activeTab === 'verification' ? 'border-primary text-primary' : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'} whitespace-nowrap py-4 px-1 border-b-2 font-medium text-sm`}>
                         {user.isVerified ? '✓' : '○'} Verification
+                    </button>
+                    <button onClick={() => setActiveTab('notifications')} className={`${activeTab === 'notifications' ? 'border-primary text-primary' : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'} whitespace-nowrap py-4 px-1 border-b-2 font-medium text-sm flex items-center gap-2`}>
+                        🔔 Notifications
                     </button>
                 </nav>
             </div>
@@ -1205,6 +1208,59 @@ export const ClientDashboard: React.FC<ClientDashboardProps> = ({ user, allClean
                     user={user} 
                     onUpload={handleVerificationUpload}
                 />
+            )}
+
+            {activeTab === 'notifications' && (
+                <div className="bg-white rounded-lg shadow-lg overflow-hidden p-6">
+                    <h2 className="text-xl font-bold text-gray-800 mb-6 flex items-center gap-2">
+                        🔔 Notifications
+                    </h2>
+                    <div className="space-y-4">
+                        {isFreeUser && (
+                            <div className="flex items-start gap-4 p-4 bg-blue-50 border border-blue-100 rounded-lg">
+                                <span className="text-2xl flex-shrink-0">✨</span>
+                                <div className="flex-1 min-w-0">
+                                    <p className="text-sm font-semibold text-blue-900">Upgrade to unlock more features</p>
+                                    <p className="text-sm text-blue-700 mt-0.5">You're on the Free Plan. Upgrade to post more jobs, access premium verified workers, and enjoy priority support.</p>
+                                    <button onClick={() => onNavigate('subscription')} className="mt-2 text-xs font-bold text-blue-600 hover:underline">View Plans →</button>
+                                </div>
+                                <span className="text-xs text-gray-400 flex-shrink-0">Today</span>
+                            </div>
+                        )}
+                        {isProfileIncomplete && (
+                            <div className="flex items-start gap-4 p-4 bg-orange-50 border border-orange-100 rounded-lg">
+                                <span className="text-2xl flex-shrink-0">📋</span>
+                                <div className="flex-1 min-w-0">
+                                    <p className="text-sm font-semibold text-orange-900">Complete your profile</p>
+                                    <p className="text-sm text-orange-700 mt-0.5">Your profile is incomplete. Fill in your details to start searching for workers and posting jobs.</p>
+                                    <button onClick={() => setActiveTab('profile')} className="mt-2 text-xs font-bold text-orange-600 hover:underline">Complete Profile →</button>
+                                </div>
+                                <span className="text-xs text-gray-400 flex-shrink-0">Today</span>
+                            </div>
+                        )}
+                        {!user.isVerified && (
+                            <div className="flex items-start gap-4 p-4 bg-purple-50 border border-purple-100 rounded-lg">
+                                <span className="text-2xl flex-shrink-0">🛡️</span>
+                                <div className="flex-1 min-w-0">
+                                    <p className="text-sm font-semibold text-purple-900">Verify your account</p>
+                                    <p className="text-sm text-purple-700 mt-0.5">Verified clients get a trust badge and can access more features. Submit your documents to get verified.</p>
+                                    <button onClick={() => setActiveTab('verification')} className="mt-2 text-xs font-bold text-purple-600 hover:underline">Start Verification →</button>
+                                </div>
+                                <span className="text-xs text-gray-400 flex-shrink-0">Today</span>
+                            </div>
+                        )}
+                        {!isFreeUser && !isProfileIncomplete && user.isVerified && (
+                            <div className="flex items-start gap-4 p-4 bg-green-50 border border-green-100 rounded-lg">
+                                <span className="text-2xl flex-shrink-0">✅</span>
+                                <div className="flex-1 min-w-0">
+                                    <p className="text-sm font-semibold text-green-900">You're all set!</p>
+                                    <p className="text-sm text-green-700 mt-0.5">Your account is verified and active. Start searching for workers or post a job to find the right professional for your needs.</p>
+                                </div>
+                                <span className="text-xs text-gray-400 flex-shrink-0">Today</span>
+                            </div>
+                        )}
+                    </div>
+                </div>
             )}
 
              {bookingToCancel && (<CancellationConfirmationModal booking={bookingToCancel} onClose={() => setBookingToCancel(null)} onConfirm={(id) => { onCancelBooking(id); setBookingToCancel(null); }} />)}
