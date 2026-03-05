@@ -91,6 +91,7 @@ const App: React.FC = () => {
     const [authMessage, setAuthMessage] = useState<{ type: 'success' | 'error', text: string } | null>(null);
 
     const [isLoading, setIsLoading] = useState(true);
+    const [isDataLoading, setIsDataLoading] = useState(false);
     const [appError, setAppError] = useState<string | null>(null);
 
     // Reset-password token extracted from the URL on first load
@@ -116,17 +117,22 @@ const App: React.FC = () => {
 
     // Refetches all app data. Used after state-changing actions.
     const refetchAllData = async (currentUser: User) => {
-        const [cleaners, users, jobs] = await Promise.allSettled([
-            apiService.getAllCleaners(),
-            currentUser.isAdmin ? apiService.adminGetAllUsers() : Promise.resolve([]),
-            apiService.getAllJobs()
-        ]);
-        if (cleaners.status === 'fulfilled') setAllCleaners(cleaners.value);
-        else console.error('Failed to fetch cleaners:', (cleaners as any).reason);
-        if (users.status === 'fulfilled') setAllUsers(users.value);
-        else console.error('Failed to fetch users:', (users as any).reason);
-        if (jobs.status === 'fulfilled') setAllJobs(jobs.value);
-        else console.error('Failed to fetch jobs:', (jobs as any).reason);
+        setIsDataLoading(true);
+        try {
+            const [cleaners, users, jobs] = await Promise.allSettled([
+                apiService.getAllCleaners(),
+                currentUser.isAdmin ? apiService.adminGetAllUsers() : Promise.resolve([]),
+                apiService.getAllJobs()
+            ]);
+            if (cleaners.status === 'fulfilled') setAllCleaners(cleaners.value);
+            else console.error('Failed to fetch cleaners:', (cleaners as any).reason);
+            if (users.status === 'fulfilled') setAllUsers(users.value);
+            else console.error('Failed to fetch users:', (users as any).reason);
+            if (jobs.status === 'fulfilled') setAllJobs(jobs.value);
+            else console.error('Failed to fetch jobs:', (jobs as any).reason);
+        } finally {
+            setIsDataLoading(false);
+        }
     };
 
     // Refetch jobs only (used after job posting)
@@ -364,9 +370,11 @@ const App: React.FC = () => {
         // Refetch data in the background AFTER navigation
         if (skipRefetch) {
             if (userData.isAdmin) {
+                setIsDataLoading(true);
                 apiService.adminGetAllUsers()
                     .then(users => setAllUsers(users))
-                    .catch(e => console.error('Failed to fetch all users:', e));
+                    .catch(e => console.error('Failed to fetch all users:', e))
+                    .finally(() => setIsDataLoading(false));
             }
         } else {
             // Fire and forget — don't block navigation
@@ -705,6 +713,7 @@ const App: React.FC = () => {
                         user={user}
                         allUsers={allUsers}
                         allJobs={allJobs}
+                        isDataLoading={isDataLoading}
                         onUpdateUser={handleUpdateUser}
                         onDeleteUser={handleDeleteUser}
                         onMarkAsPaid={handleMarkAsPaid}
