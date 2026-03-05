@@ -4,6 +4,11 @@ import { User, View, AppNotification } from '../types';
 import { BellIcon } from './icons';
 import { apiService } from '../services/apiService';
 
+interface BeforeInstallPromptEvent extends Event {
+  prompt: () => Promise<void>;
+  userChoice: Promise<{ outcome: 'accepted' | 'dismissed' }>;
+}
+
 interface HeaderProps {
   user: User | null;
   onNavigate: (view: View) => void;
@@ -16,6 +21,32 @@ export const Header: React.FC<HeaderProps> = ({ user, onNavigate, onLogout, onNa
   const [showNotifications, setShowNotifications] = useState(false);
   const bellRef = useRef<HTMLDivElement>(null);
   const unreadCount = notifications.filter(n => !n.isRead).length;
+  const [installPrompt, setInstallPrompt] = useState<BeforeInstallPromptEvent | null>(null);
+  const [isAppInstalled, setIsAppInstalled] = useState(false);
+
+  useEffect(() => {
+    const handler = (e: Event) => {
+      e.preventDefault();
+      setInstallPrompt(e as BeforeInstallPromptEvent);
+    };
+    window.addEventListener('beforeinstallprompt', handler);
+    window.addEventListener('appinstalled', () => setIsAppInstalled(true));
+    // Check if already installed (standalone mode)
+    if (window.matchMedia('(display-mode: standalone)').matches) {
+      setIsAppInstalled(true);
+    }
+    return () => window.removeEventListener('beforeinstallprompt', handler);
+  }, []);
+
+  const handleInstallClick = async () => {
+    if (!installPrompt) return;
+    await installPrompt.prompt();
+    const choice = await installPrompt.userChoice;
+    if (choice.outcome === 'accepted') {
+      setInstallPrompt(null);
+      setIsAppInstalled(true);
+    }
+  };
 
   const fetchNotifications = useCallback(async () => {
     if (!user) return;
@@ -79,10 +110,21 @@ export const Header: React.FC<HeaderProps> = ({ user, onNavigate, onLogout, onNa
             className="flex items-center gap-2 text-2xl font-bold text-primary cursor-pointer"
             onClick={() => onNavigate('landing')}
           >
-            <img src="/sk_logo.jpg" alt="Skills Konnect" className="h-8 w-8 rounded-md" />
+            <img src="/sk_logo.jpg" alt="Skills Konnect" className="h-8 w-8 rounded-lg bg-primary object-cover" />
             <span>Skills Konnect</span>
           </div>
           <div className="flex items-center space-x-3 sm:space-x-4">
+            {/* PWA Install Button — shown to all users when prompt is available */}
+            {installPrompt && !isAppInstalled && (
+              <button
+                onClick={handleInstallClick}
+                className="flex items-center gap-1.5 bg-primary text-white px-3 py-1.5 rounded-lg text-xs font-semibold hover:bg-secondary transition-colors"
+                title="Install Skills Konnect on your device"
+              >
+                <span>📲</span>
+                <span className="hidden xs:inline">Install App</span>
+              </button>
+            )}
             {user ? (
               <>
                 {user.isAdmin && (
