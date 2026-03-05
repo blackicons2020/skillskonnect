@@ -752,7 +752,7 @@ const App: React.FC = () => {
                 />;
             case 'about': return <AboutPage />;
             case 'servicesPage': return <ServicesPage />;
-            case 'help': return <HelpCenterPage />;
+            case 'help': return <HelpCenterPage onNavigate={handleNavigate} />;
             case 'contact': return <ContactPage />;
             case 'terms': return <TermsPage />;
             case 'privacy': return <PrivacyPage />;

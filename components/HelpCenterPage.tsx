@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import { View } from '../types';
 
 const FAQItem: React.FC<{ question: string; children: React.ReactNode }> = ({ question, children }) => (
     <details className="p-4 rounded-lg bg-light group border border-gray-100">
@@ -21,7 +22,7 @@ const SectionHeader: React.FC<{ icon: string; title: string }> = ({ icon, title 
     </div>
 );
 
-export const HelpCenterPage: React.FC = () => {
+export const HelpCenterPage: React.FC<{ onNavigate: (page: View) => void }> = ({ onNavigate }) => {
     const [activeSection, setActiveSection] = useState<'all' | 'clients' | 'workers' | 'account' | 'payments'>('all');
 
     const sections = [
@@ -234,12 +235,12 @@ export const HelpCenterPage: React.FC = () => {
                     <div className="mt-14 text-center bg-gray-50 rounded-xl p-8 border border-gray-100">
                         <h3 className="text-xl font-bold text-dark mb-2">Still need help?</h3>
                         <p className="text-gray-600 mb-4">Can't find the answer you're looking for? Our support team is happy to assist.</p>
-                        <a
-                            href="mailto:skillskonnectng@gmail.com"
+                        <button
+                            onClick={() => onNavigate('contact')}
                             className="inline-flex items-center gap-2 bg-primary text-white font-semibold px-6 py-3 rounded-lg hover:bg-secondary transition-colors"
                         >
                             📧 Contact Support
-                        </a>
+                        </button>
                     </div>
 
                 </div>
