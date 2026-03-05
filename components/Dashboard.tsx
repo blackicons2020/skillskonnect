@@ -312,9 +312,9 @@ export const Dashboard: React.FC<DashboardProps> = ({ user, onUpdateUser, onNavi
                     <div className="flex flex-col md:flex-row md:items-center justify-between py-6 gap-4">
                         <div className="flex items-center gap-4">
                             <div className="relative">
-                                {user.profilePicture ? (
+                                {(user.profilePicture || (typeof user.profilePhoto === 'string' && user.profilePhoto)) ? (
                                     <img
-                                        src={user.profilePicture}
+                                        src={user.profilePicture || (user.profilePhoto as string)}
                                         alt="Profile"
                                         className="w-16 h-16 rounded-full object-cover border-2 border-white shadow-md ring-2 ring-blue-50"
                                     />
@@ -355,37 +355,6 @@ export const Dashboard: React.FC<DashboardProps> = ({ user, onUpdateUser, onNavi
                         </div>
                     </div>
 
-                    {/* Tabs */}
-                    <div className="flex overflow-x-auto space-x-8 mt-4 no-scrollbar">
-                        {[
-                            { id: 'profile', label: 'My Profile', icon: UserIcon }, // Assuming UserIcon exists locally or imported
-                            { id: 'jobs', label: 'Jobs & Requests', icon: BriefcaseIcon },
-                            { id: 'messages', label: 'Messages', icon: ChatBubbleLeftRightIcon, count: unreadMessageCount },
-                            { id: 'reviews', label: 'Reviews', icon: StarIcon }, // Only show for workers usually, or both
-                            { id: 'support', label: 'Help & Support', icon: LifebuoyIcon },
-                        ].map((tab) => (
-                             // Simple conditional to hide tabs if needed
-                            <button
-                                key={tab.id}
-                                onClick={() => setActiveTab(tab.id as any)}
-                                className={`
-                                    whitespace-nowrap py-4 px-1 border-b-2 font-medium text-sm flex items-center gap-2 transition-colors
-                                    ${activeTab === tab.id
-                                        ? 'border-blue-500 text-blue-600'
-                                        : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
-                                    }
-                                `}
-                            >
-                                <tab.icon className={`w-5 h-5 ${activeTab === tab.id ? 'text-blue-500' : 'text-gray-400'}`} />
-                                {tab.label}
-                                {tab.count ? (
-                                    <span className="ml-2 bg-red-100 text-red-600 py-0.5 px-2 rounded-full text-xs font-semibold">
-                                        {tab.count}
-                                    </span>
-                                ) : null}
-                            </button>
-                        ))}
-                    </div>
                 </div>
             </div>
 
@@ -497,7 +466,7 @@ export const Dashboard: React.FC<DashboardProps> = ({ user, onUpdateUser, onNavi
                     </button>
                     <button onClick={() => setActiveTab('listings')} className={`${activeTab === 'listings' ? 'border-primary text-primary' : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'} whitespace-nowrap py-4 px-1 border-b-2 font-medium text-sm flex items-center gap-2`}>
                         <BriefcaseIcon className="w-4 h-4" />
-                        Job Listings
+                        Available Jobs
                     </button>
                     <button onClick={() => setActiveTab('jobs')} className={`${activeTab === 'jobs' ? 'border-primary text-primary' : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'} whitespace-nowrap py-4 px-1 border-b-2 font-medium text-sm`}>
                         My Jobs & Payments
@@ -813,7 +782,7 @@ export const Dashboard: React.FC<DashboardProps> = ({ user, onUpdateUser, onNavi
                 <div className="bg-white rounded-lg shadow-lg overflow-hidden p-6">
                     <h2 className="text-2xl font-bold text-dark mb-6 flex items-center gap-2">
                         <BriefcaseIcon className="w-6 h-6 text-primary" />
-                        Available Job Listings
+                        Available Jobs
                     </h2>
 
                     {/* Subscription Check Banner */}
