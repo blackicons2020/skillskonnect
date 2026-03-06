@@ -492,12 +492,19 @@ app.put('/api/users/me', protect, async (req: ExpressRequest, res: ExpressRespon
 
     await user.save();
     
-    // Return formatted user data
+    // Get booking history and reviews so the frontend has the full user object
+    const bookings = await Booking.find({
+      $or: [{ clientId: user._id.toString() }, { cleanerId: user._id.toString() }]
+    }).lean();
+    const reviews = await Review.find({ cleanerId: user._id.toString() }).lean();
+
+    // Return formatted user data (must match getMe/login format)
     const userData = {
       id: user._id.toString(),
       fullName: user.fullName,
       email: user.email,
       role: user.role,
+      userType: user.role === 'cleaner' ? 'worker' : 'client',
       phoneNumber: user.phoneNumber,
       gender: user.gender,
       address: user.address,
@@ -521,9 +528,17 @@ app.put('/api/users/me', protect, async (req: ExpressRequest, res: ExpressRespon
       chargePerContractNegotiable: user.chargePerContractNegotiable,
       bankName: user.bankName,
       accountNumber: user.accountNumber,
+      bookingHistory: bookings || [],
+      reviewsData: reviews || [],
+      pendingSubscription: user.pendingSubscription,
+      subscriptionEndDate: user.subscriptionEndDate,
+      subscriptionDate: user.subscriptionDate,
+      subscriptionAmount: user.subscriptionAmount,
       governmentId: user.governmentId,
       businessRegDoc: user.businessRegDoc,
-      isSuspended: user.isSuspended
+      isSuspended: user.isSuspended,
+      monthlyNewClientsIds: user.monthlyNewClientsIds || [],
+      monthlyUsageResetDate: user.monthlyUsageResetDate
     };
     
     res.json(userData);
