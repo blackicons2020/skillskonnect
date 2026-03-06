@@ -28,7 +28,7 @@ export const Footer: React.FC<FooterProps> = ({ onNavigate }) => {
             <div className="container mx-auto px-4 sm:px-6 lg:px-8 py-12">
                 <div className="grid grid-cols-2 md:grid-cols-5 gap-8">
                     <div className="col-span-2 md:col-span-2">
-                         <div className="flex items-center gap-3 text-2xl font-bold text-primary">
+                         <div className="flex items-center gap-3 font-bold text-primary" style={{ fontSize: '22px' }}>
                             <img src="/footer-logo.jpg" alt="Skills Konnect" className="h-8 w-8 rounded-md" />
                             <span>Skills Konnect</span>
                         </div>
