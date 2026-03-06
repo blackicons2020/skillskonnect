@@ -301,14 +301,11 @@ const App: React.FC = () => {
     };
 
     const handleGoBack = () => {
-        setViewHistory(prev => {
-            if (prev.length === 0) return prev;
-            const newHistory = [...prev];
-            const previousView = newHistory.pop()!;
-            setView(previousView);
-            window.scrollTo(0, 0);
-            return newHistory;
-        });
+        if (viewHistory.length === 0) return;
+        const previousView = viewHistory[viewHistory.length - 1];
+        setViewHistory(prev => prev.slice(0, -1));
+        setView(previousView);
+        window.scrollTo(0, 0);
     };
 
     const handleNavigateToAuth = (tab: 'login' | 'signup') => {
@@ -448,7 +445,8 @@ const App: React.FC = () => {
         clearToken();
         setViewHistory([]);
         setCleanerToRememberForBooking(null);
-        handleNavigate('landing');
+        setView('landing');
+        window.scrollTo(0, 0);
     };
 
     const handleSelectCleaner = (cleaner: Cleaner) => {
