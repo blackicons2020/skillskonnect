@@ -39,6 +39,8 @@ const UserSchema = new mongoose.Schema({
   businessRegDoc: String,
   monthlyNewClientsIds: { type: [String], default: [] },
   monthlyUsageResetDate: Date,
+  resetPasswordToken: String,
+  resetPasswordExpiry: Date,
   createdAt: { type: Date, default: Date.now }
 }, { timestamps: true });
 

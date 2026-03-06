@@ -5,6 +5,7 @@ import dotenv from 'dotenv';
 import mongoose from 'mongoose';
 import bcrypt from 'bcryptjs';
 import jwt from 'jsonwebtoken';
+import crypto from 'crypto';
 import path from 'path';
 import { GoogleGenAI } from '@google/genai';
 import { fileURLToPath } from 'url';
@@ -288,6 +289,63 @@ app.post('/api/auth/login', async (req: ExpressRequest, res: ExpressResponse) =>
     
     res.json({ token: generateToken(user._id.toString(), user.role, user.isAdmin, user.adminRole), user: userData });
   } catch (error) { handleError(res, error, 'Login failed'); }
+});
+
+// ─── Forgot Password ─────────────────────────────────────────────────────────
+app.post('/api/auth/forgot-password', async (req: ExpressRequest, res: ExpressResponse) => {
+  try {
+    const { email } = req.body;
+    if (!email) return res.status(400).json({ message: 'Email is required' });
+
+    const user = await User.findOne({ email: email.toLowerCase().trim() });
+    // Always respond with success to avoid revealing whether email is registered
+    if (!user) return res.json({ message: 'If that email exists, a reset link has been sent.' });
+
+    // Generate raw token and store hashed version
+    const rawToken = crypto.randomBytes(32).toString('hex');
+    const hashedToken = crypto.createHash('sha256').update(rawToken).digest('hex');
+    user.resetPasswordToken = hashedToken;
+    user.resetPasswordExpiry = new Date(Date.now() + 60 * 60 * 1000); // 1 hour
+    await user.save();
+
+    const frontendUrl = process.env.FRONTEND_URL || 'https://skillskonnect.vercel.app';
+    const resetLink = `${frontendUrl}/?action=resetPassword&token=${rawToken}`;
+
+    const { sendEmail } = await import('./utils/email.js');
+    await sendEmail({
+      to: user.email,
+      subject: 'Skills Konnect — Reset Your Password',
+      text: `You requested a password reset. Click the link below to set a new password (valid for 1 hour):\n\n${resetLink}\n\nIf you did not request this, please ignore this email.`,
+      html: `<p>You requested a password reset.</p><p><a href="${resetLink}">Click here to reset your password</a> (valid for 1 hour).</p><p>If you did not request this, please ignore this email.</p>`,
+    });
+
+    res.json({ message: 'If that email exists, a reset link has been sent.' });
+  } catch (error) { handleError(res, error, 'Forgot password failed'); }
+});
+
+// ─── Reset Password ───────────────────────────────────────────────────────────
+app.post('/api/auth/reset-password', async (req: ExpressRequest, res: ExpressResponse) => {
+  try {
+    const { token, password } = req.body;
+    if (!token || !password) return res.status(400).json({ message: 'Token and new password are required' });
+    if (password.length < 8) return res.status(400).json({ message: 'Password must be at least 8 characters' });
+
+    const hashedToken = crypto.createHash('sha256').update(token).digest('hex');
+    const user = await User.findOne({
+      resetPasswordToken: hashedToken,
+      resetPasswordExpiry: { $gt: new Date() },
+    });
+
+    if (!user) return res.status(400).json({ message: 'Reset link is invalid or has expired. Please request a new one.' });
+
+    const salt = await bcrypt.genSalt(10);
+    user.password = await bcrypt.hash(password, salt);
+    user.resetPasswordToken = undefined;
+    user.resetPasswordExpiry = undefined;
+    await user.save();
+
+    res.json({ message: 'Password reset successfully. You can now sign in.' });
+  } catch (error) { handleError(res, error, 'Reset password failed'); }
 });
 
 // ============================================================================
