@@ -495,13 +495,18 @@ const App: React.FC = () => {
 
             if (updatedUser.isAdmin || isAdminUpdatingOtherUser) {
                 await refetchAllData(user || updatedUser);
-            } else if (jobsChanged && (updatedUser.role === 'client' || (updatedUser as any).userType === 'client')) {
+            } else {
+                // Refresh cleaners list so landing page cards update immediately
+                if (updatedUser.role === 'cleaner' || (updatedUser as any).userType === 'worker') {
+                    apiService.getAllCleaners()
+                        .then(cleaners => setAllCleaners(cleaners))
+                        .catch(e => console.error('Failed to refresh cleaners:', e));
+                }
                 // Refetch jobs so workers can see the new/updated jobs
-                try {
-                    const jobs = await apiService.getAllJobs();
-                    setAllJobs(jobs);
-                } catch (error: any) {
-                    console.error("Failed to refresh jobs:", error);
+                if (jobsChanged && (updatedUser.role === 'client' || (updatedUser as any).userType === 'client')) {
+                    apiService.getAllJobs()
+                        .then(jobs => setAllJobs(jobs))
+                        .catch(e => console.error('Failed to refresh jobs:', e));
                 }
             }
 
