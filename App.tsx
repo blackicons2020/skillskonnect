@@ -264,8 +264,17 @@ const App: React.FC = () => {
                     // shouldNavigate=true: restore the user to their correct dashboard
                     await handleAuthSuccess(currentUser, true, true);
                 } else {
-                    console.error('Session expired or invalid.', (meResult as any).reason);
-                    handleLogout();
+                    const reason = (meResult as any).reason;
+                    const errorMsg: string = reason?.message || '';
+                    // Only clear the token if it's definitively invalid (401). For network/server
+                    // errors (cold start, timeout, etc.) keep the token and show landing page.
+                    if (errorMsg.includes('401') || errorMsg.toLowerCase().includes('unauthorized') || errorMsg.toLowerCase().includes('invalid token')) {
+                        console.error('Token invalid/expired — logging out.', errorMsg);
+                        handleLogout();
+                    } else {
+                        console.error('Session check failed (server/network error) — keeping token.', errorMsg);
+                        setIsLoading(false);
+                    }
                 }
             } else {
                 // Not logged in — only load public data

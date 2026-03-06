@@ -31,15 +31,11 @@ const STORAGE_KEY = 'skillskonnect_token';
 export const getStoredToken = (): string | null =>
     localStorage.getItem(STORAGE_KEY) || sessionStorage.getItem(STORAGE_KEY);
 
-/** Persist the token. rememberMe=true → localStorage, false → sessionStorage. */
+/** Persist the token. Always uses localStorage so the session survives browser restarts. */
 export const storeToken = (token: string, rememberMe: boolean) => {
-    if (rememberMe) {
-        localStorage.setItem(STORAGE_KEY, token);
-        sessionStorage.removeItem(STORAGE_KEY);
-    } else {
-        sessionStorage.setItem(STORAGE_KEY, token);
-        localStorage.removeItem(STORAGE_KEY);
-    }
+    // Always store in localStorage regardless of rememberMe so users stay logged in
+    localStorage.setItem(STORAGE_KEY, token);
+    sessionStorage.removeItem(STORAGE_KEY);
 };
 
 /** Remove the token from both stores. */
