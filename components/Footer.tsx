@@ -115,7 +115,7 @@ export const Footer: React.FC<FooterProps> = ({ onNavigate }) => {
                                             <path strokeLinecap="round" strokeLinejoin="round" d="M4 16v2a2 2 0 002 2h12a2 2 0 002-2v-2M12 4v12m0 0l-4-4m4 4l4-4" />
                                         </svg>
                                     </span>
-                                    <span className="text-xs text-gray-500 text-center leading-tight max-w-[80px]">Click to Install app in device</span>
+                                    <span className="text-xs text-gray-500 text-center leading-tight max-w-[80px]">Download app</span>
                                 </button>
                             </div>
                         </div>
