@@ -64,6 +64,7 @@ const LoginTab: React.FC<LoginTabProps> = ({ email, setEmail, password, setPassw
                                 autoComplete="current-password"
                                 required
                                 minLength={6}
+                                title="Password must be at least 6 characters long."
                                 className="block w-full px-3 py-2 border border-gray-600 rounded-md shadow-sm placeholder-gray-400 focus:outline-none focus:ring-primary focus:border-primary sm:text-sm bg-dark text-light"
                                 placeholder="••••••••"
                                 value={password}
@@ -214,6 +215,7 @@ const SignupTab: React.FC<SignupTabProps> = ({ onSignup }) => {
                                 onChange={(e) => setPassword(e.target.value)}
                                 required
                                 minLength={6}
+                                title="Password must be at least 6 characters long."
                                 className="block w-full px-3 py-2 border border-gray-600 rounded-md shadow-sm placeholder-gray-400 focus:outline-none focus:ring-primary focus:border-primary sm:text-sm bg-dark text-light"
                                 placeholder="••••••••"
                             />
