@@ -56,7 +56,7 @@ export const Dashboard: React.FC<DashboardProps> = ({ user, onUpdateUser, onNavi
     const [activeTab, setActiveTab] = useState<'profile' | 'jobs' | 'reviews' | 'messages' | 'support' | 'verification' | 'listings' | 'notifications'>(
         initialTab || (isProfileIncomplete ? 'profile' : 'jobs')
     );
-    const [showProfileCompletion, setShowProfileCompletion] = useState(false);
+    const [showProfileCompletion, setShowProfileCompletion] = useState(isProfileIncomplete);
 
     // PWA install prompt - removed (handled in Footer)
     const [chatToOpen, setChatToOpen] = useState<string | null>(null);
@@ -381,27 +381,6 @@ export const Dashboard: React.FC<DashboardProps> = ({ user, onUpdateUser, onNavi
             {/* Main Content Area */}
             <div className="container mx-auto px-4 sm:px-6 lg:px-8 py-8">
 
-            {/* Alert for incomplete profile */}
-            {isProfileIncomplete && (
-                <div className="p-4 rounded-md mb-6 bg-blue-100 border-blue-200 text-blue-800">
-                    <h4 className="font-bold">Complete Your Profile</h4>
-                    <p className="text-sm">
-                        Please complete your profile to get the most out of Skills Konnect. Add your personal information, professional details, and pricing.
-                    </p>
-                    <div className="mt-2">
-                        <button
-                            onClick={() => {
-                                setActiveTab('profile');
-                                setIsEditing(true);
-                            }}
-                            className="bg-blue-600 text-white px-3 py-1.5 rounded-md text-sm font-semibold hover:bg-blue-700"
-                        >
-                            Complete Profile Now
-                        </button>
-                    </div>
-                </div>
-            )}
-
             {isLimitReached && (
                 <div className="p-4 rounded-md mb-6 bg-red-100 border-red-200 text-red-800">
                     <h4 className="font-bold">Monthly Client Limit Reached!</h4>
@@ -488,26 +467,6 @@ export const Dashboard: React.FC<DashboardProps> = ({ user, onUpdateUser, onNavi
                     </button>
                 </nav>
             </div>
-
-            {/* Profile Completion Banner */}
-            {isProfileIncomplete && activeTab === 'profile' && !showProfileCompletion && (
-                <div className="bg-yellow-50 border-l-4 border-yellow-400 p-4 mb-6">
-                    <div className="flex items-start">
-                        <div className="flex-1">
-                            <h3 className="text-sm font-medium text-yellow-800">Complete Your Profile</h3>
-                            <p className="mt-1 text-sm text-yellow-700">
-                                Your profile is incomplete. Please fill in all required fields to get started.
-                            </p>
-                        </div>
-                        <button
-                            onClick={() => setShowProfileCompletion(true)}
-                            className="ml-4 bg-yellow-600 text-white px-4 py-2 rounded-md text-sm font-medium hover:bg-yellow-700"
-                        >
-                            Complete Now
-                        </button>
-                    </div>
-                </div>
-            )}
 
             {showProfileCompletion && (
                 <div className="mb-6">
@@ -1108,17 +1067,6 @@ export const Dashboard: React.FC<DashboardProps> = ({ user, onUpdateUser, onNavi
                                     </p>
                                     <p className="text-sm text-yellow-700 mt-0.5">Renew your plan to keep your premium features and keep appearing in search results.</p>
                                     <button onClick={() => onNavigate('subscription')} className="mt-2 text-xs font-bold text-yellow-700 hover:underline">Renew Now →</button>
-                                </div>
-                                <span className="text-xs text-gray-400 flex-shrink-0">Today</span>
-                            </div>
-                        )}
-                        {isProfileIncomplete && (
-                            <div className="flex items-start gap-4 p-4 bg-orange-50 border border-orange-100 rounded-lg">
-                                <span className="text-2xl flex-shrink-0">📋</span>
-                                <div className="flex-1 min-w-0">
-                                    <p className="text-sm font-semibold text-orange-900">Complete your profile</p>
-                                    <p className="text-sm text-orange-700 mt-0.5">Your profile is incomplete. Add your personal and professional details to be visible to clients and receive bookings.</p>
-                                    <button onClick={() => setActiveTab('profile')} className="mt-2 text-xs font-bold text-orange-600 hover:underline">Complete Profile →</button>
                                 </div>
                                 <span className="text-xs text-gray-400 flex-shrink-0">Today</span>
                             </div>

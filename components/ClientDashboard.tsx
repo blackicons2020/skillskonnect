@@ -551,20 +551,6 @@ export const ClientDashboard: React.FC<ClientDashboardProps> = ({ user, allClean
                 </nav>
             </div>
             
-            {/* Profile Completion Banner */}
-            {isProfileIncomplete && (
-                <div className="bg-blue-50 border-l-4 border-blue-400 p-4 mb-6">
-                    <div className="flex items-start">
-                        <div className="flex-1">
-                            <h3 className="text-sm font-medium text-blue-800">Welcome! Complete Your Profile</h3>
-                            <p className="mt-1 text-sm text-blue-700">
-                                Please fill out the form below to access all features including search and booking.
-                            </p>
-                        </div>
-                    </div>
-                </div>
-            )}
-
             {/* Show Profile Completion Form immediately when profile is incomplete */}
             {isProfileIncomplete && activeTab !== 'profile' && (
                 <div className="mb-6">
