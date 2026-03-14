@@ -43,9 +43,6 @@ export const CleanerCard: React.FC<CleanerCardProps> = ({ cleaner, onClick }) =>
         )}
       </div>
       <div className="p-4 flex flex-col flex-grow">
-        {cleaner.cleanerType === 'Company' && (
-          <span className="text-xs font-semibold text-indigo-600 bg-indigo-50 px-2 py-0.5 rounded-full self-start mb-1">Company</span>
-        )}
         <div className="flex items-center gap-1.5">
             <h3 className="text-lg font-bold text-dark">{cleaner.name}</h3>
             {cleaner.isVerified && <CheckBadgeIcon className="w-5 h-5 text-secondary" />}

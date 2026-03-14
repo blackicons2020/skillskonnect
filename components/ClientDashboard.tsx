@@ -510,21 +510,16 @@ export const ClientDashboard: React.FC<ClientDashboardProps> = ({ user, allClean
 
             <div className="border-b border-gray-200 mb-6 overflow-x-auto">
                 <nav className="-mb-px flex space-x-8" aria-label="Tabs">
-                    {/* Only show Find a Professional tab if profile is complete */}
-                    {!isProfileIncomplete && (
-                        <button onClick={() => setActiveTab('find')} className={`${activeTab === 'find' ? 'border-primary text-primary' : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'} whitespace-nowrap py-4 px-1 border-b-2 font-medium text-sm`}>
-                            Find a Professional
-                        </button>
-                    )}
+                    <button onClick={() => setActiveTab('find')} className={`${activeTab === 'find' ? 'border-primary text-primary' : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'} whitespace-nowrap py-4 px-1 border-b-2 font-medium text-sm`}>
+                        Find a Professional
+                    </button>
                     <button onClick={() => setActiveTab('bookings')} className={`${activeTab === 'bookings' ? 'border-primary text-primary' : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'} whitespace-nowrap py-4 px-1 border-b-2 font-medium text-sm`}>
                         My Bookings
                     </button>
-                    {!isProfileIncomplete && (
-                        <button onClick={() => setActiveTab('jobs')} className={`${activeTab === 'jobs' ? 'border-primary text-primary' : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'} whitespace-nowrap py-4 px-1 border-b-2 font-medium text-sm flex items-center gap-2`}>
-                            <BriefcaseIcon className="w-4 h-4" />
-                            My Posted Jobs
-                        </button>
-                    )}
+                    <button onClick={() => setActiveTab('jobs')} className={`${activeTab === 'jobs' ? 'border-primary text-primary' : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'} whitespace-nowrap py-4 px-1 border-b-2 font-medium text-sm flex items-center gap-2`}>
+                        <BriefcaseIcon className="w-4 h-4" />
+                        My Posted Jobs
+                    </button>
                     <button onClick={() => setActiveTab('messages')} className={`${activeTab === 'messages' ? 'border-primary text-primary' : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'} whitespace-nowrap py-4 px-1 border-b-2 font-medium text-sm flex items-center gap-2`}>
                         <ChatBubbleLeftRightIcon className="w-4 h-4" />
                         Messages
@@ -551,7 +546,7 @@ export const ClientDashboard: React.FC<ClientDashboardProps> = ({ user, allClean
                 </nav>
             </div>
             
-            {activeTab === 'find' && !isProfileIncomplete && (
+            {activeTab === 'find' && (
                 <div>
                      <div className="bg-white p-6 rounded-lg shadow-md">
                         <h2 className="text-lg font-bold mb-4">Search Professionals</h2>
