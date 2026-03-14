@@ -264,12 +264,40 @@ app.post('/api/auth/login', async (req: ExpressRequest, res: ExpressResponse) =>
     }
 
     // Get booking history
-    const bookings = await Booking.find({
+    const rawBookings = await Booking.find({
       $or: [{ clientId: user._id.toString() }, { cleanerId: user._id.toString() }]
     }).lean();
+    const bookings = (rawBookings || []).map((b: any) => ({
+      id: b._id.toString(),
+      clientId: b.clientId,
+      cleanerId: b.cleanerId,
+      clientName: b.clientName,
+      cleanerName: b.cleanerName,
+      service: b.serviceType,
+      date: b.date,
+      amount: b.totalPrice,
+      totalAmount: b.totalPrice,
+      paymentMethod: b.paymentMethod,
+      status: b.status,
+      paymentStatus: b.paymentStatus,
+      jobApprovedByClient: b.jobApprovedByClient || false,
+      reviewSubmitted: b.reviewSubmitted || false
+    }));
 
     // Get reviews
-    const reviews = await Review.find({ cleanerId: user._id.toString() }).lean();
+    const rawReviews = await Review.find({ cleanerId: user._id.toString() }).lean();
+    const reviews = (rawReviews || []).map((r: any) => ({
+      id: r._id.toString(),
+      bookingId: r.bookingId,
+      cleanerId: r.cleanerId,
+      reviewerName: r.reviewerName,
+      rating: r.rating,
+      timeliness: r.timeliness,
+      thoroughness: r.thoroughness,
+      conduct: r.conduct,
+      comment: r.comment,
+      createdAt: r.createdAt
+    }));
     
     // Normalize DB keys to frontend expectations (camelCase) - return complete user data
     const userData = {
@@ -431,12 +459,40 @@ app.get('/api/users/me', protect, async (req: ExpressRequest, res: ExpressRespon
     if (!user) return res.status(404).json({ message: 'User not found' });
 
     // Get booking history
-    const bookings = await Booking.find({
+    const rawBookings = await Booking.find({
       $or: [{ clientId: user._id.toString() }, { cleanerId: user._id.toString() }]
     }).lean();
+    const bookings = (rawBookings || []).map((b: any) => ({
+      id: b._id.toString(),
+      clientId: b.clientId,
+      cleanerId: b.cleanerId,
+      clientName: b.clientName,
+      cleanerName: b.cleanerName,
+      service: b.serviceType,
+      date: b.date,
+      amount: b.totalPrice,
+      totalAmount: b.totalPrice,
+      paymentMethod: b.paymentMethod,
+      status: b.status,
+      paymentStatus: b.paymentStatus,
+      jobApprovedByClient: b.jobApprovedByClient || false,
+      reviewSubmitted: b.reviewSubmitted || false
+    }));
 
     // Get reviews
-    const reviews = await Review.find({ cleanerId: user._id.toString() }).lean();
+    const rawReviews = await Review.find({ cleanerId: user._id.toString() }).lean();
+    const reviews = (rawReviews || []).map((r: any) => ({
+      id: r._id.toString(),
+      bookingId: r.bookingId,
+      cleanerId: r.cleanerId,
+      reviewerName: r.reviewerName,
+      rating: r.rating,
+      timeliness: r.timeliness,
+      thoroughness: r.thoroughness,
+      conduct: r.conduct,
+      comment: r.comment,
+      createdAt: r.createdAt
+    }));
 
     // Transform DB to frontend format
     const formattedUser = {
@@ -520,10 +576,38 @@ app.put('/api/users/me', protect, async (req: ExpressRequest, res: ExpressRespon
     await user.save();
     
     // Get booking history and reviews so the frontend has the full user object
-    const bookings = await Booking.find({
+    const rawBookings = await Booking.find({
       $or: [{ clientId: user._id.toString() }, { cleanerId: user._id.toString() }]
     }).lean();
-    const reviews = await Review.find({ cleanerId: user._id.toString() }).lean();
+    const bookings = (rawBookings || []).map((b: any) => ({
+      id: b._id.toString(),
+      clientId: b.clientId,
+      cleanerId: b.cleanerId,
+      clientName: b.clientName,
+      cleanerName: b.cleanerName,
+      service: b.serviceType,
+      date: b.date,
+      amount: b.totalPrice,
+      totalAmount: b.totalPrice,
+      paymentMethod: b.paymentMethod,
+      status: b.status,
+      paymentStatus: b.paymentStatus,
+      jobApprovedByClient: b.jobApprovedByClient || false,
+      reviewSubmitted: b.reviewSubmitted || false
+    }));
+    const rawReviews = await Review.find({ cleanerId: user._id.toString() }).lean();
+    const reviews = (rawReviews || []).map((r: any) => ({
+      id: r._id.toString(),
+      bookingId: r.bookingId,
+      cleanerId: r.cleanerId,
+      reviewerName: r.reviewerName,
+      rating: r.rating,
+      timeliness: r.timeliness,
+      thoroughness: r.thoroughness,
+      conduct: r.conduct,
+      comment: r.comment,
+      createdAt: r.createdAt
+    }));
 
     // Return formatted user data (must match getMe/login format)
     const userData = {

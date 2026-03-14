@@ -291,7 +291,7 @@ export const Dashboard: React.FC<DashboardProps> = ({ user, onUpdateUser, onNavi
     const avgThoroughness = reviews.length > 0 ? reviews.reduce((acc, r) => acc + (r.thoroughness || 0), 0) / reviews.length : 0;
     const avgConduct = reviews.length > 0 ? reviews.reduce((acc, r) => acc + (r.conduct || 0), 0) / reviews.length : 0;
 
-    const bookings = user.bookingHistory || [];
+    const bookings = (user.bookingHistory || []).filter((b: any) => b.cleanerId === user.id);
     const sortedBookings = [...bookings].reverse();
 
     // Determine the display name (Company Name if applicable, else Full Name for welcome)
