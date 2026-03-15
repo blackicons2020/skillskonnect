@@ -743,6 +743,32 @@ app.get('/api/cleaners/:id', async (req: ExpressRequest, res: ExpressResponse) =
 // ============================================================================
 // ROUTES: BOOKINGS
 // ============================================================================
+app.get('/api/bookings', protect, async (req: ExpressRequest, res: ExpressResponse) => {
+  const authReq = req as AuthRequest;
+  try {
+    const rawBookings = await Booking.find({
+      $or: [{ clientId: authReq.user!.id }, { cleanerId: authReq.user!.id }]
+    }).lean();
+    const bookings = (rawBookings || []).map((b: any) => ({
+      id: b._id.toString(),
+      clientId: b.clientId,
+      cleanerId: b.cleanerId,
+      clientName: b.clientName,
+      cleanerName: b.cleanerName,
+      service: b.serviceType,
+      date: b.date,
+      amount: b.totalPrice,
+      totalAmount: b.totalPrice,
+      paymentMethod: b.paymentMethod,
+      status: b.status,
+      paymentStatus: b.paymentStatus,
+      jobApprovedByClient: b.jobApprovedByClient || false,
+      reviewSubmitted: b.reviewSubmitted || false
+    }));
+    res.json(bookings);
+  } catch (error) { handleError(res, error, 'Failed to fetch bookings'); }
+});
+
 app.post('/api/bookings', protect, async (req: ExpressRequest, res: ExpressResponse) => {
   const authReq = req as AuthRequest;
   const { cleanerId, service, date, amount, totalAmount, paymentMethod } = req.body;
@@ -833,14 +859,24 @@ app.post('/api/bookings/:id/complete', protect, async (req: ExpressRequest, res:
 
 app.post('/api/bookings/:id/review', protect, async (req: ExpressRequest, res: ExpressResponse) => {
   const authReq = req as AuthRequest;
-  const { rating, timeliness, thoroughness, conduct, comment, cleanerId } = req.body;
+  const { rating, timeliness, thoroughness, conduct, comment } = req.body;
   try {
+    // Look up the booking to get the correct cleanerId (don't trust frontend)
+    const booking = await Booking.findById(req.params.id);
+    if (!booking) return res.status(404).json({ message: 'Booking not found' });
+    if (booking.clientId !== authReq.user!.id) {
+      return res.status(403).json({ message: 'Not authorized to review this booking' });
+    }
+    if (booking.reviewSubmitted) {
+      return res.status(400).json({ message: 'Review already submitted for this booking' });
+    }
+
     const client = await User.findById(authReq.user!.id);
     const reviewerName = client?.fullName || 'Anonymous';
 
-    await Review.create({
+    const review = await Review.create({
       bookingId: req.params.id,
-      cleanerId,
+      cleanerId: booking.cleanerId, // Use cleanerId from booking, not from request
       reviewerName,
       rating,
       timeliness,
@@ -850,7 +886,21 @@ app.post('/api/bookings/:id/review', protect, async (req: ExpressRequest, res: E
     });
     
     await Booking.findByIdAndUpdate(req.params.id, { reviewSubmitted: true });
-    res.json({ message: 'Review submitted' });
+    res.json({
+      message: 'Review submitted',
+      review: {
+        id: review._id.toString(),
+        bookingId: review.bookingId,
+        cleanerId: review.cleanerId,
+        reviewerName: review.reviewerName,
+        rating: review.rating,
+        timeliness: review.timeliness,
+        thoroughness: review.thoroughness,
+        conduct: review.conduct,
+        comment: review.comment,
+        createdAt: review.createdAt
+      }
+    });
   } catch (error) { handleError(res, error); }
 });
 
