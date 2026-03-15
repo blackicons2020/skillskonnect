@@ -220,6 +220,41 @@ app.get('/api/users/me', protect, async (req: ExpressRequest, res: ExpressRespon
     const user = result.rows[0];
     if (!user) return res.status(404).json({ message: 'User not found' });
 
+    // Map raw booking rows (snake_case) → camelCase so the frontend filter
+    // `b.cleanerId === user.id` actually finds something.
+    const mappedBookings = (user.booking_history || []).map((b: any) => ({
+      id: b.id,
+      clientId: b.client_id,
+      cleanerId: b.cleaner_id,
+      clientName: b.client_name,
+      cleanerName: b.cleaner_name,
+      service: b.service,
+      date: b.date,
+      amount: b.amount,
+      totalAmount: b.total_amount,
+      paymentMethod: b.payment_method,
+      paymentStatus: b.payment_status,
+      paymentReceipt: b.payment_receipt ? (typeof b.payment_receipt === 'string' ? JSON.parse(b.payment_receipt) : b.payment_receipt) : null,
+      status: b.status,
+      jobApprovedByClient: b.job_approved_by_client,
+      reviewSubmitted: b.review_submitted,
+      createdAt: b.created_at,
+    }));
+
+    // Map raw review rows (snake_case) → camelCase so the ratings display correctly.
+    const mappedReviews = (user.reviews_data || []).map((r: any) => ({
+      id: r.id,
+      bookingId: r.booking_id,
+      cleanerId: r.cleaner_id,
+      reviewerName: r.reviewer_name,
+      rating: r.rating,
+      timeliness: r.timeliness,
+      thoroughness: r.thoroughness,
+      conduct: r.conduct,
+      comment: r.comment,
+      createdAt: r.created_at,
+    }));
+
     // Transform DB snake_case to camelCase for frontend
     const formattedUser = {
       id: user.id,
@@ -248,8 +283,8 @@ app.get('/api/users/me', protect, async (req: ExpressRequest, res: ExpressRespon
       chargePerContractNegotiable: user.charge_per_contract_negotiable,
       bankName: user.bank_name,
       accountNumber: user.account_number,
-      bookingHistory: user.booking_history || [],
-      reviewsData: user.reviews_data || [],
+      bookingHistory: mappedBookings,
+      reviewsData: mappedReviews,
       pendingSubscription: user.pending_subscription,
       subscriptionReceipt: user.subscription_receipt ? JSON.parse(user.subscription_receipt) : null,
       isSuspended: user.is_suspended,
