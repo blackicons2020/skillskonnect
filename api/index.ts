@@ -305,13 +305,19 @@ app.post('/api/auth/login', async (req: ExpressRequest, res: ExpressResponse) =>
       fullName: user.fullName,
       email: user.email,
       role: user.role,
-      userType: user.role === 'cleaner' ? 'worker' : 'client',
+      userType: (user as any).userType || (user.role === 'cleaner' ? 'worker' : 'client'),
+      phoneCountryCode: (user as any).phoneCountryCode,
       phoneNumber: user.phoneNumber,
       gender: user.gender,
+      country: (user as any).country,
       address: user.address,
+      streetAddress: (user as any).streetAddress,
+      officeAddress: (user as any).officeAddress,
+      workplaceAddress: (user as any).workplaceAddress,
       state: user.state,
       city: user.city,
       otherCity: user.otherCity,
+      companyRegistrationNumber: (user as any).companyRegistrationNumber,
       profilePhoto: user.profilePhoto,
       isAdmin: user.isAdmin,
       adminRole: user.adminRole,
@@ -321,12 +327,15 @@ app.post('/api/auth/login', async (req: ExpressRequest, res: ExpressResponse) =>
       companyName: user.companyName,
       companyAddress: user.companyAddress,
       experience: user.experience,
+      yearsOfExperience: user.experience,
       bio: user.bio,
       services: user.services || [],
+      skillType: user.services || [],
       chargeHourly: user.chargeHourly,
       chargeDaily: user.chargeDaily,
       chargePerContract: user.chargePerContract,
       chargePerContractNegotiable: user.chargePerContractNegotiable,
+      chargeRateType: (user as any).chargeRateType,
       bankName: user.bankName,
       accountNumber: user.accountNumber,
       bookingHistory: bookings || [],
@@ -500,12 +509,19 @@ app.get('/api/users/me', protect, async (req: ExpressRequest, res: ExpressRespon
       fullName: user.fullName,
       email: user.email,
       role: user.role,
+      userType: (user as any).userType || (user.role === 'cleaner' ? 'worker' : 'client'),
+      phoneCountryCode: (user as any).phoneCountryCode,
       phoneNumber: user.phoneNumber,
       gender: user.gender,
+      country: (user as any).country,
       address: user.address,
+      streetAddress: (user as any).streetAddress,
+      officeAddress: (user as any).officeAddress,
+      workplaceAddress: (user as any).workplaceAddress,
       state: user.state,
       city: user.city,
       otherCity: user.otherCity,
+      companyRegistrationNumber: (user as any).companyRegistrationNumber,
       profilePhoto: user.profilePhoto,
       isAdmin: user.isAdmin,
       adminRole: user.adminRole,
@@ -515,12 +531,15 @@ app.get('/api/users/me', protect, async (req: ExpressRequest, res: ExpressRespon
       companyName: user.companyName,
       companyAddress: user.companyAddress,
       experience: user.experience,
+      yearsOfExperience: user.experience,
       bio: user.bio,
       services: user.services || [],
+      skillType: user.services || [],
       chargeHourly: user.chargeHourly,
       chargeDaily: user.chargeDaily,
       chargePerContract: user.chargePerContract,
       chargePerContractNegotiable: user.chargePerContractNegotiable,
+      chargeRateType: (user as any).chargeRateType,
       bankName: user.bankName,
       accountNumber: user.accountNumber,
       bookingHistory: bookings || [],
@@ -542,29 +561,40 @@ app.get('/api/users/me', protect, async (req: ExpressRequest, res: ExpressRespon
 
 app.put('/api/users/me', protect, async (req: ExpressRequest, res: ExpressResponse) => {
   const authReq = req as AuthRequest;
-  const { role, fullName, phoneNumber, gender, address, bio, services, experience, chargeHourly, chargeDaily, chargePerContract, chargePerContractNegotiable, profilePhoto, state, city, otherCity, companyName, companyAddress, bankName, accountNumber, clientType, cleanerType, governmentId, businessRegDoc } = req.body;
+  const { role, fullName, phoneNumber, phoneCountryCode, gender, address, bio, services, skillType, experience, yearsOfExperience, chargeHourly, chargeDaily, chargePerContract, chargePerContractNegotiable, chargeRateType, profilePhoto, state, city, otherCity, country, streetAddress, officeAddress, workplaceAddress, companyName, companyAddress, companyRegistrationNumber, bankName, accountNumber, clientType, cleanerType, governmentId, businessRegDoc, userType } = req.body;
   try {
     const user = await User.findById(authReq.user!.id);
     if (!user) return res.status(404).json({ message: 'User not found' });
 
     // Update only provided fields
     if (role !== undefined) user.role = role;
+    if (userType !== undefined) (user as any).userType = userType;
     if (fullName !== undefined) user.fullName = fullName;
     if (phoneNumber !== undefined) user.phoneNumber = phoneNumber;
+    if (phoneCountryCode !== undefined) (user as any).phoneCountryCode = phoneCountryCode;
     if (gender !== undefined) user.gender = gender;
+    if (country !== undefined) (user as any).country = country;
     if (address !== undefined) user.address = address;
+    if (streetAddress !== undefined) (user as any).streetAddress = streetAddress;
+    if (officeAddress !== undefined) (user as any).officeAddress = officeAddress;
+    if (workplaceAddress !== undefined) (user as any).workplaceAddress = workplaceAddress;
     if (bio !== undefined) user.bio = bio;
+    // Accept both frontend field names (skillType/yearsOfExperience) and backend names (services/experience)
+    if (skillType !== undefined) user.services = skillType;
     if (services !== undefined) user.services = services;
+    if (yearsOfExperience !== undefined) user.experience = yearsOfExperience;
     if (experience !== undefined) user.experience = experience;
     if (chargeHourly !== undefined) user.chargeHourly = chargeHourly;
     if (chargeDaily !== undefined) user.chargeDaily = chargeDaily;
     if (chargePerContract !== undefined) user.chargePerContract = chargePerContract;
+    if (chargeRateType !== undefined) (user as any).chargeRateType = chargeRateType;
     if (profilePhoto !== undefined) user.profilePhoto = profilePhoto;
     if (state !== undefined) user.state = state;
     if (city !== undefined) user.city = city;
     if (otherCity !== undefined) user.otherCity = otherCity;
     if (companyName !== undefined) user.companyName = companyName;
     if (companyAddress !== undefined) user.companyAddress = companyAddress;
+    if (companyRegistrationNumber !== undefined) (user as any).companyRegistrationNumber = companyRegistrationNumber;
     if (bankName !== undefined) user.bankName = bankName;
     if (accountNumber !== undefined) user.accountNumber = accountNumber;
     if (chargePerContractNegotiable !== undefined) user.chargePerContractNegotiable = chargePerContractNegotiable;
@@ -615,13 +645,19 @@ app.put('/api/users/me', protect, async (req: ExpressRequest, res: ExpressRespon
       fullName: user.fullName,
       email: user.email,
       role: user.role,
-      userType: user.role === 'cleaner' ? 'worker' : 'client',
+      userType: (user as any).userType || (user.role === 'cleaner' ? 'worker' : 'client'),
+      phoneCountryCode: (user as any).phoneCountryCode,
       phoneNumber: user.phoneNumber,
       gender: user.gender,
+      country: (user as any).country,
       address: user.address,
+      streetAddress: (user as any).streetAddress,
+      officeAddress: (user as any).officeAddress,
+      workplaceAddress: (user as any).workplaceAddress,
       state: user.state,
       city: user.city,
       otherCity: user.otherCity,
+      companyRegistrationNumber: (user as any).companyRegistrationNumber,
       profilePhoto: user.profilePhoto,
       isAdmin: user.isAdmin,
       adminRole: user.adminRole,
@@ -631,12 +667,15 @@ app.put('/api/users/me', protect, async (req: ExpressRequest, res: ExpressRespon
       companyName: user.companyName,
       companyAddress: user.companyAddress,
       experience: user.experience,
+      yearsOfExperience: user.experience,
       bio: user.bio,
       services: user.services || [],
+      skillType: user.services || [],
       chargeHourly: user.chargeHourly,
       chargeDaily: user.chargeDaily,
       chargePerContract: user.chargePerContract,
       chargePerContractNegotiable: user.chargePerContractNegotiable,
+      chargeRateType: (user as any).chargeRateType,
       bankName: user.bankName,
       accountNumber: user.accountNumber,
       bookingHistory: bookings || [],

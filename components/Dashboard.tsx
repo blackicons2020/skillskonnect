@@ -51,7 +51,10 @@ export const Dashboard: React.FC<DashboardProps> = ({ user, onUpdateUser, onNavi
 
     // Check if profile is incomplete — workers also need skills and experience
     const isProfileIncomplete = !user.userType || !user.phoneNumber || !user.country ||
-        (user.role === 'cleaner' && (!user.skillType || user.skillType.length === 0 || !user.yearsOfExperience));
+        (user.role === 'cleaner' && (
+            ((!user.skillType || user.skillType.length === 0) && (!user.services || user.services.length === 0)) ||
+            (!user.yearsOfExperience && !user.experience)
+        ));
 
     // Default to 'jobs' (My Jobs & Payments) if profile is complete, otherwise 'profile'
     const [activeTab, setActiveTab] = useState<'profile' | 'jobs' | 'reviews' | 'messages' | 'support' | 'verification' | 'listings' | 'notifications'>(
@@ -142,15 +145,8 @@ export const Dashboard: React.FC<DashboardProps> = ({ user, onUpdateUser, onNavi
     }, [formData.state, formData.country]);
 
     useEffect(() => {
-        if (initialTab) {
-            // If profile is incomplete, stay on profile tab
-            if (isProfileIncomplete) {
-                setActiveTab('profile');
-            } else {
-                setActiveTab(initialTab);
-            }
-        }
-    }, [initialTab, isProfileIncomplete]);
+        if (initialTab) setActiveTab(initialTab);
+    }, [initialTab]);
 
     const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>) => {
         const { name, value } = e.target;
