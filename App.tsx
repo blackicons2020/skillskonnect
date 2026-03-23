@@ -279,16 +279,27 @@ const App: React.FC = () => {
             const tokenAtStart = getStoredToken();
 
             if (tokenAtStart) {
-                // Fetch everything needed in one parallel batch
-                const [cleaners, jobs, meResult, bookingsResult] = await Promise.allSettled([
+                // First, fetch user identity so we know if they're admin
+                const meResult = await Promise.allSettled([apiService.getMe()]);
+                const meResolved = meResult[0];
+                const isAdmin = meResolved.status === 'fulfilled' && meResolved.value.isAdmin;
+
+                // Fetch everything needed in one parallel batch (include admin users if admin)
+                const [cleaners, jobs, bookingsResult, adminUsersResult] = await Promise.allSettled([
                     apiService.getAllCleaners(),
                     apiService.getAllJobs(),
-                    apiService.getMe(),
                     apiService.getBookings(),
+                    isAdmin ? apiService.adminGetAllUsers() : Promise.resolve([]),
                 ]);
 
                 if (cleaners.status === 'fulfilled') setAllCleaners(cleaners.value);
                 if (jobs.status === 'fulfilled') setAllJobs(jobs.value as any);
+                if (adminUsersResult.status === 'fulfilled') {
+                    setAllUsers(adminUsersResult.value);
+                    setAdminDataError(null);
+                } else if (isAdmin) {
+                    setAdminDataError((adminUsersResult as PromiseRejectedResult).reason?.message || 'Failed to load users.');
+                }
 
                 // Guard 1: abort if a fresh login started while we were fetching
                 // (the login stores a new token before calling handleAuthSuccess)
@@ -304,15 +315,16 @@ const App: React.FC = () => {
                     return;
                 }
 
-                if (meResult.status === 'fulfilled') {
-                    const currentUser = meResult.value;
+                if (meResolved.status === 'fulfilled') {
+                    const currentUser = meResolved.value;
                     if (bookingsResult.status === 'fulfilled') {
                         currentUser.bookingHistory = bookingsResult.value as any;
                     }
                     // shouldNavigate=true: restore the user to their correct dashboard
+                    // skipRefetch=true: we already fetched admin users above
                     await handleAuthSuccess(currentUser, true, true);
                 } else {
-                    const reason = (meResult as any).reason;
+                    const reason = (meResolved as any).reason;
                     const errorMsg: string = reason?.message || '';
                     // Only clear the token if it's definitively invalid (401). For network/server
                     // errors (cold start, timeout, etc.) keep the token and show landing page.

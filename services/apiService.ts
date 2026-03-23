@@ -126,7 +126,7 @@ const fileToBase64 = async (file: File): Promise<string> => {
 
 export const apiService = {
     login: async (email: string, password?: string): Promise<{ token: string; user: User }> => {
-        const response = await fetch(`${API_URL}/auth/login`, {
+        const response = await fetchWithTimeout(`${API_URL}/auth/login`, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ email, password }),
@@ -187,7 +187,7 @@ export const apiService = {
     },
     
     getMe: async (): Promise<User> => {
-        const response = await fetch(`${API_URL}/users/me`, {
+        const response = await fetchWithTimeout(`${API_URL}/users/me`, {
             method: 'GET',
             headers: getHeaders(),
         });
@@ -197,14 +197,14 @@ export const apiService = {
     getAllCleaners: async (): Promise<Cleaner[]> => {
         // No Content-Type header on GET requests (no body) — avoids CORS preflight
         // which can fail on some mobile carriers / strict WebViews
-        const response = await fetch(`${API_URL}/cleaners`, {
+        const response = await fetchWithTimeout(`${API_URL}/cleaners`, {
             method: 'GET',
         });
         return handleResponse(response);
     },
 
     getAllJobs: async (): Promise<Job[]> => {
-        const response = await fetch(`${API_URL}/jobs`, {
+        const response = await fetchWithTimeout(`${API_URL}/jobs`, {
             method: 'GET',
             headers: getHeaders(),
         });
