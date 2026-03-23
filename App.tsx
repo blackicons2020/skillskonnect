@@ -279,30 +279,18 @@ const App: React.FC = () => {
             const tokenAtStart = getStoredToken();
 
             if (tokenAtStart) {
-                // First, fetch user identity so we know if they're admin
-                const meResult = await Promise.allSettled([apiService.getMe()]);
-                const meResolved = meResult[0];
-                const isAdmin = meResolved.status === 'fulfilled' && meResolved.value.isAdmin;
-
-                // Fetch everything needed in one parallel batch (include admin users if admin)
-                const [cleaners, jobs, bookingsResult, adminUsersResult] = await Promise.allSettled([
+                // Fetch user identity + public data in ONE parallel batch (single cold-start wait)
+                const [meResolved, cleaners, jobs, bookingsResult] = await Promise.allSettled([
+                    apiService.getMe(),
                     apiService.getAllCleaners(),
                     apiService.getAllJobs(),
                     apiService.getBookings(),
-                    isAdmin ? apiService.adminGetAllUsers() : Promise.resolve([]),
                 ]);
 
                 if (cleaners.status === 'fulfilled') setAllCleaners(cleaners.value);
                 if (jobs.status === 'fulfilled') setAllJobs(jobs.value as any);
-                if (adminUsersResult.status === 'fulfilled') {
-                    setAllUsers(adminUsersResult.value);
-                    setAdminDataError(null);
-                } else if (isAdmin) {
-                    setAdminDataError((adminUsersResult as PromiseRejectedResult).reason?.message || 'Failed to load users.');
-                }
 
                 // Guard 1: abort if a fresh login started while we were fetching
-                // (the login stores a new token before calling handleAuthSuccess)
                 if (loginInProgressRef.current) {
                     setIsLoading(false);
                     return;
@@ -320,8 +308,19 @@ const App: React.FC = () => {
                     if (bookingsResult.status === 'fulfilled') {
                         currentUser.bookingHistory = bookingsResult.value as any;
                     }
+
+                    // If admin, fetch admin users in background (don't block navigation)
+                    if (currentUser.isAdmin) {
+                        apiService.adminGetAllUsers().then(users => {
+                            setAllUsers(users);
+                            setAdminDataError(null);
+                        }).catch(err => {
+                            setAdminDataError(err?.message || 'Failed to load users.');
+                        });
+                    }
+
                     // shouldNavigate=true: restore the user to their correct dashboard
-                    // skipRefetch=true: we already fetched admin users above
+                    // skipRefetch=true: we already fetched data above
                     await handleAuthSuccess(currentUser, true, true);
                 } else {
                     const reason = (meResolved as any).reason;

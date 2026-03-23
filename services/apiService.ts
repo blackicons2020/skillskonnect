@@ -130,7 +130,7 @@ export const apiService = {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ email, password }),
-        });
+        }, 60000);
         return handleResponse(response);
     },
 
@@ -178,11 +178,11 @@ export const apiService = {
          if (payload.governmentId instanceof File) payload.governmentId = await fileToBase64(payload.governmentId) as any;
          if (payload.businessRegDoc instanceof File) payload.businessRegDoc = await fileToBase64(payload.businessRegDoc) as any;
 
-        const response = await fetch(`${API_URL}/auth/register`, {
+        const response = await fetchWithTimeout(`${API_URL}/auth/register`, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify(payload),
-        });
+        }, 60000);
         return handleResponse(response);
     },
     
