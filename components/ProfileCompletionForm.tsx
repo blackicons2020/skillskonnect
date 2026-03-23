@@ -28,6 +28,7 @@ export default function ProfileCompletionForm({ user, onSave, onCancel, roleCont
     officeAddress: user.officeAddress || '',
     skillType: user.skillType || [],
     yearsOfExperience: user.yearsOfExperience || 0,
+    professionalExperience: user.professionalExperience || '',
     chargeHourly: user.chargeHourly || 0,
     chargeDaily: user.chargeDaily || 0,
     chargeRate: user.chargeRate || 0,
@@ -591,6 +592,23 @@ export default function ProfileCompletionForm({ user, onSave, onCancel, roleCont
                     required
                   />
                   {fe('yearsOfExperience')}
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                    Professional Experience
+                    <span className="text-xs text-gray-500 ml-2">(Describe your background & achievements)</span>
+                  </label>
+                  <textarea
+                    id="pcf-professionalExperience"
+                    value={formData.professionalExperience || ''}
+                    onChange={(e) => handleChange('professionalExperience', e.target.value)}
+                    className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-shadow"
+                    rows={4}
+                    maxLength={500}
+                    placeholder="Describe your professional experience, past roles, and achievements..."
+                  />
+                  <p className="text-xs text-gray-500 mt-1">{(formData.professionalExperience || '').length}/500 characters</p>
                 </div>
 
                 <div className="bg-gray-50 p-5 rounded-xl border border-gray-200">
