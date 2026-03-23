@@ -175,7 +175,20 @@ export default function ProfileCompletionForm({ user, onSave, onCancel, roleCont
     try {
       // Normalise phone: strip formatting, store digits only
       const cleanPhone = (formData.phoneNumber || '').replace(/[\s\-\(\)]/g, '');
-      await onSave({ ...formData, phoneNumber: cleanPhone });
+
+      // Derive cleanerType / clientType from userType so backend and /cleaners endpoint work correctly
+      const submission: Partial<User> = { ...formData, phoneNumber: cleanPhone };
+      if (formData.userType === 'Worker (Individual)') {
+        submission.cleanerType = 'Individual' as any;
+      } else if (formData.userType === 'Worker (Registered Company)') {
+        submission.cleanerType = 'Company' as any;
+      } else if (formData.userType === 'Client (Individual)') {
+        submission.clientType = 'Individual' as any;
+      } else if (formData.userType === 'Client (Registered Company)') {
+        submission.clientType = 'Company' as any;
+      }
+
+      await onSave(submission);
     } catch (err: any) {
       setError(err.message || 'Failed to save profile');
     } finally {

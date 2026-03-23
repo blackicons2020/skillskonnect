@@ -603,6 +603,14 @@ app.put('/api/users/me', protect, async (req: ExpressRequest, res: ExpressRespon
     if (governmentId !== undefined) user.governmentId = governmentId;
     if (businessRegDoc !== undefined) user.businessRegDoc = businessRegDoc;
 
+    // Derive cleanerType/clientType from userType if not explicitly provided
+    if (userType && !cleanerType && !clientType && !user.cleanerType && !user.clientType) {
+      if (userType === 'Worker (Individual)') user.cleanerType = 'Individual';
+      else if (userType === 'Worker (Registered Company)') user.cleanerType = 'Company';
+      else if (userType === 'Client (Individual)') user.clientType = 'Individual';
+      else if (userType === 'Client (Registered Company)') user.clientType = 'Company';
+    }
+
     await user.save();
     
     // Get booking history and reviews so the frontend has the full user object
@@ -713,7 +721,7 @@ app.get('/api/cleaners', async (req: ExpressRequest, res: ExpressResponse) => {
 
       return {
         id: c._id.toString(),
-        name: c.cleanerType === 'Company' && c.companyName ? c.companyName : c.fullName,
+        name: c.cleanerType === 'Company' && c.companyName ? c.companyName : (c.fullName || c.email),
         photoUrl: c.profilePhoto,
         rating: parseFloat(avgRating.toFixed(1)),
         reviews: reviews.length,
