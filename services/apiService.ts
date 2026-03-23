@@ -79,6 +79,18 @@ const handleResponse = async (response: Response) => {
     return response.json();
 };
 
+/** Wrapper around fetch() that aborts requests after a timeout (default 45s). */
+const fetchWithTimeout = (input: RequestInfo | URL, init?: RequestInit, timeoutMs = 45000): Promise<Response> => {
+    const controller = new AbortController();
+    const timer = setTimeout(() => controller.abort(), timeoutMs);
+    return fetch(input, { ...init, signal: controller.signal })
+        .catch(err => {
+            if (err.name === 'AbortError') throw new Error('Request timed out. The server may be starting up — please try again.');
+            throw err;
+        })
+        .finally(() => clearTimeout(timer));
+};
+
 const fileToBase64 = async (file: File): Promise<string> => {
     return new Promise((resolve, reject) => {
         const reader = new FileReader();
@@ -346,7 +358,7 @@ export const apiService = {
     },
 
     adminGetAllUsers: async (): Promise<User[]> => {
-        const response = await fetch(`${API_URL}/admin/users`, {
+        const response = await fetchWithTimeout(`${API_URL}/admin/users`, {
             method: 'GET',
             headers: getHeaders(),
         });

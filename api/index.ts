@@ -952,7 +952,10 @@ app.post('/api/bookings/:id/review', protect, async (req: ExpressRequest, res: E
 // ============================================================================
 app.get('/api/admin/users', protect, admin, async (req: ExpressRequest, res: ExpressResponse) => {
   try {
-    const users = await User.find().sort({ createdAt: -1 }).lean();
+    const users = await User.find()
+      .select('fullName email role isAdmin adminRole isSuspended subscriptionTier pendingSubscription clientType cleanerType companyName phoneNumber isVerified reviewsData subscriptionEndDate subscriptionDate subscriptionAmount createdAt')
+      .sort({ createdAt: -1 })
+      .lean();
     res.json(users.map(u => ({
         id: u._id.toString(),
         fullName: u.fullName,
@@ -961,11 +964,17 @@ app.get('/api/admin/users', protect, admin, async (req: ExpressRequest, res: Exp
         isAdmin: u.isAdmin,
         adminRole: u.adminRole,
         isSuspended: u.isSuspended,
+        isVerified: u.isVerified,
         subscriptionTier: u.subscriptionTier,
         pendingSubscription: u.pendingSubscription,
         clientType: u.clientType,
         cleanerType: u.cleanerType,
         companyName: u.companyName,
+        phoneNumber: u.phoneNumber,
+        reviewsData: u.reviewsData || [],
+        subscriptionEndDate: u.subscriptionEndDate,
+        subscriptionDate: u.subscriptionDate,
+        subscriptionAmount: u.subscriptionAmount,
         bookingHistory: [] 
     })));
   } catch (error) { handleError(res, error); }

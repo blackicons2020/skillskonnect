@@ -94,6 +94,7 @@ const App: React.FC = () => {
     const [isLoading, setIsLoading] = useState(true);
     const [isDataLoading, setIsDataLoading] = useState(false);
     const [appError, setAppError] = useState<string | null>(null);
+    const [adminDataError, setAdminDataError] = useState<string | null>(null);
 
     // Reset-password token extracted from the URL on first load
     const [resetToken, setResetToken] = useState<string | null>(null);
@@ -119,6 +120,7 @@ const App: React.FC = () => {
     // Refetches all app data. Used after state-changing actions.
     const refetchAllData = async (currentUser: User) => {
         setIsDataLoading(true);
+        setAdminDataError(null);
         try {
             const [cleaners, users, jobs] = await Promise.allSettled([
                 apiService.getAllCleaners(),
@@ -127,8 +129,12 @@ const App: React.FC = () => {
             ]);
             if (cleaners.status === 'fulfilled') setAllCleaners(cleaners.value);
             else console.error('Failed to fetch cleaners:', (cleaners as any).reason);
-            if (users.status === 'fulfilled') setAllUsers(users.value);
-            else console.error('Failed to fetch users:', (users as any).reason);
+            if (users.status === 'fulfilled') { setAllUsers(users.value); setAdminDataError(null); }
+            else if (currentUser.isAdmin) {
+                const errMsg = (users as PromiseRejectedResult).reason?.message || 'Failed to load users. Please retry.';
+                console.error('Failed to fetch users:', errMsg);
+                setAdminDataError(errMsg);
+            }
             if (jobs.status === 'fulfilled') setAllJobs(jobs.value);
             else console.error('Failed to fetch jobs:', (jobs as any).reason);
         } finally {
@@ -445,9 +451,13 @@ const App: React.FC = () => {
         if (skipRefetch) {
             if (userData.isAdmin) {
                 setIsDataLoading(true);
+                setAdminDataError(null);
                 apiService.adminGetAllUsers()
-                    .then(users => setAllUsers(users))
-                    .catch(e => console.error('Failed to fetch all users:', e))
+                    .then(users => { setAllUsers(users); setAdminDataError(null); })
+                    .catch(e => {
+                        console.error('Failed to fetch all users:', e);
+                        setAdminDataError(e.message || 'Failed to load users. Please retry.');
+                    })
                     .finally(() => setIsDataLoading(false));
             }
         } else {
@@ -555,16 +565,25 @@ const App: React.FC = () => {
                 await refetchAllData(user || updatedUser);
             } else {
                 // Refresh cleaners list so landing page cards update immediately
+                const refreshPromises: Promise<any>[] = [];
                 if (updatedUser.role === 'cleaner' || (updatedUser as any).userType === 'worker') {
-                    apiService.getAllCleaners()
-                        .then(cleaners => setAllCleaners(cleaners))
-                        .catch(e => console.error('Failed to refresh cleaners:', e));
+                    refreshPromises.push(
+                        apiService.getAllCleaners()
+                            .then(cleaners => setAllCleaners(cleaners))
+                            .catch(e => console.error('Failed to refresh cleaners:', e))
+                    );
                 }
                 // Refetch jobs so workers can see the new/updated jobs
                 if (jobsChanged && (updatedUser.role === 'client' || (updatedUser as any).userType === 'client')) {
-                    apiService.getAllJobs()
-                        .then(jobs => setAllJobs(jobs))
-                        .catch(e => console.error('Failed to refresh jobs:', e));
+                    refreshPromises.push(
+                        apiService.getAllJobs()
+                            .then(jobs => setAllJobs(jobs))
+                            .catch(e => console.error('Failed to refresh jobs:', e))
+                    );
+                }
+                // Wait for all refreshes to complete before showing success alert
+                if (refreshPromises.length > 0) {
+                    await Promise.all(refreshPromises);
                 }
             }
 
@@ -812,6 +831,8 @@ const App: React.FC = () => {
                         allUsers={allUsers}
                         allJobs={allJobs}
                         isDataLoading={isDataLoading}
+                        dataLoadError={adminDataError}
+                        onRetryLoadData={() => { if (user) refetchAllData(user); }}
                         onUpdateUser={handleUpdateUser}
                         onDeleteUser={handleDeleteUser}
                         onMarkAsPaid={handleMarkAsPaid}
