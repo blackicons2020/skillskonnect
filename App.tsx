@@ -357,7 +357,7 @@ const App: React.FC = () => {
         }
         // Reset dashboard tab to default when navigating normally
         if (targetView === 'clientDashboard') setDashboardInitialTab('find');
-        if (targetView === 'cleanerDashboard') setDashboardInitialTab('jobs');
+        if (targetView === 'cleanerDashboard') setDashboardInitialTab('' as any); // Let Dashboard choose based on profile completeness
     };
 
     const handleGoBack = () => {
