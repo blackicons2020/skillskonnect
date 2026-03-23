@@ -122,10 +122,11 @@ const App: React.FC = () => {
         setIsDataLoading(true);
         setAdminDataError(null);
         try {
-            const [cleaners, users, jobs] = await Promise.allSettled([
+            const [cleaners, users, jobs, bookingsResult] = await Promise.allSettled([
                 apiService.getAllCleaners(),
                 currentUser.isAdmin ? apiService.adminGetAllUsers() : Promise.resolve([]),
-                apiService.getAllJobs()
+                apiService.getAllJobs(),
+                apiService.getBookings()
             ]);
             if (cleaners.status === 'fulfilled') setAllCleaners(cleaners.value);
             else console.error('Failed to fetch cleaners:', (cleaners as any).reason);
@@ -137,6 +138,11 @@ const App: React.FC = () => {
             }
             if (jobs.status === 'fulfilled') setAllJobs(jobs.value);
             else console.error('Failed to fetch jobs:', (jobs as any).reason);
+            if (bookingsResult.status === 'fulfilled') {
+                setUser(prev => prev ? ({ ...prev, bookingHistory: bookingsResult.value }) : null);
+            } else {
+                console.error('Failed to fetch bookings:', (bookingsResult as any).reason);
+            }
         } finally {
             setIsDataLoading(false);
         }

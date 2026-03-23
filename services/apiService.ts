@@ -283,7 +283,7 @@ export const apiService = {
     },
     
     createBooking: async (bookingData: any): Promise<Booking> => {
-        const response = await fetch(`${API_URL}/bookings`, {
+        const response = await fetchWithTimeout(`${API_URL}/bookings`, {
             method: 'POST',
             headers: getHeaders(),
             body: JSON.stringify(bookingData),
@@ -292,7 +292,7 @@ export const apiService = {
     },
 
     getBookings: async (): Promise<Booking[]> => {
-        const response = await fetch(`${API_URL}/bookings`, {
+        const response = await fetchWithTimeout(`${API_URL}/bookings`, {
             method: 'GET',
             headers: getHeaders(),
         });
@@ -329,7 +329,7 @@ export const apiService = {
         if (payload.profilePhoto instanceof File) {
             payload.profilePhoto = await fileToBase64(payload.profilePhoto) as any;
         }
-        const response = await fetch(`${API_URL}/users/me`, {
+        const response = await fetchWithTimeout(`${API_URL}/users/me`, {
             method: 'PUT',
             headers: getHeaders(),
             body: JSON.stringify(payload),
