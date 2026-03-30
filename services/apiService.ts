@@ -291,8 +291,9 @@ export const apiService = {
         return handleResponse(response);
     },
 
-    getBookings: async (): Promise<Booking[]> => {
-        const response = await fetchWithTimeout(`${API_URL}/bookings`, {
+    getBookings: async (role?: 'cleaner' | 'client'): Promise<Booking[]> => {
+        const url = role ? `${API_URL}/bookings?role=${role}` : `${API_URL}/bookings`;
+        const response = await fetchWithTimeout(url, {
             method: 'GET',
             headers: getHeaders(),
         });

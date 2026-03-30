@@ -91,6 +91,11 @@ export const Dashboard: React.FC<DashboardProps> = ({ user, onUpdateUser, onNavi
     const isFreeUser = !user.subscriptionTier || user.subscriptionTier === 'Free';
     const [showUpgradeBanner, setShowUpgradeBanner] = useState(true);
 
+    // Live data fetched from the API — not the stale login-time data
+    const [liveBookings, setLiveBookings] = useState<any[]>([]);
+    const [liveReviews, setLiveReviews] = useState<any[]>([]);
+    const [isLoadingLiveData, setIsLoadingLiveData] = useState(false);
+
 
     useEffect(() => {
         // When user data loads, set form data but convert 0s to empty strings for better editing UX
@@ -147,6 +152,31 @@ export const Dashboard: React.FC<DashboardProps> = ({ user, onUpdateUser, onNavi
     useEffect(() => {
         if (initialTab) setActiveTab(initialTab);
     }, [initialTab]);
+
+    // Fetch fresh bookings and reviews from the API whenever jobs/reviews tab is opened.
+    useEffect(() => {
+        if (activeTab === 'jobs' || activeTab === 'reviews') {
+            setIsLoadingLiveData(true);
+
+            const fetchJobs = apiService.getBookings('cleaner')
+                .then(bookings => {
+                    setLiveBookings(bookings);
+                })
+                .catch(() => {
+                    const fallback = (user.bookingHistory || []).filter((b: any) =>
+                        b.cleanerId === user.id || b.cleanerName === user.fullName
+                    );
+                    setLiveBookings([...fallback].reverse());
+                });
+
+            const fetchReviews = apiService.getMe()
+                .then(freshUser => setLiveReviews(freshUser.reviewsData || []))
+                .catch(() => setLiveReviews(user.reviewsData || []));
+
+            Promise.allSettled([fetchJobs, fetchReviews])
+                .finally(() => setIsLoadingLiveData(false));
+        }
+    }, [activeTab]);
 
     const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>) => {
         const { name, value } = e.target;
@@ -289,14 +319,14 @@ export const Dashboard: React.FC<DashboardProps> = ({ user, onUpdateUser, onNavi
 
     const locationString = formData.city === 'Other' && formData.otherCity ? `${formData.otherCity}, ${formData.state}` : `${formData.city}, ${formData.state}`;
 
-    const reviews = user.reviewsData || [];
+    const reviews = liveReviews.length > 0 ? liveReviews : (user.reviewsData || []);
     const avgRating = reviews.length > 0 ? reviews.reduce((acc, r) => acc + r.rating, 0) / reviews.length : 0;
     const avgTimeliness = reviews.length > 0 ? reviews.reduce((acc, r) => acc + (r.timeliness || 0), 0) / reviews.length : 0;
     const avgThoroughness = reviews.length > 0 ? reviews.reduce((acc, r) => acc + (r.thoroughness || 0), 0) / reviews.length : 0;
     const avgConduct = reviews.length > 0 ? reviews.reduce((acc, r) => acc + (r.conduct || 0), 0) / reviews.length : 0;
 
-    const bookings = (user.bookingHistory || []).filter((b: any) => b.cleanerId === user.id);
-    const sortedBookings = [...bookings].reverse();
+    const bookings = liveBookings.length > 0 ? liveBookings : (user.bookingHistory || []).filter((b: any) => b.cleanerId === user.id || b.cleanerName === user.fullName);
+    const sortedBookings = liveBookings.length > 0 ? bookings : [...bookings].reverse();
 
     // Determine the display name (Company Name if applicable, else Full Name for welcome)
     const displayName = user.cleanerType === 'Company' && user.companyName

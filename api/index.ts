@@ -793,9 +793,23 @@ app.get('/api/cleaners/:id', async (req: ExpressRequest, res: ExpressResponse) =
 app.get('/api/bookings', protect, async (req: ExpressRequest, res: ExpressResponse) => {
   const authReq = req as AuthRequest;
   try {
-    const rawBookings = await Booking.find({
-      $or: [{ clientId: authReq.user!.id }, { cleanerId: authReq.user!.id }]
-    }).lean();
+    // Resolve the user from the DB so we have the canonical _id string.
+    const dbUser = await User.findById(authReq.user!.id);
+    if (!dbUser) return res.status(404).json({ message: 'User not found' });
+    const canonicalId = dbUser._id.toString();
+
+    // Optional role filter: ?role=cleaner  or  ?role=client
+    const roleFilter = (req.query.role as string || '').toLowerCase();
+    let query: any;
+    if (roleFilter === 'cleaner') {
+      query = { cleanerId: canonicalId };
+    } else if (roleFilter === 'client') {
+      query = { clientId: canonicalId };
+    } else {
+      query = { $or: [{ clientId: canonicalId }, { cleanerId: canonicalId }] };
+    }
+
+    const rawBookings = await Booking.find(query).sort({ createdAt: -1 }).lean();
     const bookings = (rawBookings || []).map((b: any) => ({
       id: b._id.toString(),
       clientId: b.clientId,
@@ -820,15 +834,20 @@ app.post('/api/bookings', protect, async (req: ExpressRequest, res: ExpressRespo
   const authReq = req as AuthRequest;
   const { cleanerId, service, date, amount, totalAmount, paymentMethod } = req.body;
   try {
+    // Look up both users from DB so we store canonical _id strings.
     const cleaner = await User.findById(cleanerId);
-    const cleanerName = cleaner?.fullName || 'Cleaner';
+    if (!cleaner) return res.status(404).json({ message: 'Professional not found' });
+    const canonicalCleanerId = cleaner._id.toString();
+    const cleanerName = cleaner.fullName || 'Cleaner';
     
     const client = await User.findById(authReq.user!.id);
-    const clientName = client?.fullName || 'Client';
+    if (!client) return res.status(404).json({ message: 'Client not found' });
+    const canonicalClientId = client._id.toString();
+    const clientName = client.fullName || 'Client';
 
     const booking = await Booking.create({
-      clientId: authReq.user!.id,
-      cleanerId,
+      clientId: canonicalClientId,
+      cleanerId: canonicalCleanerId,
       clientName,
       cleanerName,
       serviceType: service,
