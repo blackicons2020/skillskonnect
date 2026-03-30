@@ -1,6 +1,6 @@
 
 import React, { useState, useEffect, useRef } from 'react';
-import { User, View, VerificationDocuments, Job } from 'types';
+import { User, View, VerificationDocuments, Job, Booking } from 'types';
 import { PencilIcon, StarIcon, BriefcaseIcon, ChatBubbleLeftRightIcon, LifebuoyIcon, UserIcon } from './icons';
 import { SearchableSkillSelector } from './SearchableSkillSelector';
 import { CLIENT_LIMITS } from '../constants/subscriptions';
@@ -18,6 +18,7 @@ interface DashboardProps {
     onNavigate: (view: View) => void;
     initialTab?: 'profile' | 'jobs' | 'reviews' | 'messages' | 'support' | 'verification' | 'listings' | 'notifications';
     allJobs?: Job[];
+    allBookings?: Booking[];
 }
 
 const ProfileField: React.FC<{ label: string; value?: string | number | null | string[]; isEditing?: boolean; children?: React.ReactNode }> = ({ label, value, isEditing, children }) => (
@@ -40,7 +41,7 @@ const ProfileField: React.FC<{ label: string; value?: string | number | null | s
 );
 
 
-export const Dashboard: React.FC<DashboardProps> = ({ user, onUpdateUser, onNavigate, initialTab, allJobs = [] }) => {
+export const Dashboard: React.FC<DashboardProps> = ({ user, onUpdateUser, onNavigate, initialTab, allJobs = [], allBookings = [] }) => {
     // Local set tracking which jobs this worker has applied to.
     // Initialised from user.appliedJobs (persisted) so it survives page reloads.
     // Using local state avoids sending the entire user object to the backend on
@@ -90,11 +91,6 @@ export const Dashboard: React.FC<DashboardProps> = ({ user, onUpdateUser, onNavi
     const [unreadMessageCount, setUnreadMessageCount] = useState(0);
     const isFreeUser = !user.subscriptionTier || user.subscriptionTier === 'Free';
     const [showUpgradeBanner, setShowUpgradeBanner] = useState(true);
-
-    // Live data fetched from the API — not the stale login-time data
-    const [liveBookings, setLiveBookings] = useState<any[]>([]);
-    const [liveReviews, setLiveReviews] = useState<any[]>([]);
-    const [isLoadingLiveData, setIsLoadingLiveData] = useState(false);
 
 
     useEffect(() => {
@@ -152,31 +148,6 @@ export const Dashboard: React.FC<DashboardProps> = ({ user, onUpdateUser, onNavi
     useEffect(() => {
         if (initialTab) setActiveTab(initialTab);
     }, [initialTab]);
-
-    // Fetch fresh bookings and reviews from the API whenever jobs/reviews tab is opened.
-    useEffect(() => {
-        if (activeTab === 'jobs' || activeTab === 'reviews') {
-            setIsLoadingLiveData(true);
-
-            const fetchJobs = apiService.getBookings('cleaner')
-                .then(bookings => {
-                    setLiveBookings(bookings);
-                })
-                .catch(() => {
-                    const fallback = (user.bookingHistory || []).filter((b: any) =>
-                        b.cleanerId === user.id || b.cleanerName === user.fullName
-                    );
-                    setLiveBookings([...fallback].reverse());
-                });
-
-            const fetchReviews = apiService.getMe()
-                .then(freshUser => setLiveReviews(freshUser.reviewsData || []))
-                .catch(() => setLiveReviews(user.reviewsData || []));
-
-            Promise.allSettled([fetchJobs, fetchReviews])
-                .finally(() => setIsLoadingLiveData(false));
-        }
-    }, [activeTab]);
 
     const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>) => {
         const { name, value } = e.target;
@@ -319,14 +290,15 @@ export const Dashboard: React.FC<DashboardProps> = ({ user, onUpdateUser, onNavi
 
     const locationString = formData.city === 'Other' && formData.otherCity ? `${formData.otherCity}, ${formData.state}` : `${formData.city}, ${formData.state}`;
 
-    const reviews = liveReviews.length > 0 ? liveReviews : (user.reviewsData || []);
+    const reviews = user.reviewsData || [];
     const avgRating = reviews.length > 0 ? reviews.reduce((acc, r) => acc + r.rating, 0) / reviews.length : 0;
     const avgTimeliness = reviews.length > 0 ? reviews.reduce((acc, r) => acc + (r.timeliness || 0), 0) / reviews.length : 0;
     const avgThoroughness = reviews.length > 0 ? reviews.reduce((acc, r) => acc + (r.thoroughness || 0), 0) / reviews.length : 0;
     const avgConduct = reviews.length > 0 ? reviews.reduce((acc, r) => acc + (r.conduct || 0), 0) / reviews.length : 0;
 
-    const bookings = liveBookings.length > 0 ? liveBookings : (user.bookingHistory || []).filter((b: any) => b.cleanerId === user.id || b.cleanerName === user.fullName);
-    const sortedBookings = liveBookings.length > 0 ? bookings : [...bookings].reverse();
+    // Use allBookings prop (same pattern as allJobs for "Available Jobs")
+    const myBookings = allBookings.filter((b: any) => b.cleanerId === user.id);
+    const sortedBookings = [...myBookings].reverse();
 
     // Determine the display name (Company Name if applicable, else Full Name for welcome)
     const displayName = user.cleanerType === 'Company' && user.companyName

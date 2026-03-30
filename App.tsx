@@ -8,7 +8,7 @@ import { SubscriptionPaymentDetailsModal } from './components/SubscriptionPaymen
 import { StarIcon, ChatBubbleLeftRightIcon } from './components/icons';
 import { ErrorBoundary } from './components/ErrorBoundary';
 
-import { User, Cleaner, View, SubscriptionPlan, Review, Job } from './types';
+import { User, Cleaner, View, SubscriptionPlan, Review, Job, Booking } from './types';
 import { apiService, getStoredToken, storeToken, clearToken } from './services/apiService';
 import { paymentService } from './services/paymentService';
 import { App as CapacitorApp } from '@capacitor/app';
@@ -85,6 +85,7 @@ const App: React.FC = () => {
     const [allUsers, setAllUsers] = useState<User[]>([]);
     const [allCleaners, setAllCleaners] = useState<Cleaner[]>([]);
     const [allJobs, setAllJobs] = useState<Job[]>([]);
+    const [allBookings, setAllBookings] = useState<Booking[]>([]);
     const [selectedCleaner, setSelectedCleaner] = useState<Cleaner | null>(null);
 
     const [initialAuthTab, setInitialAuthTab] = useState<'login' | 'signup'>('login');
@@ -139,7 +140,7 @@ const App: React.FC = () => {
             if (jobs.status === 'fulfilled') setAllJobs(jobs.value);
             else console.error('Failed to fetch jobs:', (jobs as any).reason);
             if (bookingsResult.status === 'fulfilled') {
-                setUser(prev => prev ? ({ ...prev, bookingHistory: bookingsResult.value }) : null);
+                setAllBookings(bookingsResult.value);
             } else {
                 console.error('Failed to fetch bookings:', (bookingsResult as any).reason);
             }
@@ -155,6 +156,16 @@ const App: React.FC = () => {
             setAllJobs(jobs);
         } catch (error: any) {
             console.error("Failed to refresh jobs:", error);
+        }
+    };
+
+    // Refetch bookings (used after booking, cancel, review, etc.)
+    const refetchBookings = async () => {
+        try {
+            const bookings = await apiService.getBookings();
+            setAllBookings(bookings);
+        } catch (error: any) {
+            console.error("Failed to refresh bookings:", error);
         }
     };
 
@@ -251,14 +262,14 @@ const App: React.FC = () => {
                             // Refresh user data to get the updated subscription
                             const updatedUser = await apiService.getMe();
                             const bookings = await apiService.getBookings().catch(() => []);
-                            updatedUser.bookingHistory = bookings as any;
+                            setAllBookings(bookings);
                             await handleAuthSuccess(updatedUser, true, false);
                             alert(`✓ Payment successful! Your subscription to the ${updatedUser.subscriptionTier || 'selected'} plan is now active.`);
                         } else {
                             // Payment verification failed
                             const meResult = await apiService.getMe();
                             const bookings = await apiService.getBookings().catch(() => []);
-                            meResult.bookingHistory = bookings as any;
+                            setAllBookings(bookings);
                             await handleAuthSuccess(meResult, true, false);
                             alert('Payment could not be verified. If you were charged, please contact support.');
                         }
@@ -312,7 +323,7 @@ const App: React.FC = () => {
                 if (meResolved.status === 'fulfilled') {
                     const currentUser = meResolved.value;
                     if (bookingsResult.status === 'fulfilled') {
-                        currentUser.bookingHistory = bookingsResult.value as any;
+                        setAllBookings(bookingsResult.value as any);
                     }
 
                     // If admin, fetch admin users in background (don't block navigation)
@@ -640,14 +651,8 @@ const App: React.FC = () => {
             };
             const newBooking = await apiService.createBooking(bookingData);
 
-            // Fetch updated bookings from backend to ensure sync
-            try {
-                const updatedBookings = await apiService.getBookings();
-                setUser(prev => prev ? ({ ...prev, bookingHistory: updatedBookings }) : null);
-            } catch (error) {
-                // Fallback to local state update if fetch fails
-                setUser(prev => prev ? ({ ...prev, bookingHistory: [...(prev.bookingHistory || []), newBooking] }) : null);
-            }
+            // Refresh allBookings so both dashboards see the new booking
+            await refetchBookings();
 
             handleCloseBookingModals();
             alert('Booking created successfully!');
@@ -661,14 +666,7 @@ const App: React.FC = () => {
         try {
             const cancelledBooking = await apiService.cancelBooking(bookingId);
 
-            // Fetch updated bookings from backend to ensure sync
-            try {
-                const updatedBookings = await apiService.getBookings();
-                setUser(prev => prev ? ({ ...prev, bookingHistory: updatedBookings }) : null);
-            } catch (error) {
-                // Fallback to local state update if fetch fails
-                setUser(prev => prev ? ({ ...prev, bookingHistory: prev.bookingHistory?.map(b => b.id === bookingId ? cancelledBooking : b) }) : null);
-            }
+            await refetchBookings();
 
             alert("Booking cancelled successfully.");
         } catch (e: any) { alert(`Cancellation failed: ${e.message}`); }
@@ -678,14 +676,7 @@ const App: React.FC = () => {
         try {
             const completedBooking = await apiService.markJobComplete(bookingId);
 
-            // Fetch updated bookings from backend to ensure sync
-            try {
-                const updatedBookings = await apiService.getBookings();
-                setUser(prev => prev ? ({ ...prev, bookingHistory: updatedBookings }) : null);
-            } catch (error) {
-                // Fallback to local state update if fetch fails
-                setUser(prev => prev ? ({ ...prev, bookingHistory: prev.bookingHistory?.map(b => b.id === bookingId ? completedBooking : b) }) : null);
-            }
+            await refetchBookings();
         } catch (e: any) { alert(`Failed to mark as complete: ${e.message}`); }
     };
 
@@ -693,14 +684,7 @@ const App: React.FC = () => {
         try {
             await apiService.submitReview(bookingId, { ...reviewData, cleanerId });
 
-            // Fetch updated bookings from backend to ensure sync
-            try {
-                const updatedBookings = await apiService.getBookings();
-                setUser(prev => prev ? ({ ...prev, bookingHistory: updatedBookings }) : null);
-            } catch (error) {
-                // Fallback to local state update if fetch fails
-                setUser(prev => prev ? ({ ...prev, bookingHistory: prev.bookingHistory?.map(b => b.id === bookingId ? { ...b, reviewSubmitted: true } : b) }) : null);
-            }
+            await refetchBookings();
 
             alert("Review submitted successfully!");
         } catch (e: any) { alert(`Failed to submit review: ${e.message}`); }
@@ -813,6 +797,7 @@ const App: React.FC = () => {
                         allCleaners={allCleaners}
                         allUsers={allUsers}
                         allJobs={allJobs}
+                        allBookings={allBookings}
                         onSelectCleaner={handleSelectCleaner}
                         initialFilters={initialFilters}
                         clearInitialFilters={() => setInitialFilters(null)}
@@ -837,6 +822,7 @@ const App: React.FC = () => {
                         onNavigate={handleNavigate}
                         initialTab={dashboardInitialTab as any}
                         allJobs={allJobs}
+                        allBookings={allBookings}
                     />;
                 }
                 handleNavigate('auth');
