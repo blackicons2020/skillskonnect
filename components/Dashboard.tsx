@@ -296,8 +296,10 @@ export const Dashboard: React.FC<DashboardProps> = ({ user, onUpdateUser, onNavi
     const avgThoroughness = reviews.length > 0 ? reviews.reduce((acc, r) => acc + (r.thoroughness || 0), 0) / reviews.length : 0;
     const avgConduct = reviews.length > 0 ? reviews.reduce((acc, r) => acc + (r.conduct || 0), 0) / reviews.length : 0;
 
-    // Use allBookings prop (same pattern as allJobs for "Available Jobs")
-    const myBookings = allBookings.filter((b: any) => b.cleanerId === user.id);
+    // Use allBookings prop. Fall back to user.bookingHistory (from login response) if allBookings
+    // is empty — this prevents bookings from disappearing while a background refetch is in-flight.
+    const bookingSource = allBookings.length > 0 ? allBookings : ((user as any).bookingHistory || []);
+    const myBookings = bookingSource.filter((b: any) => String(b.cleanerId) === String(user.id));
     const sortedBookings = [...myBookings].reverse();
 
     // Determine the display name (Company Name if applicable, else Full Name for welcome)

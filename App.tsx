@@ -451,6 +451,11 @@ const App: React.FC = () => {
 
     const handleAuthSuccess = async (userData: User, shouldNavigate = true, skipRefetch = false) => {
         setUser(userData);
+        // Immediately populate allBookings from the login/session-restore response so bookings
+        // show right away without waiting for the background refetchAllData to complete.
+        if (userData.bookingHistory && userData.bookingHistory.length > 0) {
+            setAllBookings(userData.bookingHistory as any);
+        }
 
         // Navigate IMMEDIATELY so the auth modal disappears right away
         if (shouldNavigate) {
@@ -538,6 +543,7 @@ const App: React.FC = () => {
         apiService.logout();
         setUser(null);
         setAllUsers([]);
+        setAllBookings([]);
         clearToken();
         setViewHistory([]);
         setCleanerToRememberForBooking(null);
