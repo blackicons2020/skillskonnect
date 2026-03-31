@@ -92,6 +92,27 @@ export const Dashboard: React.FC<DashboardProps> = ({ user, onUpdateUser, onNavi
     const isFreeUser = !user.subscriptionTier || user.subscriptionTier === 'Free';
     const [showUpgradeBanner, setShowUpgradeBanner] = useState(true);
 
+    // Self-fetch bookings so the Jobs tab never depends on the parent prop timing.
+    const [selfFetchedBookings, setSelfFetchedBookings] = useState<Booking[]>([]);
+    const [bookingsLoading, setBookingsLoading] = useState(false);
+
+    useEffect(() => {
+        let cancelled = false;
+        const fetchMyBookings = async () => {
+            setBookingsLoading(true);
+            try {
+                const data = await apiService.getBookings('cleaner');
+                if (!cancelled) setSelfFetchedBookings(data || []);
+            } catch {
+                // Silently fall back to prop-based bookings if fetch fails
+            } finally {
+                if (!cancelled) setBookingsLoading(false);
+            }
+        };
+        fetchMyBookings();
+        return () => { cancelled = true; };
+    }, [user.id]);
+
 
     useEffect(() => {
         // When user data loads, set form data but convert 0s to empty strings for better editing UX
@@ -296,11 +317,14 @@ export const Dashboard: React.FC<DashboardProps> = ({ user, onUpdateUser, onNavi
     const avgThoroughness = reviews.length > 0 ? reviews.reduce((acc, r) => acc + (r.thoroughness || 0), 0) / reviews.length : 0;
     const avgConduct = reviews.length > 0 ? reviews.reduce((acc, r) => acc + (r.conduct || 0), 0) / reviews.length : 0;
 
-    // Use allBookings prop. Fall back to user.bookingHistory (from login response) if allBookings
-    // is empty — this prevents bookings from disappearing while a background refetch is in-flight.
-    const bookingSource = allBookings.length > 0 ? allBookings : ((user as any).bookingHistory || []);
-    const myBookings = bookingSource.filter((b: any) => String(b.cleanerId) === String(user.id));
-    const sortedBookings = [...myBookings].reverse();
+    // Priority: self-fetched (most reliable) → allBookings prop → bookingHistory from login
+    const bookingSource = selfFetchedBookings.length > 0
+        ? selfFetchedBookings
+        : allBookings.length > 0
+            ? allBookings.filter((b: any) => String(b.cleanerId) === String(user.id))
+            : ((user as any).bookingHistory || []).filter((b: any) => String(b.cleanerId) === String(user.id));
+    // selfFetchedBookings already comes from getBookings('cleaner') so no cleanerId filter needed.
+    const sortedBookings = [...bookingSource].reverse();
 
     // Determine the display name (Company Name if applicable, else Full Name for welcome)
     const displayName = user.cleanerType === 'Company' && user.companyName
@@ -913,7 +937,11 @@ export const Dashboard: React.FC<DashboardProps> = ({ user, onUpdateUser, onNavi
                         My Jobs & Payment History
                     </h2>
 
-                    {sortedBookings.length > 0 ? (
+                    {bookingsLoading ? (
+                        <div className="text-center py-10">
+                            <p className="text-sm text-gray-500">Loading your jobs...</p>
+                        </div>
+                    ) : sortedBookings.length > 0 ? (
                         <div className="overflow-x-auto">
                             <table className="min-w-full divide-y divide-gray-200">
                                 <thead className="bg-gray-50">
