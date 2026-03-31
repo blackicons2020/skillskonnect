@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { Cleaner, User } from '../types';
 import { XCircleIcon } from './icons';
 
@@ -6,14 +6,24 @@ interface BookingModalProps {
     cleaner: Cleaner;
     user: User;
     onClose: () => void;
-    onConfirmBooking: (cleaner: Cleaner) => void;
+    onConfirmBooking: (cleaner: Cleaner, date: string, time: string) => void;
 }
 
 export const BookingModal: React.FC<BookingModalProps> = ({ cleaner, user, onClose, onConfirmBooking }) => {
     const baseAmount = cleaner.chargeHourly || cleaner.chargeDaily || cleaner.chargePerContract || 5000;
+    const [bookingDate, setBookingDate] = useState('');
+    const [bookingTime, setBookingTime] = useState('');
 
     const handleConfirm = () => {
-        onConfirmBooking(cleaner);
+        if (!bookingDate) {
+            alert('Please select a date for the appointment.');
+            return;
+        }
+        if (!bookingTime) {
+            alert('Please select a time for the appointment.');
+            return;
+        }
+        onConfirmBooking(cleaner, bookingDate, bookingTime);
     };
 
     return (
@@ -29,9 +39,31 @@ export const BookingModal: React.FC<BookingModalProps> = ({ cleaner, user, onClo
                         <p className="mt-2 text-sm text-gray-500">You are booking <span className="font-bold">{cleaner.name}</span>.</p>
                     </div>
 
-                    <div className="my-6 p-4 bg-light rounded-lg text-center">
+                    <div className="my-4 p-4 bg-light rounded-lg text-center">
                         <p className="text-sm text-gray-600">Professional's Charge</p>
                         <p className="text-3xl font-extrabold text-dark">₦{baseAmount.toLocaleString()}</p>
+                    </div>
+
+                    <div className="mb-4 grid grid-cols-2 gap-3">
+                        <div>
+                            <label className="block text-sm font-medium text-gray-700 mb-1">Appointment Date <span className="text-red-500">*</span></label>
+                            <input
+                                type="date"
+                                value={bookingDate}
+                                min={new Date().toISOString().split('T')[0]}
+                                onChange={e => setBookingDate(e.target.value)}
+                                className="block w-full rounded-md border-gray-300 shadow-sm focus:border-primary focus:ring-primary text-sm px-3 py-2 border"
+                            />
+                        </div>
+                        <div>
+                            <label className="block text-sm font-medium text-gray-700 mb-1">Appointment Time <span className="text-red-500">*</span></label>
+                            <input
+                                type="time"
+                                value={bookingTime}
+                                onChange={e => setBookingTime(e.target.value)}
+                                className="block w-full rounded-md border-gray-300 shadow-sm focus:border-primary focus:ring-primary text-sm px-3 py-2 border"
+                            />
+                        </div>
                     </div>
 
                     <div>

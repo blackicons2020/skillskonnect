@@ -56,7 +56,7 @@ const CleanerProfile: React.FC<CleanerProfileProps> = ({ cleaner, onBook }) => {
                         onClick={() => onBook(cleaner)}
                         className="w-full max-w-xs bg-primary text-white p-3 rounded-lg font-bold hover:bg-secondary"
                     >
-                        Book this Cleaner
+                        Book this Professional
                     </button>
                 </div>
             </div>
@@ -644,14 +644,14 @@ const App: React.FC = () => {
         }
     };
 
-    const handleConfirmBooking = async (cleaner: Cleaner) => {
+    const handleConfirmBooking = async (cleaner: Cleaner, date: string, time: string) => {
         if (!user) return;
         try {
             const baseAmount = cleaner.chargeHourly || cleaner.chargeDaily || cleaner.chargePerContract || 5000;
             const bookingData = {
                 cleanerId: cleaner.id,
                 service: cleaner.serviceTypes[0] || 'General Cleaning',
-                date: new Date().toISOString().split('T')[0],
+                date: `${date} at ${time}`,
                 amount: baseAmount,
                 paymentMethod: 'Direct',
             };
