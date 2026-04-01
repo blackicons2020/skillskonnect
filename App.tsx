@@ -644,14 +644,14 @@ const App: React.FC = () => {
         }
     };
 
-    const handleConfirmBooking = async (cleaner: Cleaner, date: string, time: string) => {
+    const handleConfirmBooking = async (cleaner: Cleaner, date: string, time: string, serviceDescription: string) => {
         if (!user) return;
         try {
             const baseAmount = cleaner.chargeHourly || cleaner.chargeDaily || cleaner.chargePerContract || 5000;
             const bookingData = {
                 cleanerId: cleaner.id,
                 service: cleaner.serviceTypes[0] || 'General Cleaning',
-                date: `${date} at ${time}`,
+                date,
                 amount: baseAmount,
                 paymentMethod: 'Direct',
             };
@@ -660,8 +660,30 @@ const App: React.FC = () => {
             // Refresh allBookings so both dashboards see the new booking
             await refetchBookings();
 
+            // Send a notification message to the professional via in-app chat
+            try {
+                const chat = await apiService.createChat(user.id, cleaner.id, user.fullName || user.email, cleaner.name);
+                const clientLocation = [user.streetAddress, user.city, user.state].filter(Boolean).join(', ') || user.city || user.state || 'Not specified';
+                const formattedDate = new Date(date).toLocaleDateString('en-NG', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' });
+                const formattedTime = new Date(`2000-01-01T${time}`).toLocaleTimeString('en-NG', { hour: '2-digit', minute: '2-digit' });
+                const notificationMessage =
+                    `Hello ${cleaner.name},\n\n` +
+                    `You have a new booking request from ${user.fullName || user.email}.\n\n` +
+                    `📋 Details:\n` +
+                    `• Client: ${user.fullName || user.email}\n` +
+                    `• Location: ${clientLocation}\n` +
+                    `• Service: ${cleaner.serviceTypes[0] || 'General Cleaning'}\n` +
+                    `• Job Description: ${serviceDescription}\n` +
+                    `• Date: ${formattedDate}\n` +
+                    `• Time: ${formattedTime}\n\n` +
+                    `Please reply to this message to confirm whether you accept or decline this booking.`;
+                await apiService.sendMessage(chat.id, user.id, notificationMessage);
+            } catch {
+                // Non-critical — booking already created, just skip notification
+            }
+
             handleCloseBookingModals();
-            alert('Booking created successfully!');
+            alert('Booking created successfully! The professional has been notified via in-app message.');
             handleNavigate('clientDashboard');
         } catch (error: any) {
             alert(`Booking failed: ${error.message}`);

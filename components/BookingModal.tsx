@@ -6,24 +6,27 @@ interface BookingModalProps {
     cleaner: Cleaner;
     user: User;
     onClose: () => void;
-    onConfirmBooking: (cleaner: Cleaner, date: string, time: string) => void;
+    onConfirmBooking: (cleaner: Cleaner, date: string, time: string, serviceDescription: string) => void;
 }
 
 export const BookingModal: React.FC<BookingModalProps> = ({ cleaner, user, onClose, onConfirmBooking }) => {
     const baseAmount = cleaner.chargeHourly || cleaner.chargeDaily || cleaner.chargePerContract || 5000;
-    const [bookingDate, setBookingDate] = useState('');
-    const [bookingTime, setBookingTime] = useState('');
+
+    const today = new Date().toISOString().split('T')[0];
+    const [selectedDate, setSelectedDate] = useState<string>(today);
+    const [selectedTime, setSelectedTime] = useState<string>('09:00');
+    const [serviceDescription, setServiceDescription] = useState<string>('');
 
     const handleConfirm = () => {
-        if (!bookingDate) {
-            alert('Please select a date for the appointment.');
+        if (!selectedDate || !selectedTime) {
+            alert('Please select a date and time for the booking.');
             return;
         }
-        if (!bookingTime) {
-            alert('Please select a time for the appointment.');
+        if (!serviceDescription.trim()) {
+            alert('Please provide a brief description of the job.');
             return;
         }
-        onConfirmBooking(cleaner, bookingDate, bookingTime);
+        onConfirmBooking(cleaner, selectedDate, selectedTime, serviceDescription.trim());
     };
 
     return (
@@ -44,24 +47,35 @@ export const BookingModal: React.FC<BookingModalProps> = ({ cleaner, user, onClo
                         <p className="text-3xl font-extrabold text-dark">₦{baseAmount.toLocaleString()}</p>
                     </div>
 
-                    <div className="mb-4 grid grid-cols-2 gap-3">
+                    <div className="my-4">
+                        <label className="block text-sm font-semibold text-gray-700 mb-1">Service Description <span className="text-red-500">*</span></label>
+                        <textarea
+                            rows={3}
+                            placeholder="Describe the type and nature of work to be done (e.g. deep clean of 3-bedroom apartment, including kitchen and bathrooms)..."
+                            value={serviceDescription}
+                            onChange={e => setServiceDescription(e.target.value)}
+                            className="w-full border border-gray-300 rounded-md px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary resize-none"
+                        />
+                    </div>
+
+                    <div className="my-4 grid grid-cols-2 gap-4">
                         <div>
-                            <label className="block text-sm font-medium text-gray-700 mb-1">Appointment Date <span className="text-red-500">*</span></label>
+                            <label className="block text-sm font-semibold text-gray-700 mb-1">Appointment Date</label>
                             <input
                                 type="date"
-                                value={bookingDate}
-                                min={new Date().toISOString().split('T')[0]}
-                                onChange={e => setBookingDate(e.target.value)}
-                                className="block w-full rounded-md border-gray-300 shadow-sm focus:border-primary focus:ring-primary text-sm px-3 py-2 border"
+                                min={today}
+                                value={selectedDate}
+                                onChange={e => setSelectedDate(e.target.value)}
+                                className="w-full border border-gray-300 rounded-md px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary"
                             />
                         </div>
                         <div>
-                            <label className="block text-sm font-medium text-gray-700 mb-1">Appointment Time <span className="text-red-500">*</span></label>
+                            <label className="block text-sm font-semibold text-gray-700 mb-1">Appointment Time</label>
                             <input
                                 type="time"
-                                value={bookingTime}
-                                onChange={e => setBookingTime(e.target.value)}
-                                className="block w-full rounded-md border-gray-300 shadow-sm focus:border-primary focus:ring-primary text-sm px-3 py-2 border"
+                                value={selectedTime}
+                                onChange={e => setSelectedTime(e.target.value)}
+                                className="w-full border border-gray-300 rounded-md px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary"
                             />
                         </div>
                     </div>
@@ -84,10 +98,10 @@ export const BookingModal: React.FC<BookingModalProps> = ({ cleaner, user, onClo
                         </div>
                     </div>
                     
-                    <div className="mt-8">
+                    <div className="mt-6 flex justify-center">
                         <button
                             onClick={handleConfirm}
-                            className="w-full flex justify-center items-center rounded-md border border-transparent bg-primary px-4 py-3 text-base font-medium text-white shadow-sm hover:bg-secondary focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-2"
+                            className="inline-flex justify-center items-center rounded-md border border-transparent bg-primary px-8 py-3 text-base font-medium text-white shadow-sm hover:bg-secondary focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-2"
                         >
                             Confirm Booking
                         </button>
