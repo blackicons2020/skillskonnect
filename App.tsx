@@ -654,6 +654,7 @@ const App: React.FC = () => {
                 date,
                 amount: baseAmount,
                 paymentMethod: 'Direct',
+                serviceDescription,
             };
             const newBooking = await apiService.createBooking(bookingData);
 

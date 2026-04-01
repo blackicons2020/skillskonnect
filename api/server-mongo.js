@@ -1882,7 +1882,7 @@ app.post('/api/bookings', authenticateToken, async (req, res) => {
       return res.status(404).json({ error: 'User not found' });
     }
 
-    const { cleanerId, service, date, amount, totalAmount, paymentMethod } = req.body;
+    const { cleanerId, service, date, amount, totalAmount, paymentMethod, serviceDescription } = req.body;
     
     // Get cleaner info
     const cleaner = await User.findById(cleanerId);
@@ -1920,8 +1920,8 @@ app.post('/api/bookings', authenticateToken, async (req, res) => {
     await createNotification(
       cleanerId,
       'booking',
-      'New Booking Received',
-      `${user.fullName || user.email} has booked you for ${service} on ${date}.`
+      'New Booking Request',
+      `${user.fullName || user.email} has booked you for ${service} on ${date}.${serviceDescription ? ' Job description: ' + serviceDescription : ''} Please check your Messages and respond to accept or decline.`
     );
   } catch (error) {
     res.status(500).json({ error: error.message });

@@ -137,6 +137,8 @@ export const ClientDashboard: React.FC<ClientDashboardProps> = ({ user, allClean
 
     // Unread messages badge
     const [unreadMessageCount, setUnreadMessageCount] = useState(0);
+    // Unread notifications badge
+    const [unreadNotificationCount, setUnreadNotificationCount] = useState(0);
 
     // Upgrade banner state for free/unsubscribed users
     const isFreeUser = !user.subscriptionTier || user.subscriptionTier === 'Free';
@@ -263,6 +265,21 @@ export const ClientDashboard: React.FC<ClientDashboardProps> = ({ user, allClean
             }
         }
     }, [initialTab, isProfileIncomplete]);
+
+    // Fetch unread notification count on mount
+    useEffect(() => {
+        let cancelled = false;
+        const fetchNotifCount = async () => {
+            try {
+                const notifs = await apiService.getNotifications();
+                if (!cancelled) setUnreadNotificationCount(notifs.filter((n: any) => !n.isRead).length);
+            } catch {
+                // silently ignore
+            }
+        };
+        fetchNotifCount();
+        return () => { cancelled = true; };
+    }, [user.id]);
 
     useEffect(() => {
         setIsRecsLoading(true);
@@ -541,8 +558,13 @@ export const ClientDashboard: React.FC<ClientDashboardProps> = ({ user, allClean
                     <button onClick={() => setActiveTab('verification')} className={`${activeTab === 'verification' ? 'border-primary text-primary' : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'} whitespace-nowrap py-4 px-1 border-b-2 font-medium text-sm`}>
                         {user.isVerified ? '✓' : '○'} Verification
                     </button>
-                    <button onClick={() => setActiveTab('notifications')} className={`${activeTab === 'notifications' ? 'border-primary text-primary' : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'} whitespace-nowrap py-4 px-1 border-b-2 font-medium text-sm flex items-center gap-2`}>
+                    <button onClick={() => { setActiveTab('notifications'); setUnreadNotificationCount(0); apiService.markAllNotificationsRead().catch(()=>{}); }} className={`${activeTab === 'notifications' ? 'border-primary text-primary' : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'} whitespace-nowrap py-4 px-1 border-b-2 font-medium text-sm flex items-center gap-2`}>
                         🔔 Notifications
+                        {unreadNotificationCount > 0 && (
+                            <span className="bg-red-500 text-white text-[10px] font-bold rounded-full min-w-[18px] h-[18px] flex items-center justify-center px-1">
+                                {unreadNotificationCount > 9 ? '9+' : unreadNotificationCount}
+                            </span>
+                        )}
                     </button>
                 </nav>
             </div>
