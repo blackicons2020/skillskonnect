@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { Cleaner, User } from '../types';
 import { XCircleIcon } from './icons';
+import { getPricingModel, getCountryCurrency } from '../constants/countries';
 
 interface BookingModalProps {
     cleaner: Cleaner;
@@ -10,7 +11,10 @@ interface BookingModalProps {
 }
 
 export const BookingModal: React.FC<BookingModalProps> = ({ cleaner, user, onClose, onConfirmBooking }) => {
-    const baseAmount = cleaner.chargeHourly || cleaner.chargeDaily || cleaner.chargePerContract || 5000;
+    const pricingModel = getPricingModel(cleaner.country || 'Nigeria');
+    const currencySymbol = getCountryCurrency(cleaner.country || 'Nigeria').symbol;
+    const isFixedPrice = pricingModel === 'hourly' && cleaner.chargeHourly;
+    const baseAmount = cleaner.chargeHourly || cleaner.chargeDaily || cleaner.chargePerContract || 0;
 
     const today = new Date().toISOString().split('T')[0];
     const [selectedDate, setSelectedDate] = useState<string>(today);
@@ -44,7 +48,11 @@ export const BookingModal: React.FC<BookingModalProps> = ({ cleaner, user, onClo
 
                     <div className="my-2 p-2 bg-light rounded-lg text-center">
                         <p className="text-xs text-gray-600">Professional's Charge</p>
-                        <p className="text-2xl font-extrabold text-dark">₦{baseAmount.toLocaleString()}</p>
+                        {isFixedPrice ? (
+                            <p className="text-2xl font-extrabold text-dark">{currencySymbol}{baseAmount.toLocaleString()}<span className="text-sm font-normal text-gray-500">/hour</span></p>
+                        ) : (
+                            <p className="text-xl font-bold text-primary">Amount: Not fixed</p>
+                        )}
                     </div>
 
                     <div className="mb-2">
@@ -85,7 +93,7 @@ export const BookingModal: React.FC<BookingModalProps> = ({ cleaner, user, onClo
                         <div className="p-2 border border-primary bg-green-50 rounded-lg text-xs">
                             <p className="font-bold text-gray-900">Direct Payment</p>
                             <p className="text-gray-600 mt-1">Arrange payment directly with the professional upon job completion.</p>
-                            <p className="font-semibold text-primary mt-1">Charge: ₦{baseAmount.toLocaleString()}</p>
+                            <p className="font-semibold text-primary mt-1">Charge: {isFixedPrice ? `${currencySymbol}${baseAmount.toLocaleString()}` : 'Not fixed'}</p>
                         </div>
                     </div>
                     
