@@ -493,9 +493,11 @@ export const Dashboard: React.FC<DashboardProps> = ({ user, onUpdateUser, onNavi
                     <button onClick={() => setActiveTab('jobs')} className={`${activeTab === 'jobs' ? 'border-primary text-primary' : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'} whitespace-nowrap py-4 px-1 border-b-2 font-medium text-sm`}>
                         My Jobs & Payments
                     </button>
+                    {/* My Reviews & Ratings — hidden until feature is ready
                     <button onClick={() => setActiveTab('reviews')} className={`${activeTab === 'reviews' ? 'border-primary text-primary' : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'} whitespace-nowrap py-4 px-1 border-b-2 font-medium text-sm`}>
                         My Reviews & Ratings
                     </button>
+                    */}
                     <button onClick={() => setActiveTab('messages')} className={`${activeTab === 'messages' ? 'border-primary text-primary' : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'} whitespace-nowrap py-4 px-1 border-b-2 font-medium text-sm flex items-center gap-2`}>
                         <ChatBubbleLeftRightIcon className="w-4 h-4" />
                         Messages
@@ -960,7 +962,16 @@ export const Dashboard: React.FC<DashboardProps> = ({ user, onUpdateUser, onNavi
                         My Jobs & Payment History
                     </h2>
 
-                    {bookingsLoading ? (
+                    {(!user.subscriptionTier || user.subscriptionTier === 'Free') ? (
+                        <div className="flex flex-col items-center justify-center py-16 text-center">
+                            <div className="text-5xl mb-4">🔒</div>
+                            <h3 className="text-xl font-bold text-gray-800 mb-2">Subscription Required</h3>
+                            <p className="text-gray-600 max-w-md mb-6">Access to your Jobs & Payment history is available to subscribed professionals only. Upgrade your plan to unlock this feature.</p>
+                            <button onClick={() => onNavigate('subscription')} className="bg-primary text-white px-6 py-3 rounded-lg font-semibold hover:bg-secondary transition-colors">
+                                View Subscription Plans
+                            </button>
+                        </div>
+                    ) : bookingsLoading ? (
                         <div className="text-center py-10">
                             <p className="text-sm text-gray-500">Loading your jobs...</p>
                         </div>
@@ -1033,6 +1044,7 @@ export const Dashboard: React.FC<DashboardProps> = ({ user, onUpdateUser, onNavi
                             <h3 className="mt-2 text-sm font-medium text-gray-900">No jobs yet</h3>
                             <p className="mt-1 text-sm text-gray-500">When you get booked, your jobs will appear here.</p>
                         </div>
+                    )}
                     )}
                 </div>
             )}
