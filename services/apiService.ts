@@ -491,6 +491,31 @@ export const apiService = {
         return handleResponse(response);
     },
 
+    blockUser: async (userId: string): Promise<void> => {
+        const response = await fetch(`${API_URL}/users/${userId}/block`, {
+            method: 'POST',
+            headers: getHeaders(),
+        });
+        return handleResponse(response);
+    },
+
+    unblockUser: async (userId: string): Promise<void> => {
+        const response = await fetch(`${API_URL}/users/${userId}/block`, {
+            method: 'DELETE',
+            headers: getHeaders(),
+        });
+        return handleResponse(response);
+    },
+
+    reportUser: async (userId: string, reason: string, details?: string): Promise<void> => {
+        const response = await fetch(`${API_URL}/users/${userId}/report`, {
+            method: 'POST',
+            headers: getHeaders(),
+            body: JSON.stringify({ reason, details }),
+        });
+        return handleResponse(response);
+    },
+
     // ==================== NOTIFICATION API ====================
 
     getNotifications: async (): Promise<AppNotification[]> => {

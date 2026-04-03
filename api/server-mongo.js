@@ -97,6 +97,7 @@ const UserSchema = new mongoose.Schema({
   isAdmin: { type: Boolean, default: false },
   adminRole: String,
   isSuspended: { type: Boolean, default: false },
+  blockedUsers: [String],
   
   // Subscription
   subscriptionTier: String,
@@ -303,6 +304,14 @@ NotificationSchema.set('toJSON', {
   }
 });
 
+const ReportSchema = new mongoose.Schema({
+  reporterId: { type: String, required: true },
+  reportedUserId: { type: String, required: true },
+  reason: { type: String, required: true },
+  details: { type: String, default: '' },
+  status: { type: String, default: 'pending' }
+}, { timestamps: true });
+
 // Create models
 const User = mongoose.model('User', UserSchema);
 const Job = mongoose.model('Job', JobSchema);
@@ -310,6 +319,7 @@ const Booking = mongoose.model('Booking', BookingSchema);
 const Chat = mongoose.model('Chat', ChatSchema);
 const SupportTicket = mongoose.model('SupportTicket', SupportTicketSchema);
 const Notification = mongoose.model('Notification', NotificationSchema);
+const Report = mongoose.model('Report', ReportSchema);
 
 // Helper: Create a notification for a user
 async function createNotification(userId, type, title, message) {
@@ -1186,9 +1196,13 @@ app.get('/api/chats', authenticateToken, async (req, res) => {
     const user = await User.findOne({ email: req.user.email });
     const userId = user._id.toString();
 
-    const chats = await Chat.find({
+    const blockedUserIds = (user.blockedUsers || []).map(id => id.toString());
+    const allChats = await Chat.find({
       participants: userId
     }).sort({ 'lastMessage.timestamp': -1 });
+    const chats = blockedUserIds.length > 0
+      ? allChats.filter(chat => !chat.participants.some(p => blockedUserIds.includes(p.toString()) && p.toString() !== userId))
+      : allChats;
 
     // Serialize chats properly, ensuring participantNames is a plain object
     const serializedChats = await Promise.all(chats.map(async (chat) => {
@@ -1378,6 +1392,59 @@ app.put('/api/chats/:chatId/read', authenticateToken, async (req, res) => {
 
     await chat.save();
     res.json({ message: 'Messages marked as read' });
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// Block a user
+app.post('/api/users/:userId/block', authenticateToken, async (req, res) => {
+  try {
+    const user = await User.findOne({ email: req.user.email });
+    const targetId = req.params.userId;
+    if (user._id.toString() === targetId) {
+      return res.status(400).json({ error: 'Cannot block yourself' });
+    }
+    user.blockedUsers = user.blockedUsers || [];
+    if (!user.blockedUsers.includes(targetId)) {
+      user.blockedUsers.push(targetId);
+      await user.save();
+    }
+    res.json({ message: 'User blocked' });
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// Unblock a user
+app.delete('/api/users/:userId/block', authenticateToken, async (req, res) => {
+  try {
+    const user = await User.findOne({ email: req.user.email });
+    const targetId = req.params.userId;
+    user.blockedUsers = (user.blockedUsers || []).filter(id => id.toString() !== targetId);
+    await user.save();
+    res.json({ message: 'User unblocked' });
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// Report a user
+app.post('/api/users/:userId/report', authenticateToken, async (req, res) => {
+  try {
+    const reporter = await User.findOne({ email: req.user.email });
+    const targetId = req.params.userId;
+    const { reason, details } = req.body;
+    if (!reason) {
+      return res.status(400).json({ error: 'Reason is required' });
+    }
+    await Report.create({
+      reporterId: reporter._id.toString(),
+      reportedUserId: targetId,
+      reason,
+      details: details || ''
+    });
+    res.json({ message: 'Report submitted' });
   } catch (error) {
     res.status(500).json({ error: error.message });
   }

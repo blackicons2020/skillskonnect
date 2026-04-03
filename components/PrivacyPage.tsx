@@ -25,6 +25,11 @@ export const PrivacyPage: React.FC = () => {
 
                     <h2>6. Data Deletion Policy</h2>
                     <p>You have the right to request the deletion of your personal data and account at any time. To request account deletion, you may delete your account directly from the settings menu within the Skills Konnect app, or contact us at [Insert your support email address] with your request. Upon request, we will remove your personal data from our active databases, subject to any legal obligations to retain certain information.</p>
+
+                    <h2>7. User-Generated Content &amp; Messaging Safety</h2>
+                    <p>Skills Konnect includes a direct messaging feature that allows users to communicate with each other. Users are responsible for the content they send through the platform. We do not pre-screen messages but we reserve the right to review and remove content that violates our Terms of Service.</p>
+                    <p><strong>Reporting &amp; Blocking:</strong> You may report or block any user directly from within a conversation. To do so, open the conversation, tap the <strong>⋮</strong> (more options) button in the top-right corner of the chat, and choose <em>Report User</em> or <em>Block User</em>. Blocking a user removes the conversation from your inbox and prevents them from messaging you. Reported users are reviewed by our moderation team.</p>
+                    <p>We do not tolerate harassment, spam, hate speech, or any form of abusive behaviour through our messaging system. Violations may result in account suspension or permanent removal from the platform.</p>
                 </div>
             </div>
         </div>

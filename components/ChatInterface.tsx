@@ -17,6 +17,13 @@ export const ChatInterface: React.FC<ChatInterfaceProps> = ({ currentUser, initi
     const [messages, setMessages] = useState<Message[]>([]);
     const [newMessage, setNewMessage] = useState('');
     const [loading, setLoading] = useState(true);
+    const [showMenu, setShowMenu] = useState(false);
+    const [showReportDialog, setShowReportDialog] = useState(false);
+    const [showBlockConfirm, setShowBlockConfirm] = useState(false);
+    const [reportReason, setReportReason] = useState('');
+    const [reportDetails, setReportDetails] = useState('');
+    const [actionFeedback, setActionFeedback] = useState<string | null>(null);
+    const menuRef = React.useRef<HTMLDivElement>(null);
     const messagesEndRef = useRef<HTMLDivElement>(null);
     const messagesContainerRef = useRef<HTMLDivElement>(null);
     const isAtBottomRef = useRef(true);
@@ -126,6 +133,7 @@ export const ChatInterface: React.FC<ChatInterfaceProps> = ({ currentUser, initi
 
     const handleSelectChat = async (chat: Chat) => {
         setSelectedChat(chat);
+        setShowMenu(false);
         isAtBottomRef.current = true; // always scroll to bottom on chat open
         prevMessageCountRef.current = 0;
         // Mark messages in this chat as read
@@ -140,6 +148,46 @@ export const ChatInterface: React.FC<ChatInterfaceProps> = ({ currentUser, initi
             });
         } catch {
             // Non-critical
+        }
+    };
+
+    const getOtherParticipantId = (chat: Chat) => {
+        return chat.participants?.find(p => p !== currentUser.id) || null;
+    };
+
+    const handleBlockUser = async () => {
+        if (!selectedChat) return;
+        const otherId = getOtherParticipantId(selectedChat);
+        if (!otherId) return;
+        try {
+            await apiService.blockUser(otherId);
+            setChats(prev => prev.filter(c => c.id !== selectedChat.id));
+            setSelectedChat(null);
+            setShowBlockConfirm(false);
+            setShowMenu(false);
+            setActionFeedback('User blocked. The conversation has been removed.');
+            setTimeout(() => setActionFeedback(null), 4000);
+        } catch {
+            setActionFeedback('Failed to block user. Please try again.');
+            setTimeout(() => setActionFeedback(null), 4000);
+        }
+    };
+
+    const handleReportUser = async () => {
+        if (!selectedChat || !reportReason) return;
+        const otherId = getOtherParticipantId(selectedChat);
+        if (!otherId) return;
+        try {
+            await apiService.reportUser(otherId, reportReason, reportDetails);
+            setShowReportDialog(false);
+            setShowMenu(false);
+            setReportReason('');
+            setReportDetails('');
+            setActionFeedback('Report submitted. Thank you for helping keep the community safe.');
+            setTimeout(() => setActionFeedback(null), 5000);
+        } catch {
+            setActionFeedback('Failed to submit report. Please try again.');
+            setTimeout(() => setActionFeedback(null), 4000);
         }
     };
 
@@ -245,6 +293,40 @@ export const ChatInterface: React.FC<ChatInterfaceProps> = ({ currentUser, initi
                                     )}
                                 </div>
                             </div>
+                            <div className="relative" ref={menuRef}>
+                                <button
+                                    onClick={() => setShowMenu(v => !v)}
+                                    className="p-2 rounded-full hover:bg-gray-100 text-gray-500 hover:text-gray-700 transition-colors"
+                                    title="More options"
+                                    aria-label="More options"
+                                >
+                                    <svg xmlns="http://www.w3.org/2000/svg" className="w-5 h-5" viewBox="0 0 20 20" fill="currentColor">
+                                        <path d="M10 6a2 2 0 110-4 2 2 0 010 4zM10 12a2 2 0 110-4 2 2 0 010 4zM10 18a2 2 0 110-4 2 2 0 010 4z" />
+                                    </svg>
+                                </button>
+                                {showMenu && (
+                                    <div className="absolute right-0 top-10 bg-white border border-gray-200 rounded-lg shadow-lg z-20 w-44">
+                                        <button
+                                            onClick={() => { setShowMenu(false); setShowReportDialog(true); }}
+                                            className="w-full text-left px-4 py-3 text-sm text-gray-700 hover:bg-gray-50 flex items-center gap-2"
+                                        >
+                                            <svg xmlns="http://www.w3.org/2000/svg" className="w-4 h-4 text-orange-500" viewBox="0 0 20 20" fill="currentColor">
+                                                <path fillRule="evenodd" d="M8.257 3.099c.765-1.36 2.722-1.36 3.486 0l5.58 9.92c.75 1.334-.213 2.98-1.742 2.98H4.42c-1.53 0-2.493-1.646-1.743-2.98l5.58-9.92zM11 13a1 1 0 11-2 0 1 1 0 012 0zm-1-8a1 1 0 00-1 1v3a1 1 0 002 0V6a1 1 0 00-1-1z" clipRule="evenodd" />
+                                            </svg>
+                                            Report User
+                                        </button>
+                                        <button
+                                            onClick={() => { setShowMenu(false); setShowBlockConfirm(true); }}
+                                            className="w-full text-left px-4 py-3 text-sm text-red-600 hover:bg-red-50 flex items-center gap-2 border-t border-gray-100"
+                                        >
+                                            <svg xmlns="http://www.w3.org/2000/svg" className="w-4 h-4" viewBox="0 0 20 20" fill="currentColor">
+                                                <path fillRule="evenodd" d="M13.477 14.89A6 6 0 015.11 6.524l8.367 8.368zm1.414-1.414L6.524 5.11a6 6 0 018.367 8.367zM18 10a8 8 0 11-16 0 8 8 0 0116 0z" clipRule="evenodd" />
+                                            </svg>
+                                            Block User
+                                        </button>
+                                    </div>
+                                )}
+                            </div>
                         </div>
 
                         <div className="flex-grow p-4 overflow-y-auto bg-gray-50 space-y-4" ref={messagesContainerRef} onScroll={handleMessagesScroll}>
@@ -317,6 +399,87 @@ export const ChatInterface: React.FC<ChatInterfaceProps> = ({ currentUser, initi
                     </div>
                 )}
             </div>
+
+            {/* Feedback toast */}
+            {actionFeedback && (
+                <div className="fixed bottom-6 left-1/2 -translate-x-1/2 bg-gray-800 text-white text-sm px-5 py-3 rounded-full shadow-lg z-50 max-w-sm text-center">
+                    {actionFeedback}
+                </div>
+            )}
+
+            {/* Block confirmation modal */}
+            {showBlockConfirm && selectedChat && (
+                <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
+                    <div className="bg-white rounded-xl shadow-xl max-w-sm w-full p-6">
+                        <h3 className="text-lg font-bold text-gray-900 mb-2">Block {getOtherParticipantName(selectedChat)}?</h3>
+                        <p className="text-sm text-gray-600 mb-6">This user will no longer be able to message you and this conversation will be removed from your inbox.</p>
+                        <div className="flex gap-3">
+                            <button
+                                onClick={() => setShowBlockConfirm(false)}
+                                className="flex-1 px-4 py-2 border border-gray-300 rounded-lg text-sm font-medium text-gray-700 hover:bg-gray-50"
+                            >
+                                Cancel
+                            </button>
+                            <button
+                                onClick={handleBlockUser}
+                                className="flex-1 px-4 py-2 bg-red-600 text-white rounded-lg text-sm font-medium hover:bg-red-700"
+                            >
+                                Block User
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            )}
+
+            {/* Report dialog */}
+            {showReportDialog && selectedChat && (
+                <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
+                    <div className="bg-white rounded-xl shadow-xl max-w-sm w-full p-6">
+                        <h3 className="text-lg font-bold text-gray-900 mb-4">Report {getOtherParticipantName(selectedChat)}</h3>
+                        <div className="mb-4">
+                            <label className="block text-sm font-medium text-gray-700 mb-2">Reason *</label>
+                            <select
+                                value={reportReason}
+                                onChange={(e) => setReportReason(e.target.value)}
+                                className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary"
+                            >
+                                <option value="">Select a reason</option>
+                                <option value="spam">Spam</option>
+                                <option value="harassment">Harassment or bullying</option>
+                                <option value="inappropriate">Inappropriate content</option>
+                                <option value="scam">Scam or fraud</option>
+                                <option value="fake">Fake profile</option>
+                                <option value="other">Other</option>
+                            </select>
+                        </div>
+                        <div className="mb-6">
+                            <label className="block text-sm font-medium text-gray-700 mb-2">Additional details (optional)</label>
+                            <textarea
+                                value={reportDetails}
+                                onChange={(e) => setReportDetails(e.target.value)}
+                                placeholder="Describe the issue..."
+                                rows={3}
+                                className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary resize-none"
+                            />
+                        </div>
+                        <div className="flex gap-3">
+                            <button
+                                onClick={() => { setShowReportDialog(false); setReportReason(''); setReportDetails(''); }}
+                                className="flex-1 px-4 py-2 border border-gray-300 rounded-lg text-sm font-medium text-gray-700 hover:bg-gray-50"
+                            >
+                                Cancel
+                            </button>
+                            <button
+                                onClick={handleReportUser}
+                                disabled={!reportReason}
+                                className="flex-1 px-4 py-2 bg-orange-500 text-white rounded-lg text-sm font-medium hover:bg-orange-600 disabled:bg-gray-300"
+                            >
+                                Submit Report
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            )}
         </div>
     );
 };
