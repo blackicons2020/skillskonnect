@@ -3,7 +3,16 @@
   "outputDirectory": "dist",
   "installCommand": "npm install",
   "framework": "vite",
+  "functions": {
+    "api/server-mongo.js": {
+      "maxDuration": 30
+    }
+  },
   "rewrites": [
+    {
+      "source": "/api(.*)",
+      "destination": "/api/server-mongo.js"
+    },
     {
       "source": "/(.*)",
       "destination": "/index.html"

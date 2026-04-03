@@ -4,9 +4,9 @@ import { User, Cleaner, Booking, AdminRole, Chat, Message, SupportTicket, Review
 // ==========================================
 // CONFIGURATION
 // ==========================================
-// The production API is shared between the web app (https://skillskonnect.online/)
-// and the mobile app (Capacitor). Both read from the same MongoDB on Render.
-const PRODUCTION_API_URL = 'https://skillskonnect.onrender.com/api';
+// The production API is hosted on Vercel (same project as the web frontend).
+// Mobile (Capacitor) uses the absolute production URL; web uses a relative /api path.
+const PRODUCTION_API_URL = 'https://skillskonnect.onrender.com/api'; // Fallback for Capacitor
 
 const getApiUrl = () => {
     try {
@@ -24,8 +24,11 @@ const getApiUrl = () => {
         }
 
         if (env) {
-            // Use VITE_API_URL if set (for production/mobile deployments), otherwise use localhost
-            return env.VITE_API_URL || 'http://localhost:5000/api';
+            if (env.VITE_API_URL) return env.VITE_API_URL;
+            // In production on Vercel, the frontend and API share the same domain — use a relative path
+            // so no CORS headers are needed and the correct origin is always used automatically.
+            if (env.PROD) return '/api';
+            return 'http://localhost:5000/api';
         }
     } catch (e) {
         // Ignore errors if import.meta is not supported

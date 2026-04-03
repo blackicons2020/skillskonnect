@@ -356,8 +356,8 @@ mongoose.connect(MONGO_URL)
     }
   })
   .catch(err => {
-    console.error('❌ MongoDB connection error:', err);
-    process.exit(1);
+    console.error('❌ MongoDB connection error:', err.message);
+    // Do not call process.exit — serverless environments cannot exit the process
   });
 
 // ==================== AUTH MIDDLEWARE ====================
@@ -2479,11 +2479,13 @@ async function sendSystemNotifications() {
   }
 }
 
-// Run system notifications once on startup (after 10s) then every 12 hours
-setTimeout(() => {
-  sendSystemNotifications();
-  setInterval(sendSystemNotifications, 12 * 60 * 60 * 1000);
-}, 10000);
+// Run system notifications only in persistent server environments (not Vercel serverless)
+if (!process.env.VERCEL) {
+  setTimeout(() => {
+    sendSystemNotifications();
+    setInterval(sendSystemNotifications, 12 * 60 * 60 * 1000);
+  }, 10000);
+}
 
 // ==================== HEALTH CHECK ====================
 
@@ -2497,8 +2499,14 @@ app.get('/api/health', (req, res) => {
 
 // ==================== START SERVER ====================
 
-app.listen(PORT, () => {
-  console.log(`🚀 Server running on port ${PORT}`);
-  console.log(`📊 Environment: ${process.env.NODE_ENV || 'development'}`);
-  console.log(`🔗 CORS Origin: ${process.env.CORS_ORIGIN || '*'}`);
-});
+// Export the Express app for Vercel serverless runtime
+export default app;
+
+// Only start a standalone HTTP server when NOT running on Vercel
+if (!process.env.VERCEL) {
+  app.listen(PORT, () => {
+    console.log(`🚀 Server running on port ${PORT}`);
+    console.log(`📊 Environment: ${process.env.NODE_ENV || 'development'}`);
+    console.log(`🔗 CORS Origin: ${process.env.CORS_ORIGIN || '*'}`);
+  });
+}
