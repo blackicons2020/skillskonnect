@@ -388,8 +388,8 @@ function normalizeUser(user) {
   }
   // Map userType to role for frontend compatibility (but don't override admin roles)
   if ((userObj.role === 'user' || !userObj.role) && !['admin', 'super-admin'].includes(userObj.role)) {
-    if (userObj.userType === 'client') userObj.role = 'client';
-    else if (userObj.userType === 'worker') userObj.role = 'cleaner';
+    if (userObj.userType === 'client' || userObj.userType === 'Client (Individual)' || userObj.userType === 'Client (Registered Company)') userObj.role = 'client';
+    else if (userObj.userType === 'worker' || userObj.userType === 'Worker (Individual)' || userObj.userType === 'Worker (Registered Company)') userObj.role = 'cleaner';
   }
   // Add isAdmin flag - check both role and userType for admin status
   userObj.isAdmin = ['admin', 'super-admin'].includes(userObj.role) || userObj.userType === 'admin';
@@ -670,16 +670,31 @@ app.put('/api/users/me', authenticateToken, async (req, res) => {
       }
     }
 
+    // Persist correct role in DB when userType is being updated
+    const WORKER_TYPES = ['worker', 'Worker (Individual)', 'Worker (Registered Company)'];
+    const CLIENT_TYPES = ['client', 'Client (Individual)', 'Client (Registered Company)'];
+    if (updateData.userType) {
+      if (WORKER_TYPES.includes(updateData.userType)) {
+        updateData.role = 'cleaner';
+      } else if (CLIENT_TYPES.includes(updateData.userType)) {
+        updateData.role = 'client';
+      }
+    }
+
     // Auto-set isProfileComplete to true when required fields are present
     const user = await User.findOne({ email: req.user.email });
     if (user && updateData.fullName && updateData.phoneNumber && updateData.country) {
-      if (user.userType === 'worker') {
-        // Worker needs: services, experience/pricing
-        if (updateData.services && updateData.services.length > 0 && 
-           (updateData.chargeHourly || updateData.chargeDaily || updateData.chargePerContract)) {
+      const effectiveUserType = updateData.userType || user.userType;
+      if (WORKER_TYPES.includes(effectiveUserType)) {
+        // Worker needs: services or skillType, plus at least one pricing option
+        const skills = (updateData.services && updateData.services.length > 0)
+          ? updateData.services
+          : (updateData.skillType && updateData.skillType.length > 0 ? updateData.skillType : []);
+        if (skills.length > 0 &&
+           (updateData.chargeHourly || updateData.chargeDaily || updateData.chargePerContract || updateData.chargeRate)) {
           updateData.isProfileComplete = true;
         }
-      } else if (user.userType === 'client') {
+      } else if (CLIENT_TYPES.includes(effectiveUserType)) {
         // Client just needs basic info
         updateData.isProfileComplete = true;
       }
@@ -953,7 +968,8 @@ app.post('/api/jobs/:jobId/apply', authenticateToken, async (req, res) => {
     const { proposal, proposedPrice } = req.body;
     const worker = await User.findOne({ email: req.user.email });
 
-    if (worker.userType !== 'worker') {
+    const workerUserTypes = ['worker', 'Worker (Individual)', 'Worker (Registered Company)'];
+    if (!workerUserTypes.includes(worker.userType)) {
       return res.status(403).json({ error: 'Only workers can apply to jobs' });
     }
 
@@ -1703,7 +1719,10 @@ app.post('/api/admin/notifications/send', authenticateToken, async (req, res) =>
 app.get('/api/cleaners', async (req, res) => {
   try {
     const workers = await User.find({
-      role: 'cleaner',
+      $or: [
+        { role: 'cleaner' },
+        { userType: { $in: ['worker', 'Worker (Individual)', 'Worker (Registered Company)'] } }
+      ],
       isSuspended: { $ne: true }
     }).select('-password');
     
@@ -1716,7 +1735,7 @@ app.get('/api/cleaners', async (req, res) => {
         photoUrl: worker.profilePhoto || worker.profilePicture || '',
         rating: worker.ratings?.average || 0,
         reviews: worker.ratings?.count || (worker.reviewsData?.length || 0),
-        serviceTypes: worker.services || worker.skillType || [],
+        serviceTypes: (worker.services && worker.services.length > 0) ? worker.services : (worker.skillType || []),
         state: worker.state || '',
         city: worker.city || '',
         otherCity: worker.otherCity || '',
