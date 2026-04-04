@@ -48,6 +48,7 @@ export const Footer: React.FC<FooterProps> = ({ onNavigate }) => {
         legal: [
             { name: 'Terms of Service', view: 'terms' as View },
             { name: 'Privacy Policy', view: 'privacy' as View },
+            { name: 'Delete Account', view: 'deleteAccount' as View },
         ],
     };
 

@@ -118,7 +118,7 @@ interface ClientDashboardProps {
     onUpdateUser: (user: User) => void;
     onRefreshJobs?: () => Promise<void>;
     appError: string | null;
-    initialTab?: 'find' | 'bookings' | 'messages' | 'support' | 'profile' | 'verification' | 'jobs' | 'notifications';
+    initialTab?: 'find' | 'bookings' | 'messages' | 'support' | 'profile' | 'verification' | 'jobs' | 'notifications' | 'settings';
 }
 
 export const ClientDashboard: React.FC<ClientDashboardProps> = ({ user, allCleaners, allUsers = [], allJobs = [], allBookings = [], onSelectCleaner, initialFilters, clearInitialFilters, onNavigate, onCancelBooking, onReviewSubmit, onApproveJobCompletion, onUpdateUser, onRefreshJobs, appError, initialTab }) => {
@@ -148,7 +148,7 @@ export const ClientDashboard: React.FC<ClientDashboardProps> = ({ user, allClean
     const isProfileIncomplete = !user.userType || !user.phoneNumber || !user.country;
     
     // Set initial tab - if profile is incomplete, always start with profile, otherwise use initialTab or 'find'
-    const [activeTab, setActiveTab] = useState<'find' | 'bookings' | 'messages' | 'support' | 'profile' | 'verification' | 'jobs' | 'notifications'>(
+    const [activeTab, setActiveTab] = useState<'find' | 'bookings' | 'messages' | 'support' | 'profile' | 'verification' | 'jobs' | 'notifications' | 'settings'>(
         isProfileIncomplete ? 'profile' : (initialTab || 'find')
     );
     const [showProfileCompletion, setShowProfileCompletion] = useState(isProfileIncomplete);
@@ -565,6 +565,9 @@ export const ClientDashboard: React.FC<ClientDashboardProps> = ({ user, allClean
                                 {unreadNotificationCount > 9 ? '9+' : unreadNotificationCount}
                             </span>
                         )}
+                    </button>
+                    <button onClick={() => setActiveTab('settings')} className={`${activeTab === 'settings' ? 'border-primary text-primary' : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'} whitespace-nowrap py-4 px-1 border-b-2 font-medium text-sm flex items-center gap-2`}>
+                        ⚙️ Settings
                     </button>
                 </nav>
             </div>
@@ -1080,6 +1083,39 @@ export const ClientDashboard: React.FC<ClientDashboardProps> = ({ user, allClean
 
             {activeTab === 'support' && (
                 <SupportTicketSection userId={user.id} />
+            )}
+
+            {activeTab === 'settings' && (
+                <div className="max-w-2xl mx-auto space-y-6">
+                    <div className="bg-white border border-gray-200 rounded-lg p-6">
+                        <h3 className="text-base font-semibold text-gray-900 mb-1">Account</h3>
+                        <p className="text-sm text-gray-500 mb-4">Manage your account and legal preferences.</p>
+                        <div className="space-y-3">
+                            <button onClick={() => onNavigate('privacy')} className="w-full text-left px-4 py-3 rounded-lg border border-gray-200 hover:bg-gray-50 text-sm text-gray-700 flex items-center justify-between">
+                                <span>Privacy Policy</span>
+                                <span className="text-gray-400">&rsaquo;</span>
+                            </button>
+                            <button onClick={() => onNavigate('terms')} className="w-full text-left px-4 py-3 rounded-lg border border-gray-200 hover:bg-gray-50 text-sm text-gray-700 flex items-center justify-between">
+                                <span>Terms of Service</span>
+                                <span className="text-gray-400">&rsaquo;</span>
+                            </button>
+                            <button onClick={() => onNavigate('contact')} className="w-full text-left px-4 py-3 rounded-lg border border-gray-200 hover:bg-gray-50 text-sm text-gray-700 flex items-center justify-between">
+                                <span>Contact Support</span>
+                                <span className="text-gray-400">&rsaquo;</span>
+                            </button>
+                        </div>
+                    </div>
+                    <div className="bg-white border border-red-200 rounded-lg p-6">
+                        <h3 className="text-base font-semibold text-red-700 mb-1">Danger Zone</h3>
+                        <p className="text-sm text-gray-500 mb-4">Permanently delete your account and all associated data. This action cannot be undone.</p>
+                        <button
+                            onClick={() => onNavigate('deleteAccount')}
+                            className="px-5 py-2.5 bg-red-600 hover:bg-red-700 text-white text-sm font-medium rounded-lg transition-colors"
+                        >
+                            Delete My Account
+                        </button>
+                    </div>
+                </div>
             )}
 
             {activeTab === 'profile' && (
