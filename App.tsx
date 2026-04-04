@@ -30,6 +30,7 @@ const HelpCenterPage = React.lazy(() => import('./components/HelpCenterPage').th
 const ContactPage = React.lazy(() => import('./components/ContactPage').then(module => ({ default: module.ContactPage })));
 const TermsPage = React.lazy(() => import('./components/TermsPage').then(module => ({ default: module.TermsPage })));
 const PrivacyPage = React.lazy(() => import('./components/PrivacyPage').then(module => ({ default: module.PrivacyPage })));
+const DeleteAccountPage = React.lazy(() => import('./components/DeleteAccountPage').then(module => ({ default: module.DeleteAccountPage })));
 const SearchResultsPage = React.lazy(() => import('./components/SearchResultsPage').then(module => ({ default: module.SearchResultsPage })));
 
 
@@ -243,6 +244,13 @@ const App: React.FC = () => {
                 return;
             }
 
+            // Detect direct /delete-account URL
+            if (window.location.pathname === '/delete-account') {
+                setView('deleteAccount');
+                setIsLoading(false);
+                return;
+            }
+
             // Detect password-reset link: ?action=resetPassword&token=<raw>
             const urlParams = new URLSearchParams(window.location.search);
             const action = urlParams.get('action');
@@ -408,7 +416,9 @@ const App: React.FC = () => {
         // Sync URL for the Privacy Policy page
         if (targetView === 'privacy') {
             window.history.pushState({}, document.title, '/privacy');
-        } else if (view === 'privacy') {
+        } else if (targetView === 'deleteAccount') {
+            window.history.pushState({}, document.title, '/delete-account');
+        } else if (view === 'privacy' || view === 'deleteAccount') {
             window.history.replaceState({}, document.title, '/');
         }
         // Reset dashboard tab to default when navigating normally
@@ -422,7 +432,7 @@ const App: React.FC = () => {
         setViewHistory(prev => prev.slice(0, -1));
         setView(previousView);
         // Restore base URL when leaving the Privacy page
-        if (view === 'privacy') {
+        if (view === 'privacy' || view === 'deleteAccount') {
             window.history.replaceState({}, document.title, '/');
         }
         window.scrollTo(0, 0);
@@ -935,6 +945,7 @@ const App: React.FC = () => {
             case 'contact': return withBack('Back', <ContactPage />);
             case 'terms': return withBack('Back', <TermsPage />);
             case 'privacy': return withBack('Back', <PrivacyPage />);
+            case 'deleteAccount': return withBack('Back', <DeleteAccountPage />);
             case 'landing':
             default:
                 return <LandingPage

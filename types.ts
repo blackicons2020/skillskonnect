@@ -248,5 +248,6 @@ export type View =
   | 'contact'
   | 'terms'
   | 'privacy'
+  | 'deleteAccount'
   | 'searchResults'
   | 'resetPassword';
