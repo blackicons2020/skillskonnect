@@ -4,7 +4,7 @@
   "installCommand": "npm install",
   "framework": "vite",
   "functions": {
-    "api/server-mongo.js": {
+    "api/**/*.js": {
       "maxDuration": 30
     }
   },
