@@ -203,6 +203,15 @@ export const HelpCenterPage: React.FC<{ onNavigate: (page: View) => void }> = ({
                                 <FAQItem question="How do I delete my account?">
                                     <p>To delete your account, go to your <strong>Dashboard</strong> and click the <strong>⚙️ Settings</strong> tab. Read the information about what deletion means for your account, then click <strong>Delete My Account</strong>. A confirmation popup will appear — click <strong>Yes, Delete My Account</strong> to confirm.</p>
                                     <p className="mt-2">Once confirmed, you will be logged out immediately and your account will be deactivated. Your data is held securely for up to <strong>30 days</strong> while our admin team reviews the request, after which it is permanently deleted. If you change your mind within that window, contact our support team as soon as possible.</p>
+                                    <div className="mt-4">
+                                        <button
+                                            onClick={() => onNavigate('deleteAccount')}
+                                            className="inline-flex items-center gap-2 px-4 py-2 bg-red-600 text-white text-sm font-semibold rounded-lg hover:bg-red-700 transition-colors"
+                                        >
+                                            🗑️ Delete My Account
+                                        </button>
+                                        <p className="text-xs text-gray-500 mt-2">You can also delete your account without logging in by using the form above.</p>
+                                    </div>
                                 </FAQItem>
                             </>
                         )}
