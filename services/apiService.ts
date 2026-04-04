@@ -84,6 +84,10 @@ const handleResponse = async (response: Response) => {
         throw new Error(errorData.message || errorData.error || `Request failed with status ${response.status}`);
     }
     if (response.status === 204) return null;
+    const contentType = response.headers.get('content-type') || '';
+    if (!contentType.includes('application/json') && !contentType.includes('text/json')) {
+        throw new Error('Server is temporarily unavailable. Please wait a moment and try again.');
+    }
     return response.json();
 };
 

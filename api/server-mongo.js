@@ -2587,6 +2587,18 @@ app.get('/api/health', (req, res) => {
   });
 });
 
+// ==================== JSON ERROR HANDLERS ====================
+// Catch-all for unmatched routes — return JSON 404 (not HTML)
+app.use((req, res, next) => {
+  res.status(404).json({ error: `Route not found: ${req.method} ${req.path}` });
+});
+
+// Global error handler — ensures Express never returns an HTML error page
+app.use((err, req, res, next) => {
+  console.error('[Express Error]', err.message || err);
+  res.status(err.status || 500).json({ error: err.message || 'Internal server error' });
+});
+
 // ==================== START SERVER ====================
 
 // Export the Express app for Vercel serverless runtime
