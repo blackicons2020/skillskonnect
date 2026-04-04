@@ -199,6 +199,11 @@ export const HelpCenterPage: React.FC<{ onNavigate: (page: View) => void }> = ({
                                 <FAQItem question="Can I use this app on my phone?">
                                     <p>Yes! Skills Konnect is fully responsive and works on smartphones, tablets, and desktops. No app download is required — simply open the website in any modern browser (Chrome, Safari, Firefox) on your device.</p>
                                 </FAQItem>
+
+                                <FAQItem question="How do I delete my account?">
+                                    <p>To delete your account, go to your <strong>Dashboard</strong> and click the <strong>⚙️ Settings</strong> tab. Read the information about what deletion means for your account, then click <strong>Delete My Account</strong>. A confirmation popup will appear — click <strong>Yes, Delete My Account</strong> to confirm.</p>
+                                    <p className="mt-2">Once confirmed, you will be logged out immediately and your account will be deactivated. Your data is held securely for up to <strong>30 days</strong> while our admin team reviews the request, after which it is permanently deleted. If you change your mind within that window, contact our support team as soon as possible.</p>
+                                </FAQItem>
                             </>
                         )}
 

@@ -869,6 +869,7 @@ const App: React.FC = () => {
                         initialFilters={initialFilters}
                         clearInitialFilters={() => setInitialFilters(null)}
                         onNavigate={handleNavigate}
+                        onLogout={handleLogout}
                         onCancelBooking={handleCancelBooking}
                         onReviewSubmit={handleReviewSubmit}
                         onApproveJobCompletion={handleApproveJobCompletion}
@@ -887,6 +888,7 @@ const App: React.FC = () => {
                         user={user}
                         onUpdateUser={handleUpdateUser}
                         onNavigate={handleNavigate}
+                        onLogout={handleLogout}
                         initialTab={dashboardInitialTab as any}
                         allJobs={allJobs}
                         allBookings={allBookings}

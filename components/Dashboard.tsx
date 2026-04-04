@@ -16,6 +16,7 @@ interface DashboardProps {
     user: User;
     onUpdateUser: (user: User) => void;
     onNavigate: (view: View) => void;
+    onLogout: () => void;
     initialTab?: 'profile' | 'jobs' | 'reviews' | 'messages' | 'support' | 'verification' | 'listings' | 'notifications' | 'settings';
     allJobs?: Job[];
     allBookings?: Booking[];
@@ -41,7 +42,7 @@ const ProfileField: React.FC<{ label: string; value?: string | number | null | s
 );
 
 
-export const Dashboard: React.FC<DashboardProps> = ({ user, onUpdateUser, onNavigate, initialTab, allJobs = [], allBookings = [] }) => {
+export const Dashboard: React.FC<DashboardProps> = ({ user, onUpdateUser, onNavigate, onLogout, initialTab, allJobs = [], allBookings = [] }) => {
     // Local set tracking which jobs this worker has applied to.
     // Initialised from user.appliedJobs (persisted) so it survives page reloads.
     // Using local state avoids sending the entire user object to the backend on
@@ -66,6 +67,9 @@ export const Dashboard: React.FC<DashboardProps> = ({ user, onUpdateUser, onNavi
 
     // PWA install prompt - removed (handled in Footer)
     const [chatToOpen, setChatToOpen] = useState<string | null>(null);
+    const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
+    const [isDeletingAccount, setIsDeletingAccount] = useState(false);
+    const [deleteError, setDeleteError] = useState<string | null>(null);
 
     // Handler for profile updates
     const handleProfileUpdate = async (updates: Partial<User>) => {
@@ -1115,67 +1119,101 @@ export const Dashboard: React.FC<DashboardProps> = ({ user, onUpdateUser, onNavi
 
             {activeTab === 'settings' && (
                 <div className="max-w-2xl mx-auto space-y-6">
-                    <div className="bg-white border border-gray-200 rounded-lg p-6">
-                        <h3 className="text-base font-semibold text-gray-900 mb-1">Account</h3>
-                        <p className="text-sm text-gray-500 mb-4">Manage your account and legal preferences.</p>
-                        <div className="space-y-3">
-                            <button onClick={() => onNavigate('privacy')} className="w-full text-left px-4 py-3 rounded-lg border border-gray-200 hover:bg-gray-50 text-sm text-gray-700 flex items-center justify-between">
-                                <span>Privacy Policy</span>
-                                <span className="text-gray-400">&rsaquo;</span>
-                            </button>
-                            <button onClick={() => onNavigate('terms')} className="w-full text-left px-4 py-3 rounded-lg border border-gray-200 hover:bg-gray-50 text-sm text-gray-700 flex items-center justify-between">
-                                <span>Terms of Service</span>
-                                <span className="text-gray-400">&rsaquo;</span>
-                            </button>
-                            <button onClick={() => onNavigate('contact')} className="w-full text-left px-4 py-3 rounded-lg border border-gray-200 hover:bg-gray-50 text-sm text-gray-700 flex items-center justify-between">
-                                <span>Contact Support</span>
-                                <span className="text-gray-400">&rsaquo;</span>
-                            </button>
+                    <div className="bg-white border border-red-200 rounded-xl p-6">
+                        <div className="flex items-center gap-3 mb-4">
+                            <div className="w-10 h-10 rounded-full bg-red-100 flex items-center justify-center flex-shrink-0">
+                                <svg className="w-5 h-5 text-red-600" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z" /></svg>
+                            </div>
+                            <div>
+                                <h3 className="text-base font-semibold text-red-700">Delete Your Account</h3>
+                                <p className="text-xs text-gray-500">This action is permanent and cannot be reversed</p>
+                            </div>
                         </div>
-                    </div>
-                    <div className="bg-white border border-red-200 rounded-lg p-6">
-                        <h3 className="text-base font-semibold text-red-700 mb-1">Danger Zone</h3>
-                        <p className="text-sm text-gray-500 mb-4">Permanently delete your account and all associated data. This action cannot be undone.</p>
+                        <p className="text-sm text-gray-600 mb-4">
+                            Before you proceed, please understand what deleting your account means:
+                        </p>
+                        <ul className="space-y-2 mb-5">
+                            {[
+                                'Your profile will be removed from search results immediately.',
+                                'All active bookings and job applications will be cancelled.',
+                                'Your message history will be permanently deleted.',
+                                'Any active subscription will be cancelled with no refund.',
+                                'You will lose access to your account right away.',
+                                'This action cannot be undone.',
+                            ].map((item, i) => (
+                                <li key={i} className="flex items-start gap-2 text-sm text-gray-700">
+                                    <svg className="w-4 h-4 text-red-500 mt-0.5 flex-shrink-0" fill="currentColor" viewBox="0 0 20 20"><path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z" clipRule="evenodd" /></svg>
+                                    {item}
+                                </li>
+                            ))}
+                        </ul>
+                        <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-3 mb-5">
+                            <p className="text-xs text-yellow-800">
+                                <strong>Note:</strong> Your account data will be held securely for up to 30 days before permanent deletion. During this window, our admin team reviews deletion requests. If you change your mind, contact support immediately.
+                            </p>
+                        </div>
+                        {deleteError && (
+                            <p className="text-sm text-red-600 mb-3">{deleteError}</p>
+                        )}
                         <button
-                            onClick={() => onNavigate('deleteAccount')}
-                            className="px-5 py-2.5 bg-red-600 hover:bg-red-700 text-white text-sm font-medium rounded-lg transition-colors"
+                            onClick={() => { setDeleteError(null); setShowDeleteConfirm(true); }}
+                            className="w-full py-3 bg-red-600 hover:bg-red-700 text-white text-sm font-semibold rounded-lg transition-colors"
                         >
                             Delete My Account
                         </button>
                     </div>
-                </div>
-            )}
 
-            {activeTab === 'settings' && (
-                <div className="max-w-2xl mx-auto space-y-6">
-                    <div className="bg-white border border-gray-200 rounded-lg p-6">
-                        <h3 className="text-base font-semibold text-gray-900 mb-1">Account</h3>
-                        <p className="text-sm text-gray-500 mb-4">Manage your account information and preferences.</p>
-                        <div className="space-y-3">
-                            <button onClick={() => onNavigate('privacy')} className="w-full text-left px-4 py-3 rounded-lg border border-gray-200 hover:bg-gray-50 text-sm text-gray-700 flex items-center justify-between">
-                                <span>Privacy Policy</span>
-                                <span className="text-gray-400">&rsaquo;</span>
-                            </button>
-                            <button onClick={() => onNavigate('terms')} className="w-full text-left px-4 py-3 rounded-lg border border-gray-200 hover:bg-gray-50 text-sm text-gray-700 flex items-center justify-between">
-                                <span>Terms of Service</span>
-                                <span className="text-gray-400">&rsaquo;</span>
-                            </button>
-                            <button onClick={() => onNavigate('contact')} className="w-full text-left px-4 py-3 rounded-lg border border-gray-200 hover:bg-gray-50 text-sm text-gray-700 flex items-center justify-between">
-                                <span>Contact Support</span>
-                                <span className="text-gray-400">&rsaquo;</span>
-                            </button>
+                    {showDeleteConfirm && (
+                        <div className="fixed inset-0 bg-black bg-opacity-60 flex items-center justify-center z-50 p-4">
+                            <div className="bg-white rounded-2xl shadow-xl w-full max-w-md p-6">
+                                <div className="flex items-center gap-3 mb-4">
+                                    <div className="w-10 h-10 rounded-full bg-red-100 flex items-center justify-center flex-shrink-0">
+                                        <svg className="w-5 h-5 text-red-600" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" /></svg>
+                                    </div>
+                                    <h3 className="text-lg font-bold text-gray-900">Are you absolutely sure?</h3>
+                                </div>
+                                <p className="text-sm text-gray-600 mb-2">
+                                    You are about to permanently delete your account. Once confirmed:
+                                </p>
+                                <ul className="text-sm text-gray-600 list-disc pl-5 mb-4 space-y-1">
+                                    <li>You will be logged out immediately</li>
+                                    <li>All your data will be scheduled for deletion</li>
+                                    <li>You will not be able to log back in</li>
+                                </ul>
+                                {deleteError && (
+                                    <p className="text-sm text-red-600 mb-3">{deleteError}</p>
+                                )}
+                                <div className="flex gap-3">
+                                    <button
+                                        onClick={() => setShowDeleteConfirm(false)}
+                                        disabled={isDeletingAccount}
+                                        className="flex-1 py-2.5 border border-gray-300 text-gray-700 text-sm font-medium rounded-lg hover:bg-gray-50 transition-colors disabled:opacity-50"
+                                    >
+                                        Cancel
+                                    </button>
+                                    <button
+                                        onClick={async () => {
+                                            setIsDeletingAccount(true);
+                                            setDeleteError(null);
+                                            try {
+                                                await apiService.requestAccountDeletion();
+                                                onLogout();
+                                            } catch (err: any) {
+                                                setDeleteError(err.message || 'Failed to delete account. Please try again.');
+                                                setIsDeletingAccount(false);
+                                            }
+                                        }}
+                                        disabled={isDeletingAccount}
+                                        className="flex-1 py-2.5 bg-red-600 hover:bg-red-700 text-white text-sm font-semibold rounded-lg transition-colors disabled:opacity-50 flex items-center justify-center gap-2"
+                                    >
+                                        {isDeletingAccount ? (
+                                            <><svg className="animate-spin h-4 w-4" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24"><circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" /><path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z" /></svg>Deleting...</>
+                                        ) : 'Yes, Delete My Account'}
+                                    </button>
+                                </div>
+                            </div>
                         </div>
-                    </div>
-                    <div className="bg-white border border-red-200 rounded-lg p-6">
-                        <h3 className="text-base font-semibold text-red-700 mb-1">Danger Zone</h3>
-                        <p className="text-sm text-gray-500 mb-4">Permanently delete your account and all associated data. This action cannot be undone.</p>
-                        <button
-                            onClick={() => onNavigate('deleteAccount')}
-                            className="px-5 py-2.5 bg-red-600 hover:bg-red-700 text-white text-sm font-medium rounded-lg transition-colors"
-                        >
-                            Delete My Account
-                        </button>
-                    </div>
+                    )}
                 </div>
             )}
 

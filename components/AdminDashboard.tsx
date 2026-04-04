@@ -74,7 +74,7 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ user: currentUse
     // Current user context is now passed directly as a prop, avoiding redundant fetches
 
     // Initial state setup to avoid flashing incorrect tabs
-    const [activeTab, setActiveTab] = useState<'clients' | 'cleaners' | 'payments' | 'allBookings' | 'admins' | 'support' | 'jobs'>('clients');
+    const [activeTab, setActiveTab] = useState<'clients' | 'cleaners' | 'payments' | 'allBookings' | 'admins' | 'support' | 'jobs' | 'pendingDeletion'>('clients');
 
     const [searchTerm, setSearchTerm] = useState('');
     const [userToView, setUserToView] = useState<User | null>(null);
@@ -204,6 +204,8 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ user: currentUse
                 return false; // Only Super (handled above)
             case 'support':
                 return role === 'Support';
+            case 'pendingDeletion':
+                return role === 'Support' || role === 'Super';
             default:
                 return false;
         }
@@ -455,6 +457,20 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ user: currentUse
                             } whitespace-nowrap py-4 px-1 border-b-2 font-medium text-sm`}
                     >
                         Job Postings ({allJobs.length})
+                    </button>
+                    <button
+                        onClick={() => setActiveTab('pendingDeletion')}
+                        className={`${activeTab === 'pendingDeletion'
+                            ? 'border-red-600 text-red-600'
+                            : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
+                            } whitespace-nowrap py-4 px-1 border-b-2 font-medium text-sm flex items-center gap-1`}
+                    >
+                        🗑 Pending Deletions
+                        {allUsers.filter(u => (u as any).deletionRequestedAt).length > 0 && (
+                            <span className="ml-1 bg-red-100 text-red-700 text-xs font-bold px-1.5 py-0.5 rounded-full">
+                                {allUsers.filter(u => (u as any).deletionRequestedAt).length}
+                            </span>
+                        )}
                     </button>
                 </nav>
             </div>
@@ -740,6 +756,75 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ user: currentUse
                         )}
                     </div>
                 )}
+
+                {activeTab === 'pendingDeletion' && (() => {
+                    const pendingUsers = allUsers.filter(u => (u as any).deletionRequestedAt);
+                    return (
+                        <div className="p-4">
+                            <h3 className="text-xl font-semibold mb-1">Accounts Pending Deletion</h3>
+                            <p className="text-sm text-gray-500 mb-4">These users have requested account deletion. Accounts are permanently deleted 30 days after the request unless restored.</p>
+                            {pendingUsers.length > 0 ? (
+                                <div className="overflow-x-auto">
+                                    <table className="w-full">
+                                        <thead className="bg-gray-50">
+                                            <tr>
+                                                <th className="px-4 py-3 text-left text-xs font-bold text-gray-700 uppercase">User</th>
+                                                <th className="px-4 py-3 text-left text-xs font-bold text-gray-700 uppercase">Role</th>
+                                                <th className="px-4 py-3 text-left text-xs font-bold text-gray-700 uppercase">Requested</th>
+                                                <th className="px-4 py-3 text-left text-xs font-bold text-gray-700 uppercase">Days Left</th>
+                                                <th className="px-4 py-3 text-left text-xs font-bold text-gray-700 uppercase">Actions</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody className="bg-white divide-y divide-gray-200">
+                                            {pendingUsers.map((u) => {
+                                                const reqDate = new Date((u as any).deletionRequestedAt);
+                                                const daysSince = Math.floor((Date.now() - reqDate.getTime()) / (1000 * 60 * 60 * 24));
+                                                const daysLeft = Math.max(0, 30 - daysSince);
+                                                return (
+                                                    <tr key={u.id} className="hover:bg-gray-50">
+                                                        <td className="px-4 py-4">
+                                                            <p className="font-semibold text-gray-900">{u.fullName}</p>
+                                                            <p className="text-xs text-gray-500">{u.email}</p>
+                                                        </td>
+                                                        <td className="px-4 py-4">
+                                                            <span className="px-2 py-1 text-xs font-bold rounded-full bg-gray-100 text-gray-700 capitalize">{u.role || (u as any).userType}</span>
+                                                        </td>
+                                                        <td className="px-4 py-4 text-sm text-gray-700">
+                                                            {reqDate.toLocaleDateString()}
+                                                        </td>
+                                                        <td className="px-4 py-4">
+                                                            <span className={`text-sm font-semibold ${daysLeft <= 3 ? 'text-red-600' : daysLeft <= 7 ? 'text-orange-600' : 'text-gray-700'}`}>
+                                                                {daysLeft === 0 ? 'Overdue' : `${daysLeft} day${daysLeft !== 1 ? 's' : ''}`}
+                                                            </span>
+                                                        </td>
+                                                        <td className="px-4 py-4">
+                                                            <div className="flex gap-2">
+                                                                <button
+                                                                    onClick={() => onUpdateUser({ ...u, isSuspended: false, deletionRequestedAt: null } as any)}
+                                                                    className="px-3 py-1.5 bg-green-600 hover:bg-green-700 text-white text-xs font-semibold rounded-lg transition-colors"
+                                                                >
+                                                                    Restore
+                                                                </button>
+                                                                <button
+                                                                    onClick={() => setUserToDelete(u)}
+                                                                    className="px-3 py-1.5 bg-red-600 hover:bg-red-700 text-white text-xs font-semibold rounded-lg transition-colors"
+                                                                >
+                                                                    Delete Now
+                                                                </button>
+                                                            </div>
+                                                        </td>
+                                                    </tr>
+                                                );
+                                            })}
+                                        </tbody>
+                                    </table>
+                                </div>
+                            ) : (
+                                <p className="text-gray-500 text-center py-8">No accounts pending deletion.</p>
+                            )}
+                        </div>
+                    );
+                })()}
             </div>
 
             {userToView && (

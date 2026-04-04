@@ -180,6 +180,7 @@ export interface User {
   isAdmin?: boolean;
   adminRole?: AdminRole;
   isSuspended?: boolean;
+  deletionRequestedAt?: string;
 
   // Cleaner/Worker legacy fields
   experience?: number;

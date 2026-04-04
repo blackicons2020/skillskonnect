@@ -516,6 +516,14 @@ export const apiService = {
         return handleResponse(response);
     },
 
+    requestAccountDeletion: async (): Promise<void> => {
+        const response = await fetch(`${API_URL}/users/me`, {
+            method: 'DELETE',
+            headers: getHeaders(),
+        });
+        return handleResponse(response);
+    },
+
     // ==================== NOTIFICATION API ====================
 
     getNotifications: async (): Promise<AppNotification[]> => {

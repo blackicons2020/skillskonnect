@@ -98,6 +98,7 @@ const UserSchema = new mongoose.Schema({
   adminRole: String,
   isSuspended: { type: Boolean, default: false },
   blockedUsers: [String],
+  deletionRequestedAt: { type: Date, default: null },
   
   // Subscription
   subscriptionTier: String,
@@ -500,6 +501,14 @@ app.post('/api/auth/login', async (req, res) => {
     const isValidPassword = await bcrypt.compare(password, user.password);
     if (!isValidPassword) {
       return res.status(401).json({ error: 'Invalid credentials' });
+    }
+
+    if (user.isSuspended) {
+      return res.status(403).json({ error: 'Your account has been suspended. Please contact support.' });
+    }
+
+    if (user.deletionRequestedAt) {
+      return res.status(403).json({ error: 'This account is pending deletion and cannot be accessed.' });
     }
 
     const token = jwt.sign(
@@ -1424,6 +1433,20 @@ app.delete('/api/users/:userId/block', authenticateToken, async (req, res) => {
     user.blockedUsers = (user.blockedUsers || []).filter(id => id.toString() !== targetId);
     await user.save();
     res.json({ message: 'User unblocked' });
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// Request account deletion (self)
+app.delete('/api/users/me', authenticateToken, async (req, res) => {
+  try {
+    const user = await User.findOne({ email: req.user.email });
+    if (!user) return res.status(404).json({ error: 'User not found' });
+    user.deletionRequestedAt = new Date();
+    user.isSuspended = true; // Revoke access immediately
+    await user.save();
+    res.json({ message: 'Account deletion requested. Your account will be permanently deleted within 30 days.' });
   } catch (error) {
     res.status(500).json({ error: error.message });
   }
