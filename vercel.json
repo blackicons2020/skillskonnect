@@ -6,7 +6,7 @@
   "rewrites": [
     {
       "source": "/api(.*)",
-      "destination": "/api/server-mongo.js"
+      "destination": "/api/server-mongo"
     },
     {
       "source": "/(.*)",
