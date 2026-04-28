@@ -6,7 +6,7 @@ import { User, Cleaner, Booking, AdminRole, Chat, Message, SupportTicket, Review
 // ==========================================
 // The production API is hosted on Vercel (same project as the web frontend).
 // Mobile (Capacitor) uses the absolute production URL; web uses a relative /api path.
-const PRODUCTION_API_URL = 'https://skillskonnect.onrender.com/api'; // Fallback for Capacitor
+const PRODUCTION_API_URL = 'https://skillskonnect.online/api'; // Fallback for Capacitor
 
 const getApiUrl = () => {
     try {

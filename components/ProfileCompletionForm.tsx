@@ -177,7 +177,16 @@ export default function ProfileCompletionForm({ user, onSave, onCancel, roleCont
       const cleanPhone = (formData.phoneNumber || '').replace(/[\s\-\(\)]/g, '');
 
       // Derive cleanerType / clientType from userType so backend and /cleaners endpoint work correctly
-      const submission: Partial<User> = { ...formData, phoneNumber: cleanPhone };
+      const isWorkerUser = formData.userType === 'Worker (Individual)' || formData.userType === 'Worker (Registered Company)';
+      const submission: Partial<User> = { 
+          ...formData, 
+          phoneNumber: cleanPhone,
+          role: isWorkerUser ? 'cleaner' : 'client'
+      };
+      if (formData.profilePicture) {
+          submission.profilePhoto = formData.profilePicture;
+          delete submission.profilePicture;
+      }
       if (formData.userType === 'Worker (Individual)') {
         submission.cleanerType = 'Individual' as any;
       } else if (formData.userType === 'Worker (Registered Company)') {
